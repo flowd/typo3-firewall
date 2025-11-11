@@ -1,0 +1,27 @@
+{
+    "name": "flowd/typo3-firewall",
+    "description": "Firewall implements a PSR-15 middleware that helps to protect your website against malicious requests",
+    "type": "typo3-cms-extension",
+    "license": "GPL-2.0-or-later",
+    "autoload": {
+        "psr-4": {
+            "Flowd\\Typo3Firewall\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Sascha Egerer",
+            "email": "sascha.egerer@flowd.de"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "typo3/cms-core": "^12.4 || ^13.0",
+        "flowd/phirewall": "dev-main@dev"
+    },
+    "extra": {
+        "typo3/cms": {
+            "extension-key": "firewall"
+        }
+    }
+}
