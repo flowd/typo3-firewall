@@ -16,8 +16,8 @@
     ],
     "require": {
         "php": ">=8.2",
-        "typo3/cms-core": "^12.4 || ^13.0",
-        "flowd/phirewall": "dev-main@dev"
+        "typo3/cms-core": "^12.4 || ^13.0 || ^14.0",
+        "flowd/phirewall": "^0.1.0"
     },
     "extra": {
         "typo3/cms": {
