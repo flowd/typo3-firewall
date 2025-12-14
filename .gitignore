@@ -1,4 +1,13 @@
 .DS_Store
-/vendor
-/public
 composer.lock
+/*.idea
+/.Build/*
+/.cache
+/.fleet
+/.php-cs-fixer.cache
+/.phpunit.result.cache
+/Documentation-GENERATED-temp/
+/build
+/composer.lock
+/generate-documentation.sh
+/var

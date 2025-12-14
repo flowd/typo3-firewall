@@ -18,14 +18,13 @@ class PatternEntryDto
         public ?string $expiresAt = null,
         public ?int $addedAt = null,
         public array $metadata = []
-    ) {
-    }
+    ) {}
 
     public function toPatternEntry(): PatternEntry
     {
         $expiresAt = null;
         if (($this->expiresAt ?? '') !== '') {
-            $expiresAt = strtotime($this->expiresAt);
+            $expiresAt = strtotime((string) $this->expiresAt);
             if ($expiresAt === false) {
                 $expiresAt = null;
             }

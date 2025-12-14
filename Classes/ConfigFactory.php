@@ -11,10 +11,9 @@ use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\EventDispatcher\EventDispatcher;
 
 #[Autoconfigure(autowire: true)]
-class ConfigFactory {
-    public function __construct(private readonly EventDispatcher $eventDispatcher)
-    {
-    }
+class ConfigFactory
+{
+    public function __construct(private readonly EventDispatcher $eventDispatcher) {}
 
     public function fromConfigurationFile(): Config
     {
@@ -36,7 +35,7 @@ class ConfigFactory {
 
     private function getDefaultConfig(): Config
     {
-        return (new Config(new InMemoryCache(), $this->eventDispatcher));
+        return new Config(new InMemoryCache(), $this->eventDispatcher);
     }
 
     private function getConfigurationPath(): string

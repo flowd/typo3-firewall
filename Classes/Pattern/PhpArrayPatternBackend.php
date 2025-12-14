@@ -16,7 +16,7 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
 {
     private const MAX_ENTRIES = self::MAX_ENTRIES_DEFAULT;
 
-    private int $now;
+    private readonly int $now;
 
     public function __construct(private readonly string $filePath, int $now = null)
     {
@@ -38,9 +38,7 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
         $entries = [];
         foreach ($raw as $row) {
             $patternEntry = $this->rowToPatternEntry($row);
-            if ($patternEntry instanceof PatternEntry) {
-                $entries[] = $patternEntry;
-            }
+            $entries[] = $patternEntry;
         }
 
         return new PatternSnapshot($entries, $mtime, $this->filePath);
@@ -49,7 +47,7 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
     /**
      * @param array<mixed> $row
      */
-    private function rowToPatternEntry(array $row): ?PatternEntry
+    private function rowToPatternEntry(array $row): PatternEntry
     {
         foreach ($row as $key => $val) {
             if ($key !== 'metadata') {
@@ -73,7 +71,6 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
     }
 
     /**
-     * @param mixed $value
      * @return ?scalar
      */
     private function ensureScalarValue(mixed $value): mixed
@@ -81,6 +78,7 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
         if (!is_scalar($value) && $value !== null) {
             return null;
         }
+
         return $value;
     }
 
@@ -139,7 +137,7 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
 
         // Prevent uncontrolled growth
         if (count($data) >= self::MAX_ENTRIES) {
-            throw new \RuntimeException(sprintf('Pattern file exceeds maximum entries (%d).', self::MAX_ENTRIES));
+            throw new \RuntimeException(sprintf('Pattern file exceeds maximum entries (%d).', self::MAX_ENTRIES), 6857001936);
         }
 
         // De-duplicate simple duplicates (same kind/value/target)
@@ -224,7 +222,7 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
     {
         $dir = \dirname($this->filePath);
         if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
-            throw new \RuntimeException(sprintf('Cannot create directory: %s', $dir));
+            throw new \RuntimeException(sprintf('Cannot create directory: %s', $dir), 8136924054);
         }
     }
 
@@ -250,7 +248,7 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
         }
 
         // ensure list semantics
-        $data = array_filter($data, static fn($item): bool => is_array($item));
+        $data = array_filter($data, is_array(...));
 
         return array_values($data);
     }
@@ -264,12 +262,12 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
         $tmp = $this->filePath . '.tmp';
         $php = "<?php\nreturn " . var_export($data, true) . ";\n";
         if (@file_put_contents($tmp, $php) === false) {
-            throw new \RuntimeException(sprintf('Cannot write temp pattern file: %s', $tmp));
+            throw new \RuntimeException(sprintf('Cannot write temp pattern file: %s', $tmp), 2415665751);
         }
 
         // fallback: write directly
         if (!@rename($tmp, $this->filePath) && @file_put_contents($this->filePath, $php) === false) {
-            throw new \RuntimeException(sprintf('Cannot write pattern file: %s', $this->filePath));
+            throw new \RuntimeException(sprintf('Cannot write pattern file: %s', $this->filePath), 4649000086);
         }
 
         @chmod($this->filePath, 0664);
