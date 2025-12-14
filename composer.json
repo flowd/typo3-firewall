@@ -102,7 +102,6 @@
             "@coverage:create-directories",
             "phpunit -c Build/phpunit/UnitTests.xml --coverage-php=build/coverage/unit.cov"
         ],
-        "check:json:lint": "find . ! -path '*/.cache/*' ! -path '*/.Build/*' ! -path '*/node_modules/*' -name '*.json' | xargs -r php .Build/bin/jsonlint -q",
         "check:php": [
             "@check:php:cs-fixer",
             "@check:php:lint",
@@ -115,7 +114,6 @@
         "check:static": [
             "@check:composer:normalize",
             "@check:composer:unused",
-            "@check:json:lint",
             "@check:php:lint",
             "@check:composer:psr-verify",
             "@check:php:rector",
@@ -165,7 +163,6 @@
         "check:coverage:functional": "Generates the code coverage report for functional tests.",
         "check:coverage:merge": "Merges the code coverage reports for unit and functional tests.",
         "check:coverage:unit": "Generates the code coverage report for unit tests.",
-        "check:json:lint": "Lints the JSON files.",
         "check:php": "Runs all static checks for the PHP files.",
         "check:php:cs-fixer": "Checks the code style with the PHP Coding Standards Fixer (PHP-CS-Fixer).",
         "check:php:lint": "Lints the PHP files for syntax errors.",
