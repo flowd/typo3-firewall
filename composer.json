@@ -148,7 +148,6 @@
         "phpstan:baseline": "phpstan --generate-baseline=Build/phpstan/phpstan-baseline.neon --allow-empty-baseline --configuration=Build/phpstan/phpstan.neon",
         "prepare-release": [
             "rm -rf .Build",
-            "rm -rf .ddev",
             "rm -rf .github",
             "rm -rf Build",
             "rm -rf Tests",
@@ -156,8 +155,6 @@
             "rm .editorconfig",
             "rm .gitattributes",
             "rm .gitignore",
-            "rm package-lock.json",
-            "rm package.json",
             "rm phive.xml"
         ]
     },
