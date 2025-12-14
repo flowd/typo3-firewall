@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Flowd\Typo3Firewall\Backend\Controller;
 
-use Flowd\Phirewall\Pattern\PatternEntry;
 use Flowd\Phirewall\Pattern\PatternKind;
 use Flowd\Typo3Firewall\Dto\PatternEntryDto;
 use Flowd\Typo3Firewall\Pattern\PhpArrayPatternBackend;
@@ -19,11 +18,6 @@ class FirewallController extends ActionController
     public function __construct(
         private readonly ModuleTemplateFactory $moduleTemplateFactory,
     ) {
-    }
-
-    protected function errorAction(): ResponseInterface
-    {
-return parent::errorAction();
     }
 
     public function overviewAction(): ResponseInterface

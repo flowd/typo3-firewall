@@ -24,8 +24,8 @@ class PatternEntryDto
     public function toPatternEntry(): PatternEntry
     {
         $expiresAt = null;
-        if ($this->expiresAt !== null) {
-            $expiresAt = \Carbon\Carbon::parse($this->expiresAt)->getTimestamp();
+        if (($this->expiresAt ?? '') !== '') {
+            $expiresAt = strtotime($this->expiresAt);
             if ($expiresAt === false) {
                 $expiresAt = null;
             }
@@ -41,4 +41,3 @@ class PatternEntryDto
         );
     }
 }
-

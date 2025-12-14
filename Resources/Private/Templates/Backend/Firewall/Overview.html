@@ -11,7 +11,7 @@
             <strong><f:translate key="create.title" /></strong>
         </div>
         <div class="card-body">
-            <f:form action="create" method="post" objectName="patternEntry">
+            <f:form action="create" method="post" objectName="patternEntryDto">
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label class="form-label" for="firewall-kind">
@@ -171,24 +171,9 @@
                             <td><f:translate key="examples.table.header_exact.description" /></td>
                         </tr>
                         <tr>
-                            <td><f:translate key="examples.table.header_substring.kind" /></td>
-                            <td><code><f:translate key="examples.table.header_substring.value" /></code></td>
-                            <td><f:translate key="examples.table.header_substring.description" /></td>
-                        </tr>
-                        <tr>
                             <td><f:translate key="examples.table.header_regex.kind" /></td>
                             <td><code><f:translate key="examples.table.header_regex.value" /></code></td>
                             <td><f:translate key="examples.table.header_regex.description" /></td>
-                        </tr>
-                        <tr>
-                            <td><f:translate key="examples.table.user_agent.kind" /></td>
-                            <td><code><f:translate key="examples.table.user_agent.value" /></code></td>
-                            <td><f:translate key="examples.table.user_agent.description" /></td>
-                        </tr>
-                        <tr>
-                            <td><f:translate key="examples.table.user_agent_substring.kind" /></td>
-                            <td><code><f:translate key="examples.table.user_agent_substring.value" /></code></td>
-                            <td><f:translate key="examples.table.user_agent_substring.description" /></td>
                         </tr>
                     </tbody>
                 </table>

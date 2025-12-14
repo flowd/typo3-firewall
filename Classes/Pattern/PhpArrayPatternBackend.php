@@ -52,8 +52,8 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
     private function rowToPatternEntry(array $row): ?PatternEntry
     {
         foreach ($row as $key => $val) {
-            if (!is_scalar($val) && $key !== 'metadata') {
-                return null;
+            if ($key !== 'metadata') {
+                $row[$key] = $this->ensureScalarValue($val);
             }
         }
 
@@ -70,6 +70,18 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
             addedAt: isset($row['addedAt']) ? (int)$row['addedAt'] : null,
             metadata: $metadata,
         );
+    }
+
+    /**
+     * @param mixed $value
+     * @return ?scalar
+     */
+    private function ensureScalarValue(mixed $value): mixed
+    {
+        if (!is_scalar($value) && $value !== null) {
+            return null;
+        }
+        return $value;
     }
 
     /**

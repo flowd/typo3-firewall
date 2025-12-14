@@ -47,7 +47,7 @@
       <trans-unit id="kind.ip">
         <source>IP address (exact match)</source>
       </trans-unit>
-      <trans-unit id="kind.idr">
+      <trans-unit id="kind.cidr">
         <source>IP range (CIDR, e.g. 192.0.2.0/24)</source>
       </trans-unit>
       <trans-unit id="kind.path_prefix">
@@ -141,7 +141,7 @@
         <source>Path (regular expression)</source>
       </trans-unit>
       <trans-unit id="examples.table.path_regex.value">
-        <source>^/api/v[0-9]+/private/</source>
+        <source>/^\/api\/v[0-9]+\/private\/.*/</source>
       </trans-unit>
       <trans-unit id="examples.table.path_regex.description">
         <source>Blocks requests where the path matches the given regular expression.</source>
@@ -155,20 +155,14 @@
       <trans-unit id="examples.table.header_exact.description">
         <source>Blocks requests with exactly this User-Agent header.</source>
       </trans-unit>
-      <trans-unit id="examples.table.header_substring.kind">
-        <source>HTTP header contains value</source>
-      </trans-unit>
-      <trans-unit id="examples.table.header_substring.value">
-        <source>User-Agent contains "bot"</source>
-      </trans-unit>
-      <trans-unit id="examples.table.header_substring.description">
-        <source>Blocks requests if the User-Agent header contains the word "bot".</source>
-      </trans-unit>
       <trans-unit id="examples.table.header_regex.kind">
         <source>HTTP header (regular expression)</source>
       </trans-unit>
       <trans-unit id="examples.table.header_regex.value">
-        <source>X-Api-Key: ^test-.*</source>
+        <source>/^.*HeadlessChrome.*$/</source>
+      </trans-unit>
+      <trans-unit id="examples.table.header_regex.target">
+        <source>user-agent</source>
       </trans-unit>
       <trans-unit id="examples.table.header_regex.description">
         <source>Blocks requests where the header value matches the given regular expression.</source>
@@ -181,14 +175,6 @@
       </trans-unit>
       <trans-unit id="examples.table.user_agent.description">
         <source>Blocks requests from this exact User-Agent.</source>
-      </trans-unit>
-      <trans-unit id="examples.table.user_agent_substring.kind">
-      </trans-unit>
-      <trans-unit id="examples.table.user_agent_substring.value">
-        <source>bot</source>
-      </trans-unit>
-      <trans-unit id="examples.table.user_agent_substring.description">
-        <source>Blocks requests if the User-Agent contains the word "bot".</source>
       </trans-unit>
       <trans-unit id="note.patternsStorage">
         <source>Patterns are stored in config/system/phirewall.patterns.php and enforced immediately.</source>
