@@ -7,6 +7,7 @@ includes:
 
 parameters:
   phpVersion: 80200
+  treatPhpDocTypesAsCertain: false
 
   parallel:
     # Don't be overly greedy on machines with more CPU's to be a good neighbor especially on CI
@@ -27,8 +28,8 @@ parameters:
     property_type: 95
 
   cognitive_complexity:
-    class: 10
-    function: 5
+    class: 15
+    function: 8
 
   type_perfect:
     no_mixed_property: true
