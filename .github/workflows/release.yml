@@ -6,7 +6,7 @@ on:
 
 env:
   TYPO3_EXTENSION_KEY: firewall
-  EXTENSION_ARTEFACT: firewall_{{ github.ref_name }}.zip
+  EXTENSION_ARTEFACT: firewall_${{ github.ref_name }}.zip
 
 jobs:
   build:
