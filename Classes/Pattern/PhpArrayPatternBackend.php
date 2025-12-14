@@ -19,25 +19,27 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
     private const MAX_ENTRIES = PatternBackendInterface::MAX_ENTRIES_DEFAULT;
 
     private readonly int $now;
-    private FileArrayWriter $fileHelper;
+
+    private readonly FileArrayWriter $fileArrayWriter;
 
     public function __construct(private readonly string $filePath, int $now = null)
     {
         $this->now = $now ?? time();
-        $this->fileHelper = new FileArrayWriter($filePath);
+        $this->fileArrayWriter = new FileArrayWriter($filePath);
     }
 
     public function consume(): PatternSnapshot
     {
-        $this->fileHelper->ensureDirectory();
-        $this->fileHelper->ensureFileExists();
+        $this->fileArrayWriter->ensureDirectory();
+        $this->fileArrayWriter->ensureFileExists();
         clearstatcache(false, $this->filePath);
         $mtime = @filemtime($this->filePath);
         if ($mtime === false) {
             $mtime = $this->now;
         }
-        $raw = $this->fileHelper->readArray();
-        $entries = array_map(fn(array $row): PatternEntry => $this->rowToPatternEntry($row), $raw);
+
+        $raw = $this->fileArrayWriter->readArray();
+        $entries = array_map($this->rowToPatternEntry(...), $raw);
         return new PatternSnapshot($entries, $mtime, $this->filePath);
     }
 
@@ -66,11 +68,13 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
     {
         $metadata = [];
         if (isset($row['metadata']) && is_array($row['metadata'])) {
-            $metadata = array_filter($row['metadata'], static fn(mixed $v): bool => is_scalar($v));
+            $metadata = array_filter($row['metadata'], is_scalar(...));
         }
+
         if (isset($row['id']) && is_string($row['id'])) {
             $metadata['id'] = $row['id'];
         }
+
         return $metadata;
     }
 
@@ -85,23 +89,22 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
                 $row[$key] = $this->ensureScalarValue($val);
             }
         }
+
         return $row;
     }
 
-    /**
-     * @return bool|float|int|string|null
-     */
     private function ensureScalarValue(mixed $value): bool|float|int|string|null
     {
         if (is_scalar($value) || $value === null) {
             return $value;
         }
+
         return null;
     }
 
     public function removeById(string $id): void
     {
-        $data = $this->fileHelper->readArray();
+        $data = $this->fileArrayWriter->readArray();
         $found = false;
         foreach ($data as $idx => $row) {
             if (($row['id'] ?? null) === $id) {
@@ -110,8 +113,9 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
                 break;
             }
         }
+
         if ($found) {
-            $this->fileHelper->writeArray(array_values($data));
+            $this->fileArrayWriter->writeArray(array_values($data));
         }
     }
 
@@ -122,30 +126,31 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
 
     public function append(PatternEntry $patternEntry): void
     {
-        $this->fileHelper->ensureDirectory();
-        $this->fileHelper->ensureFileExists();
+        $this->fileArrayWriter->ensureDirectory();
+        $this->fileArrayWriter->ensureFileExists();
+
         $now = $this->now;
-        $data = $this->fileHelper->readArray();
+        $data = $this->fileArrayWriter->readArray();
         $id = $patternEntry->metadata['id'] ?? null;
         if (!is_string($id) || $id === '') {
             $id = $this->generatePatternHash($patternEntry);
         }
+
         $row = $this->createRow($patternEntry, $id, $now);
         if (count($data) >= self::MAX_ENTRIES) {
             throw new \RuntimeException(sprintf('Pattern file exceeds maximum entries (%d).', self::MAX_ENTRIES), 6857001936);
         }
+
         if ($this->updateIfDuplicate($data, $row)) {
-            $this->fileHelper->writeArray(array_values($data));
+            $this->fileArrayWriter->writeArray(array_values($data));
             return;
         }
+
         $data[] = $row;
-        $this->fileHelper->writeArray(array_values($data));
+        $this->fileArrayWriter->writeArray(array_values($data));
     }
 
     /**
-     * @param PatternEntry $patternEntry
-     * @param string $id
-     * @param int $now
      * @return array<string, mixed>
      */
     private function createRow(PatternEntry $patternEntry, string $id, int $now): array
@@ -178,22 +183,24 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
                 return true;
             }
         }
+
         unset($existing);
         return false;
     }
 
     public function pruneExpired(): void
     {
-        $data = $this->fileHelper->readArray();
+        $data = $this->fileArrayWriter->readArray();
         $now = $this->now;
         $data = array_values(array_filter($data, static function (array $row) use ($now): bool {
             $expiresAt = $row['expiresAt'] ?? null;
             if (!is_scalar($expiresAt)) {
                 return true;
             }
+
             return ((int)$expiresAt) > $now;
         }));
-        $this->fileHelper->writeArray($data);
+        $this->fileArrayWriter->writeArray($data);
     }
 
     public function type(): string
@@ -219,6 +226,6 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
      */
     public function listRaw(): array
     {
-        return $this->fileHelper->readArray();
+        return $this->fileArrayWriter->readArray();
     }
 }

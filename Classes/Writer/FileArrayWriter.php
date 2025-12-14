@@ -2,7 +2,6 @@
 
 namespace Flowd\Typo3Firewall\Writer;
 
-
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -27,13 +26,14 @@ final class FileArrayWriter
         if (!@is_file($this->filePath)) {
             return [];
         }
+
         $data = @include $this->filePath;
         if (!\is_array($data)) {
             return [];
         }
+
         return $this->filterInvalidEntries($data);
     }
-
 
     /**
      * @param array<mixed> $data
@@ -46,6 +46,7 @@ final class FileArrayWriter
             if (!is_array($item)) {
                 return false;
             }
+
             return $this->isStringIndexedArray($item);
         });
         return array_values($values);
@@ -61,6 +62,7 @@ final class FileArrayWriter
                 return false;
             }
         }
+
         return true;
     }
 

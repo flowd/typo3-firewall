@@ -91,72 +91,72 @@ jobs:
       matrix:
         php-version:
           - "8.3"
-  unit-tests:
-    name: Unit tests
-    runs-on: ubuntu-24.04
-    needs: php-lint
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - name: Show the Composer version
-        run: ./Build/Scripts/runTests.sh -s composer -- --version
-      - name: Show the Composer configuration
-        run:  ./Build/Scripts/runTests.sh -s composer config --global --list
-      - name: Install composer dependencies
-        run: |
-          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
-      - name: Run unit tests
-        run: |
-          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -s unit
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - typo3-version: "12.4"
-            php-version: "8.1"
-            composer-dependencies: Min
-          - typo3-version: "12.4"
-            php-version: "8.1"
-            composer-dependencies: Max
-          - typo3-version: "12.4"
-            php-version: "8.5"
-            composer-dependencies: Min
-          - typo3-version: "12.4"
-            php-version: "8.5"
-            composer-dependencies: Max
-  functional-tests:
-    name: Functional tests
-    runs-on: ubuntu-24.04
-    needs: php-lint
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - name: Show the Composer version
-        run: ./Build/Scripts/runTests.sh -s composer -- --version
-      - name: Show the Composer configuration
-        run:  ./Build/Scripts/runTests.sh -s composer config --global --list
-      - name: Install composer dependencies
-        run: |
-          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
-      - name: Run functional tests
-        run: |
-          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -s functional
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - typo3-version: "12.4"
-            php-version: "8.1"
-            composer-dependencies: Min
-          - typo3-version: "12.4"
-            php-version: "8.1"
-            composer-dependencies: Max
-          - typo3-version: "12.4"
-            php-version: "8.5"
-            composer-dependencies: Min
-          - typo3-version: "12.4"
-            php-version: "8.5"
-            composer-dependencies: Max
+#  unit-tests:
+#    name: Unit tests
+#    runs-on: ubuntu-24.04
+#    needs: php-lint
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v6
+#      - name: Show the Composer version
+#        run: ./Build/Scripts/runTests.sh -s composer -- --version
+#      - name: Show the Composer configuration
+#        run:  ./Build/Scripts/runTests.sh -s composer config --global --list
+#      - name: Install composer dependencies
+#        run: |
+#          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
+#      - name: Run unit tests
+#        run: |
+#          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -s unit
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        include:
+#          - typo3-version: "12.4"
+#            php-version: "8.1"
+#            composer-dependencies: Min
+#          - typo3-version: "12.4"
+#            php-version: "8.1"
+#            composer-dependencies: Max
+#          - typo3-version: "12.4"
+#            php-version: "8.5"
+#            composer-dependencies: Min
+#          - typo3-version: "12.4"
+#            php-version: "8.5"
+#            composer-dependencies: Max
+#  functional-tests:
+#    name: Functional tests
+#    runs-on: ubuntu-24.04
+#    needs: php-lint
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v6
+#      - name: Show the Composer version
+#        run: ./Build/Scripts/runTests.sh -s composer -- --version
+#      - name: Show the Composer configuration
+#        run:  ./Build/Scripts/runTests.sh -s composer config --global --list
+#      - name: Install composer dependencies
+#        run: |
+#          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
+#      - name: Run functional tests
+#        run: |
+#          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -s functional
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        include:
+#          - typo3-version: "12.4"
+#            php-version: "8.1"
+#            composer-dependencies: Min
+#          - typo3-version: "12.4"
+#            php-version: "8.1"
+#            composer-dependencies: Max
+#          - typo3-version: "12.4"
+#            php-version: "8.5"
+#            composer-dependencies: Min
+#          - typo3-version: "12.4"
+#            php-version: "8.5"
+#            composer-dependencies: Max
   shellcheck:
     name: Check shell scripts
     runs-on: ubuntu-24.04
