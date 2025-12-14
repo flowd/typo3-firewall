@@ -97,6 +97,6 @@ jobs:
           - typo3-version: "13.4"
             php-version: "8.4"
             composer-dependencies: Max
-          - typo3-version: "14.0"
-            php-version: "8.5"
-            composer-dependencies: Max
+#          - typo3-version: "14.0"
+#            php-version: "8.5"
+#            composer-dependencies: Max
