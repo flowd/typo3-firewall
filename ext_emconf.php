@@ -33,10 +33,5 @@ $EM_CONF[$_EXTKEY] = [
             'typo3' => '12.0.0-14.4.99',
             'php' => '8.2.0-8.5.99',
         ],
-    ],
-    'autoload' => [
-        'psr-4' => [
-            'Flowd\\Typo3Firewall\\' => 'Classes',
-        ],
-    ],
+    ]
 ];
