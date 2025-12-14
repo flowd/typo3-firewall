@@ -1,7 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Class cognitive complexity is 30.*$#'
-			identifier: complexity.classLike
+			message: "#^Class cognitive complexity is 30, keep it under 15$#"
 			count: 1
 			path: ../../Classes/Pattern/PhpArrayPatternBackend.php
