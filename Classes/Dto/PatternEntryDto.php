@@ -24,7 +24,7 @@ class PatternEntryDto
     {
         $expiresAt = null;
         if (($this->expiresAt ?? '') !== '') {
-            $expiresAt = strtotime((string) $this->expiresAt);
+            $expiresAt = strtotime((string)$this->expiresAt);
             if ($expiresAt === false) {
                 $expiresAt = null;
             }
