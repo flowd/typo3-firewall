@@ -5,7 +5,7 @@
     "license": "GPL-2.0-or-later",
     "autoload": {
         "psr-4": {
-            "Flowd\\Typo3Firewall\\": "src/"
+            "Flowd\\Typo3Firewall\\": "Classes/"
         }
     },
     "authors": [
@@ -17,11 +17,25 @@
     "require": {
         "php": ">=8.2",
         "typo3/cms-core": "^12.4 || ^13.0 || ^14.0",
+        "typo3/cms-backend": "^12.4 || ^13.0 || ^14.0",
         "flowd/phirewall": "^0.1.0"
+    },
+    "require-dev": {
+        "saschaegerer/phpstan-typo3": "^2.1",
+        "rector/type-perfect": "^2.1.1",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "rector/rector": "^2.2.14"
     },
     "extra": {
         "typo3/cms": {
             "extension-key": "firewall"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "typo3/cms-composer-installers": true,
+            "typo3/class-alias-loader": true
         }
     }
 }

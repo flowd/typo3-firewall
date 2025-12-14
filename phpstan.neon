@@ -1,0 +1,10 @@
+includes:
+    - vendor/phpstan/phpstan-deprecation-rules/rules.neon
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+    - vendor/saschaegerer/phpstan-typo3/extension.neon
+parameters:
+    level: 9
+    strictRules:
+        allRules: true
+    paths:
+         - Classes/

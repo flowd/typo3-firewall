@@ -1,12 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Flowd\Typo3Firewall;
 
 use Flowd\Phirewall\Config;
 use Flowd\Phirewall\Store\InMemoryCache;
+use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\EventDispatcher\EventDispatcher;
 
+#[Autoconfigure(autowire: true)]
 class ConfigFactory {
     public function __construct(private readonly EventDispatcher $eventDispatcher)
     {
@@ -40,6 +44,7 @@ class ConfigFactory {
         if (Environment::getProjectPath() !== Environment::getPublicPath()) {
             return Environment::getConfigPath() . '/system/phirewall.php';
         }
+
         return Environment::getLegacyConfigPath() . '/system/phirewall.php';
     }
 }

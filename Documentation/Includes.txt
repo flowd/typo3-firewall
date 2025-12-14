@@ -1,0 +1,2 @@
+.. This file is included at the top of every .rst file in this documentation.
+.. You can add common substitutions or links here.

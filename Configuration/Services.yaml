@@ -1,12 +1,17 @@
 services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        public: false
+
+    Flowd\Typo3Firewall\:
+        resource: '../Classes/*'
+
     Flowd\Phirewall\Middleware:
         autowire: true
         public: true
         arguments:
             $config: '@Flowd\Phirewall\Config'
-
-    Flowd\Typo3Firewall\ConfigFactory:
-        autowire: true
 
     Flowd\Phirewall\Config:
         factory: ['@Flowd\Typo3Firewall\ConfigFactory', 'fromConfigurationFile']

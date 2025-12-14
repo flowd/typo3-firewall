@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2">
+  <file source-language="en" datatype="plaintext" original="messages" product-name="firewall">
+    <body>
+      <trans-unit id="module.title">
+        <source>Firewall patterns</source>
+      </trans-unit>
+      <trans-unit id="list.title">
+        <source>Existing patterns</source>
+      </trans-unit>
+      <trans-unit id="list.empty">
+        <source>No patterns yet</source>
+      </trans-unit>
+      <trans-unit id="create.title">
+        <source>Add pattern</source>
+      </trans-unit>
+      <trans-unit id="action.add">
+        <source>Add</source>
+      </trans-unit>
+      <trans-unit id="action.delete">
+        <source>Delete</source>
+      </trans-unit>
+      <trans-unit id="action.prune">
+        <source>Prune expired</source>
+      </trans-unit>
+      <trans-unit id="field.kind">
+        <source>Kind</source>
+      </trans-unit>
+      <trans-unit id="field.kind.help">
+        <source>Select what should be matched (IP, header, path, etc.).</source>
+      </trans-unit>
+      <trans-unit id="field.value">
+        <source>Value</source>
+      </trans-unit>
+      <trans-unit id="field.target">
+        <source>Target</source>
+      </trans-unit>
+      <trans-unit id="field.target.help">
+        <source>Optional: additional qualifier, e.g. HTTP header name for header_* kinds.</source>
+      </trans-unit>
+      <trans-unit id="field.expiresAt">
+        <source>Expires at (date/time)</source>
+      </trans-unit>
+      <trans-unit id="field.expiresAt.help">
+        <source>Optional: Date and time. Leave empty for no automatic expiry.</source>
+      </trans-unit>
+      <trans-unit id="kind.ip">
+        <source>IP address (exact match)</source>
+      </trans-unit>
+      <trans-unit id="kind.idr">
+        <source>IP range (CIDR, e.g. 192.0.2.0/24)</source>
+      </trans-unit>
+      <trans-unit id="kind.path_prefix">
+        <source>Path starts with…</source>
+      </trans-unit>
+      <trans-unit id="kind.path_substring">
+        <source>Path contains…</source>
+      </trans-unit>
+      <trans-unit id="kind.header_exact">
+        <source>HTTP header equals value</source>
+      </trans-unit>
+      <trans-unit id="kind.header_substring">
+        <source>HTTP header contains value</source>
+      </trans-unit>
+      <trans-unit id="kind.path_exact">
+        <source>Path (exact match)</source>
+      </trans-unit>
+      <trans-unit id="kind.path_regex">
+        <source>Path (regular expression)</source>
+      </trans-unit>
+      <trans-unit id="kind.header_regex">
+        <source>HTTP header (regular expression)</source>
+      </trans-unit>
+      <trans-unit id="kind.user_agent">
+        <source>User-Agent (exact match)</source>
+      </trans-unit>
+      <trans-unit id="kind.request_regex">
+        <source>Request Regex</source>
+      </trans-unit>
+      <trans-unit id="examples.title">
+        <source>Real world examples</source>
+      </trans-unit>
+      <trans-unit id="examples.intro">
+        <source>The following examples illustrate how different kinds and values behave in practice.</source>
+      </trans-unit>
+      <trans-unit id="examples.table.header.kind">
+        <source>Kind</source>
+      </trans-unit>
+      <trans-unit id="examples.table.header.value">
+        <source>Example value</source>
+      </trans-unit>
+      <trans-unit id="examples.table.header.description">
+        <source>Description</source>
+      </trans-unit>
+      <trans-unit id="examples.table.ip.kind">
+        <source>IP address (exact match)</source>
+      </trans-unit>
+      <trans-unit id="examples.table.ip.value">
+        <source>203.0.113.42</source>
+      </trans-unit>
+      <trans-unit id="examples.table.ip.description">
+        <source>Blocks all requests from this IP address.</source>
+      </trans-unit>
+      <trans-unit id="examples.table.ip_cidr.kind">
+        <source>IP range (CIDR)</source>
+      </trans-unit>
+      <trans-unit id="examples.table.ip_cidr.value">
+        <source>192.0.2.0/24</source>
+      </trans-unit>
+      <trans-unit id="examples.table.ip_cidr.description">
+        <source>Blocks all requests from the IP range 192.0.2.0 to 192.0.2.255.</source>
+      </trans-unit>
+      <trans-unit id="examples.table.path_prefix.kind">
+        <source>Path starts with…</source>
+      </trans-unit>
+      <trans-unit id="examples.table.path_prefix.value">
+        <source>/admin</source>
+      </trans-unit>
+      <trans-unit id="examples.table.path_prefix.description">
+        <source>Blocks all requests where the path starts with /admin.</source>
+      </trans-unit>
+      <trans-unit id="examples.table.path_substring.kind">
+        <source>Path contains…</source>
+      </trans-unit>
+      <trans-unit id="examples.table.path_substring.value">
+        <source>private</source>
+      </trans-unit>
+      <trans-unit id="examples.table.path_substring.description">
+        <source>Blocks all requests where the path contains the word "private".</source>
+      </trans-unit>
+      <trans-unit id="examples.table.path_exact.kind">
+        <source>Path (exact match)</source>
+      </trans-unit>
+      <trans-unit id="examples.table.path_exact.value">
+        <source>/admin/login</source>
+      </trans-unit>
+      <trans-unit id="examples.table.path_exact.description">
+        <source>Blocks requests where the path matches exactly /admin/login.</source>
+      </trans-unit>
+      <trans-unit id="examples.table.path_regex.kind">
+        <source>Path (regular expression)</source>
+      </trans-unit>
+      <trans-unit id="examples.table.path_regex.value">
+        <source>^/api/v[0-9]+/private/</source>
+      </trans-unit>
+      <trans-unit id="examples.table.path_regex.description">
+        <source>Blocks requests where the path matches the given regular expression.</source>
+      </trans-unit>
+      <trans-unit id="examples.table.header_exact.kind">
+        <source>HTTP header equals value</source>
+      </trans-unit>
+      <trans-unit id="examples.table.header_exact.value">
+        <source>User-Agent: curl/7.68.0</source>
+      </trans-unit>
+      <trans-unit id="examples.table.header_exact.description">
+        <source>Blocks requests with exactly this User-Agent header.</source>
+      </trans-unit>
+      <trans-unit id="examples.table.header_substring.kind">
+        <source>HTTP header contains value</source>
+      </trans-unit>
+      <trans-unit id="examples.table.header_substring.value">
+        <source>User-Agent contains "bot"</source>
+      </trans-unit>
+      <trans-unit id="examples.table.header_substring.description">
+        <source>Blocks requests if the User-Agent header contains the word "bot".</source>
+      </trans-unit>
+      <trans-unit id="examples.table.header_regex.kind">
+        <source>HTTP header (regular expression)</source>
+      </trans-unit>
+      <trans-unit id="examples.table.header_regex.value">
+        <source>X-Api-Key: ^test-.*</source>
+      </trans-unit>
+      <trans-unit id="examples.table.header_regex.description">
+        <source>Blocks requests where the header value matches the given regular expression.</source>
+      </trans-unit>
+      <trans-unit id="examples.table.user_agent.kind">
+        <source>User-Agent (exact match)</source>
+      </trans-unit>
+      <trans-unit id="examples.table.user_agent.value">
+        <source>Googlebot/2.1</source>
+      </trans-unit>
+      <trans-unit id="examples.table.user_agent.description">
+        <source>Blocks requests from this exact User-Agent.</source>
+      </trans-unit>
+      <trans-unit id="examples.table.user_agent_substring.kind">
+      </trans-unit>
+      <trans-unit id="examples.table.user_agent_substring.value">
+        <source>bot</source>
+      </trans-unit>
+      <trans-unit id="examples.table.user_agent_substring.description">
+        <source>Blocks requests if the User-Agent contains the word "bot".</source>
+      </trans-unit>
+      <trans-unit id="note.patternsStorage">
+        <source>Patterns are stored in config/system/phirewall.patterns.php and enforced immediately.</source>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>
