@@ -1,0 +1,93 @@
+name: Release
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+env:
+  TYPO3_EXTENSION_KEY: firewall
+  EXTENSION_ARTEFACT: firewall_{{ github.ref_name }}.zip
+
+jobs:
+  build:
+    name: Build extension artefact
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # Prepare environment
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.5
+          tools: composer:v2, typo3/tailor
+          coverage: none
+
+      - name: Reset files
+        run: git reset --hard HEAD && git clean -dfx
+
+      - name: Create artefact
+        run: |
+          php ~/.composer/vendor/bin/tailor set-version "${{ github.ref_name }}"
+          php ~/.composer/vendor/bin/tailor create-artefact "${{ github.ref_name }}"
+
+      - name: Upload extension artefact
+        uses: actions/upload-artifact@v6
+        with:
+          name: extension-artefact
+          path: tailor-version-artefact/${{ env.EXTENSION_ARTEFACT }}
+
+  release:
+    name: Create release
+    needs: [build]
+    runs-on: ubuntu-latest
+    outputs:
+      release-notes-url: ${{ steps.create-release.outputs.url }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download extension artefact
+        id: download
+        uses: actions/download-artifact@v7
+        with:
+          name: extension-artefact
+
+      - name: Create release
+        id: create-release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: ${{ steps.download.outputs.download-path }}/${{ env.EXTENSION_ARTEFACT }}
+
+  ter-publish:
+    name: Publish on TER
+    needs: [release]
+    runs-on: ubuntu-latest
+    env:
+      TYPO3_API_TOKEN: ${{ secrets.TYPO3_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download extension artefact
+        id: download
+        uses: actions/download-artifact@v7
+        with:
+          name: extension-artefact
+
+      - name: Set release comment
+        id: get-comment
+        run: echo "comment=See release notes at ${{ needs.release.outputs.release-notes-url }}" >> $GITHUB_OUTPUT
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.5
+          extensions: intl, mbstring, json, zip, curl
+          tools: composer:v2, typo3/tailor
+
+      - name: Publish to TER
+        run: |
+          php ~/.composer/vendor/bin/tailor ter:publish \
+            --comment "${{ steps.get-comment.outputs.comment }}" \
+            --artefact "${{ steps.download.outputs.download-path }}/${{ env.EXTENSION_ARTEFACT }}" \
+            "${{ github.ref_name }}"

@@ -1,6 +1,6 @@
 {
 	"name": "flowd/typo3-firewall",
-	"description": "Firewall implements a PSR-15 middleware that helps to protect your website against malicious requests",
+	"description": "Firewall for TYPO3 - Firewall implements a PSR-15 middleware that helps to protect your website against malicious requests",
 	"license": "GPL-2.0-or-later",
 	"type": "typo3-cms-extension",
 	"authors": [
@@ -48,7 +48,7 @@
 		"typo3/cms-fluid-styled-content": "^12.4 || ^13.4",
 		"typo3/coding-standards": "0.8.0",
 		"typo3/testing-framework": "8.2.7",
-		"webmozart/assert": "^1.12.1"
+		"webit-de/typo3-extemconf-to-composer-converter": "^2.0"
 	},
 	"replace": {
 		"typo3-ter/firewall": "self.version"
@@ -150,7 +150,6 @@
 			"rm -rf .github",
 			"rm -rf Build",
 			"rm -rf Tests",
-			"rm -rf tools",
 			"rm .editorconfig",
 			"rm .gitattributes",
 			"rm .gitignore",
