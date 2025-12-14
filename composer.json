@@ -36,7 +36,7 @@
         "phpunit/phpunit": "^10.5.60",
         "rector/rector": "^2.2.14",
         "rector/type-perfect": "^2.1.1",
-        "saschaegerer/phpstan-typo3": "^2.1",
+        "saschaegerer/phpstan-typo3": "^1.10 || ^2.1",
         "spaze/phpstan-disallowed-calls": "^4.7.0",
         "ssch/typo3-rector": "^3.6.2",
         "ssch/typo3-rector-testing-framework": "^3.0.0",
