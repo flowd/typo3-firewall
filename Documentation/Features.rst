@@ -16,3 +16,192 @@ Configuration overview
 
 - Core Phirewall configuration: ``config/system/phirewall.php``
 - Static custom patterns managed by this extension: ``config/system/phirewall.patterns.php``
+
+Usage Examples
+==============
+
+Below are practical examples of configuring the firewall in a TYPO3 context.
+
+Blocking common scanner requests and known bot IPs
+--------------------------------------------------
+
+.. code-block:: php
+
+    <?php
+    use Flowd\Phirewall\Config;
+    use Flowd\Phirewall\KeyExtractors;
+    use Flowd\Phirewall\Store\RedisCache;
+    use Predis\Client;
+    use Psr\EventDispatcher\EventDispatcherInterface;
+    use Psr\Http\Message\ServerRequestInterface;
+
+    return fn (EventDispatcherInterface $eventDispatcher) =>
+    (new Config(
+        new RedisCache(new Client('redis://localhost:6379')),
+        $eventDispatcher
+    ))
+        ->blocklist(
+            name: 'evil-bot-ips',
+            callback: function (ServerRequestInterface $request): bool {
+                return in_array(KeyExtractors::ip()($request), [
+                    '176.65.149.61',
+                    '45.13.214.201',
+                ], true);
+            }
+        )
+        ->blocklist(
+            name: 'blocked-uri-paths',
+            callback: function (ServerRequestInterface $request): bool {
+                $path = strtolower($request->getUri()->getPath());
+                return str_contains($path, '/wp_admin');
+            }
+        )
+        ->blocklist(
+            name: 'blocked-uri-query-strings',
+            callback: function (ServerRequestInterface $request): bool {
+                $path = strtolower($request->getUri()->getQuery());
+                return str_contains($path, 'xdebug')
+                    || str_contains($path, 'option=com_');
+            }
+        );
+
+Temporary blocking after repeated abuse (Fail2Ban)
+--------------------------------------------------
+
+.. code-block:: php
+
+    <?php
+    use Flowd\Phirewall\Config;
+    use Flowd\Phirewall\KeyExtractors;
+    use Flowd\Phirewall\Store\RedisCache;
+    use Predis\Client;
+    use Psr\EventDispatcher\EventDispatcherInterface;
+    use Psr\Http\Message\ServerRequestInterface;
+
+    return fn (EventDispatcherInterface $eventDispatcher) =>
+    (new Config(
+        new RedisCache(new Client('redis://redis:6379')),
+        $eventDispatcher
+    ))
+        ->fail2ban(
+            name: 'search-page-scrapers',
+            threshold: 5,
+            period: 10,
+            ban: 60,
+            filter: fn (ServerRequestInterface $request) => str_starts_with($request->getUri()->getPath(), '/search'),
+            key: KeyExtractors::ip()
+        );
+
+Rate limiting with clear client feedback
+----------------------------------------
+
+.. code-block:: php
+
+    <?php
+    use Flowd\Phirewall\Config;
+    use Flowd\Phirewall\KeyExtractors;
+    use Flowd\Phirewall\Store\RedisCache;
+    use Predis\Client;
+    use Psr\EventDispatcher\EventDispatcherInterface;
+
+    return fn (EventDispatcherInterface $eventDispatcher) =>
+        (new Config(
+            new RedisCache(new Client('redis://localhost:6379')),
+            $eventDispatcher
+        ))
+        ->throttle(
+            name: 'slow-down-to-10-requests-in-10-seconds',
+            limit: 10,
+            period: 10,
+            key: KeyExtractors::ip()
+        )
+        ->enableRateLimitHeaders();
+
+Using a simple PHP pattern file, like the one managed in TYPO3 backend
+---------------------------------------------------------------------
+
+.. code-block:: php
+
+    <?php
+    use Flowd\Phirewall\Config;
+    use Flowd\Phirewall\Store\RedisCache;
+    use Flowd\Typo3Firewall\Pattern\PhpArrayPatternBackend;
+    use Predis\Client;
+    use Psr\EventDispatcher\EventDispatcherInterface;
+
+    return fn (EventDispatcherInterface $eventDispatcher) =>
+        (new Config(
+            new RedisCache(new Client('redis://localhost:6379')),
+            $eventDispatcher
+        ))
+        ->blocklist(
+            name: 'blocked-uri-paths',
+            callback: function (ServerRequestInterface $request): bool {
+                $path = strtolower($request->getUri()->getPath());
+                return str_contains($path, '/wp_admin');
+            }
+        )
+        ->addPatternBackend(
+            'php-array',
+            new PhpArrayPatternBackend(__DIR__ . '/phirewall.patterns.php')
+        );
+
+Using APCu as a cache backend
+----------------------------
+
+.. code-block:: php
+
+    <?php
+    use Flowd\Phirewall\Config;
+    use Flowd\Phirewall\Store\ApcuCache;
+    use Psr\EventDispatcher\EventDispatcherInterface;
+
+    return fn (EventDispatcherInterface $eventDispatcher) =>
+        (new Config(
+            new ApcuCache(),
+            $eventDispatcher
+        ))
+        ->blocklist(
+            name: 'blocked-uri-paths',
+            callback: function (ServerRequestInterface $request): bool {
+                $path = strtolower($request->getUri()->getPath());
+                return str_contains($path, '/wp_admin');
+            }
+        )
+        ->addPatternBackend(
+            'php-array',
+            new PhpArrayPatternBackend(__DIR__ . '/phirewall.patterns.php')
+        );
+
+Using InMemoryCache as a cache backend (not recommended for production)
+-----------------------------------------------------------------------
+
+.. code-block:: php
+
+    <?php
+    use Flowd\Phirewall\Config;
+    use Flowd\Phirewall\Store\InMemoryCache;
+    use Psr\EventDispatcher\EventDispatcherInterface;
+
+    return fn (EventDispatcherInterface $eventDispatcher) =>
+        (new Config(
+            new InMemoryCache(),
+            $eventDispatcher
+        ))
+        ->blocklist(
+            name: 'blocked-uri-paths',
+            callback: function (ServerRequestInterface $request): bool {
+                $path = strtolower($request->getUri()->getPath());
+                return str_contains($path, '/wp_admin');
+            }
+        )
+        ->addPatternBackend(
+            'php-array',
+            new PhpArrayPatternBackend(__DIR__ . '/phirewall.patterns.php')
+        );
+
+.. note::
+
+    When using ``InMemoryCache``, only block rules work. Throttling and Fail2Ban do not work as request counts
+    cannot be stored between requests. This backend is only suitable for testing or CLI environments,
+    not for production use.
