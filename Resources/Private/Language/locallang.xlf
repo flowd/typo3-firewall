@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<xliff version="1.2">
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
   <file source-language="en" datatype="plaintext" original="messages" product-name="firewall">
     <body>
       <trans-unit id="module.title">
@@ -52,9 +52,6 @@
       </trans-unit>
       <trans-unit id="kind.path_prefix">
         <source>Path starts with…</source>
-      </trans-unit>
-      <trans-unit id="kind.path_substring">
-        <source>Path contains…</source>
       </trans-unit>
       <trans-unit id="kind.header_exact">
         <source>HTTP header equals value</source>
@@ -119,15 +116,6 @@
       <trans-unit id="examples.table.path_prefix.description">
         <source>Blocks all requests where the path starts with /admin.</source>
       </trans-unit>
-      <trans-unit id="examples.table.path_substring.kind">
-        <source>Path contains…</source>
-      </trans-unit>
-      <trans-unit id="examples.table.path_substring.value">
-        <source>private</source>
-      </trans-unit>
-      <trans-unit id="examples.table.path_substring.description">
-        <source>Blocks all requests where the path contains the word "private".</source>
-      </trans-unit>
       <trans-unit id="examples.table.path_exact.kind">
         <source>Path (exact match)</source>
       </trans-unit>
@@ -161,8 +149,14 @@
       <trans-unit id="examples.table.header_regex.value">
         <source>/^.*HeadlessChrome.*$/</source>
       </trans-unit>
+      <trans-unit id="examples.table.header_regex.value.prefix">
+        <source>Value:</source>
+      </trans-unit>
       <trans-unit id="examples.table.header_regex.target">
         <source>user-agent</source>
+      </trans-unit>
+      <trans-unit id="examples.table.header_regex.target.prefix">
+        <source>Target:</source>
       </trans-unit>
       <trans-unit id="examples.table.header_regex.description">
         <source>Blocks requests where the header value matches the given regular expression.</source>

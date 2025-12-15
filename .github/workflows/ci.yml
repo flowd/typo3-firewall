@@ -1,0 +1,180 @@
+---
+# This GitHub Actions workflow uses the same development tools that are also installed locally
+# via Composer or PHIVE and calls them using the Composer scripts.
+name: GitHub Actions CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  schedule:
+    - cron: '15 3 * * 1'
+permissions:
+  contents: read
+jobs:
+  php-lint:
+    name: PHP linter
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Install Composer dependencies
+        run: Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -s composerUpdateMax -t 13.4
+      - name: Lint PHP
+        run: |
+          Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -s lintPhp
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version:
+          - "8.2"
+          - "8.3"
+          - "8.4"
+          - "8.5"
+  code-quality:
+    name: Code quality checks
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Show the Composer version
+        run: ./Build/Scripts/runTests.sh -s composer -- --version
+      - name: Show the Composer configuration
+        run:  ./Build/Scripts/runTests.sh -s composer config --global --list
+      - name: Install Composer dependencies
+        run: Build/Scripts/runTests.sh -s composerUpdateMax
+      - name: Run code quality checks
+        run: |
+          Build/Scripts/runTests.sh -s composer check:${{ matrix.command }}
+    strategy:
+      fail-fast: false
+      matrix:
+        command:
+          - "composer:normalize"
+          - "composer:psr-verify"
+          - "composer:unused"
+          - "php:cs-fixer"
+          - "php:rector"
+          - "php:stan"
+          - "xliff:lint"
+          - "yaml:lint"
+  static-code-analysis:
+    name: Static code quality checks
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Show the Composer version
+        run: ./Build/Scripts/runTests.sh -s composer -- --version
+      - name: Show the Composer configuration
+        run: ./Build/Scripts/runTests.sh -s composer config --global --list
+      - name: Install Composer dependencies
+        run: Build/Scripts/runTests.sh -s composerUpdateMax
+      - name: Run code quality checks
+        run: |
+          Build/Scripts/runTests.sh -s ${{ matrix.command }}
+    strategy:
+      fail-fast: false
+      matrix:
+        command:
+          - "phpmd"
+  prepare-release:
+    name: Check prepare release script
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Run prepare release
+        run: Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -s composer prepare-release
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version:
+          - "8.3"
+#  unit-tests:
+#    name: Unit tests
+#    runs-on: ubuntu-24.04
+#    needs: php-lint
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v6
+#      - name: Show the Composer version
+#        run: ./Build/Scripts/runTests.sh -s composer -- --version
+#      - name: Show the Composer configuration
+#        run:  ./Build/Scripts/runTests.sh -s composer config --global --list
+#      - name: Install composer dependencies
+#        run: |
+#          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
+#      - name: Run unit tests
+#        run: |
+#          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -s unit
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        include:
+#          - typo3-version: "12.4"
+#            php-version: "8.1"
+#            composer-dependencies: Min
+#          - typo3-version: "12.4"
+#            php-version: "8.1"
+#            composer-dependencies: Max
+#          - typo3-version: "12.4"
+#            php-version: "8.5"
+#            composer-dependencies: Min
+#          - typo3-version: "12.4"
+#            php-version: "8.5"
+#            composer-dependencies: Max
+#  functional-tests:
+#    name: Functional tests
+#    runs-on: ubuntu-24.04
+#    needs: php-lint
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v6
+#      - name: Show the Composer version
+#        run: ./Build/Scripts/runTests.sh -s composer -- --version
+#      - name: Show the Composer configuration
+#        run:  ./Build/Scripts/runTests.sh -s composer config --global --list
+#      - name: Install composer dependencies
+#        run: |
+#          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
+#      - name: Run functional tests
+#        run: |
+#          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -s functional
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        include:
+#          - typo3-version: "12.4"
+#            php-version: "8.1"
+#            composer-dependencies: Min
+#          - typo3-version: "12.4"
+#            php-version: "8.1"
+#            composer-dependencies: Max
+#          - typo3-version: "12.4"
+#            php-version: "8.5"
+#            composer-dependencies: Min
+#          - typo3-version: "12.4"
+#            php-version: "8.5"
+#            composer-dependencies: Max
+  shellcheck:
+    name: Check shell scripts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Check scripts
+        run: |
+          Build/Scripts/runTests.sh -s shellcheck
+  documentation:
+    name: Documentation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Test if the documentation will render without warnings
+        run: |
+          docker run --rm --pull always -v $(pwd):/project \
+             ghcr.io/typo3-documentation/render-guides:latest --config=Documentation --no-progress --fail-on-log

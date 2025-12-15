@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Flowd\Typo3Firewall\Backend\Controller;
@@ -17,8 +18,7 @@ class FirewallController extends ActionController
 {
     public function __construct(
         private readonly ModuleTemplateFactory $moduleTemplateFactory,
-    ) {
-    }
+    ) {}
 
     public function overviewAction(): ResponseInterface
     {

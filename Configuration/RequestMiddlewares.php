@@ -1,8 +1,11 @@
 <?php
+
+use Flowd\Phirewall\Middleware;
+
 return [
     'frontend' => [
         'flowd/typo3-firewall' => [
-            'target' => \Flowd\Phirewall\Middleware::class,
+            'target' => Middleware::class,
             'after' => [
                 'typo3/cms-frontend/timetracker',
             ],

@@ -7,6 +7,7 @@ namespace Flowd\Typo3Firewall\Pattern;
 use Flowd\Phirewall\Pattern\PatternBackendInterface;
 use Flowd\Phirewall\Pattern\PatternEntry;
 use Flowd\Phirewall\Pattern\PatternSnapshot;
+use Flowd\Typo3Firewall\Writer\FileArrayWriter;
 
 /**
  * Pattern backend that persists patterns into a PHP file returning an array.
@@ -14,42 +15,74 @@ use Flowd\Phirewall\Pattern\PatternSnapshot;
  */
 final class PhpArrayPatternBackend implements PatternBackendInterface
 {
-    private const MAX_ENTRIES = self::MAX_ENTRIES_DEFAULT;
+    /** @var int */
+    private const MAX_ENTRIES = PatternBackendInterface::MAX_ENTRIES_DEFAULT;
 
-    private int $now;
+    private readonly int $now;
+
+    private readonly FileArrayWriter $fileArrayWriter;
 
     public function __construct(private readonly string $filePath, int $now = null)
     {
         $this->now = $now ?? time();
+        $this->fileArrayWriter = new FileArrayWriter($filePath);
     }
 
     public function consume(): PatternSnapshot
     {
-        $this->ensureDirectory();
-        $this->ensureFileExists();
-
+        $this->fileArrayWriter->ensureDirectory();
+        $this->fileArrayWriter->ensureFileExists();
         clearstatcache(false, $this->filePath);
         $mtime = @filemtime($this->filePath);
         if ($mtime === false) {
             $mtime = $this->now;
         }
 
-        $raw = $this->readArray();
-        $entries = [];
-        foreach ($raw as $row) {
-            $patternEntry = $this->rowToPatternEntry($row);
-            if ($patternEntry instanceof PatternEntry) {
-                $entries[] = $patternEntry;
-            }
-        }
-
+        $raw = $this->fileArrayWriter->readArray();
+        $entries = array_map($this->rowToPatternEntry(...), $raw);
         return new PatternSnapshot($entries, $mtime, $this->filePath);
     }
 
     /**
-     * @param array<mixed> $row
+     * @param array<string, mixed> $row
      */
-    private function rowToPatternEntry(array $row): ?PatternEntry
+    private function rowToPatternEntry(array $row): PatternEntry
+    {
+        $row = $this->ensureRowScalars($row);
+        $metadata = $this->extractMetadata($row);
+        return new PatternEntry(
+            kind: is_string($row['kind'] ?? null) ? $row['kind'] : '',
+            value: is_string($row['value'] ?? null) ? $row['value'] : '',
+            target: isset($row['target']) && is_string($row['target']) ? $row['target'] : null,
+            expiresAt: isset($row['expiresAt']) && is_int($row['expiresAt']) ? $row['expiresAt'] : null,
+            addedAt: isset($row['addedAt']) && is_int($row['addedAt']) ? $row['addedAt'] : null,
+            metadata: $metadata,
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, bool|float|int|string>
+     */
+    private function extractMetadata(array $row): array
+    {
+        $metadata = [];
+        if (isset($row['metadata']) && is_array($row['metadata'])) {
+            $metadata = array_filter($row['metadata'], is_scalar(...));
+        }
+
+        if (isset($row['id']) && is_string($row['id'])) {
+            $metadata['id'] = $row['id'];
+        }
+
+        return $metadata;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private function ensureRowScalars(array $row): array
     {
         foreach ($row as $key => $val) {
             if ($key !== 'metadata') {
@@ -57,39 +90,21 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
             }
         }
 
-        $metadata = is_array($row['metadata'] ?? null) ? $row['metadata'] : [];
-        if (isset($row['id'])) {
-            $metadata['id'] = $row['id'];
-        }
-
-        return new PatternEntry(
-            kind: (string)$row['kind'],
-            value: (string)$row['value'],
-            target: isset($row['target']) ? (string)$row['target'] : null,
-            expiresAt: isset($row['expiresAt']) ? (int)$row['expiresAt'] : null,
-            addedAt: isset($row['addedAt']) ? (int)$row['addedAt'] : null,
-            metadata: $metadata,
-        );
+        return $row;
     }
 
-    /**
-     * @param mixed $value
-     * @return ?scalar
-     */
-    private function ensureScalarValue(mixed $value): mixed
+    private function ensureScalarValue(mixed $value): bool|float|int|string|null
     {
-        if (!is_scalar($value) && $value !== null) {
-            return null;
+        if (is_scalar($value) || $value === null) {
+            return $value;
         }
-        return $value;
+
+        return null;
     }
 
-    /**
-     * Remove entry by its unique hash id in the array file.
-     */
     public function removeById(string $id): void
     {
-        $data = $this->readArray();
+        $data = $this->fileArrayWriter->readArray();
         $found = false;
         foreach ($data as $idx => $row) {
             if (($row['id'] ?? null) === $id) {
@@ -100,32 +115,46 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
         }
 
         if ($found) {
-            $this->writeArray($data);
+            $this->fileArrayWriter->writeArray(array_values($data));
         }
     }
 
-    /**
-     * Generate a stable hash for a pattern entry (kind, value, target).
-     */
     private function generatePatternHash(PatternEntry $patternEntry): string
     {
-        return sha1($patternEntry->kind . '|' . $patternEntry->value . '|' . ($patternEntry->target ?? ''));
+        return hash('sha256', $patternEntry->kind . '|' . $patternEntry->value . '|' . ($patternEntry->target ?? ''));
     }
 
     public function append(PatternEntry $patternEntry): void
     {
-        $this->ensureDirectory();
-        $this->ensureFileExists();
+        $this->fileArrayWriter->ensureDirectory();
+        $this->fileArrayWriter->ensureFileExists();
 
         $now = $this->now;
-        $data = $this->readArray();
-
-        // Generate or keep id (hash)
+        $data = $this->fileArrayWriter->readArray();
         $id = $patternEntry->metadata['id'] ?? null;
         if (!is_string($id) || $id === '') {
             $id = $this->generatePatternHash($patternEntry);
         }
 
+        $row = $this->createRow($patternEntry, $id, $now);
+        if (count($data) >= self::MAX_ENTRIES) {
+            throw new \RuntimeException(sprintf('Pattern file exceeds maximum entries (%d).', self::MAX_ENTRIES), 6857001936);
+        }
+
+        if ($this->updateIfDuplicate($data, $row)) {
+            $this->fileArrayWriter->writeArray(array_values($data));
+            return;
+        }
+
+        $data[] = $row;
+        $this->fileArrayWriter->writeArray(array_values($data));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function createRow(PatternEntry $patternEntry, string $id, int $now): array
+    {
         $row = [
             'id' => $id,
             'kind' => $patternEntry->kind,
@@ -136,36 +165,32 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
             'metadata' => $patternEntry->metadata,
         ];
         $row['metadata']['id'] = $id;
+        return $row;
+    }
 
-        // Prevent uncontrolled growth
-        if (count($data) >= self::MAX_ENTRIES) {
-            throw new \RuntimeException(sprintf('Pattern file exceeds maximum entries (%d).', self::MAX_ENTRIES));
-        }
-
-        // De-duplicate simple duplicates (same kind/value/target)
-        $exists = false;
+    /**
+     * @param array<int, array<string, mixed>> $data
+     * @param array<string, mixed> $row
+     * @return bool true if updated
+     */
+    private function updateIfDuplicate(array &$data, array $row): bool
+    {
         foreach ($data as &$existing) {
             if (($existing['kind'] ?? null) === $row['kind']
                 && ($existing['value'] ?? null) === $row['value']
                 && (($existing['target'] ?? null) === $row['target'])) {
-                $existing = array_merge($existing, array_filter($row, static fn($v): bool => $v !== null));
-                $exists = true;
-                break;
+                $existing = array_merge($existing, array_filter($row, static fn(mixed $v): bool => $v !== null));
+                return true;
             }
         }
 
         unset($existing);
-
-        if (!$exists) {
-            $data[] = $row;
-        }
-
-        $this->writeArray($data);
+        return false;
     }
 
     public function pruneExpired(): void
     {
-        $data = $this->readArray();
+        $data = $this->fileArrayWriter->readArray();
         $now = $this->now;
         $data = array_values(array_filter($data, static function (array $row) use ($now): bool {
             $expiresAt = $row['expiresAt'] ?? null;
@@ -175,7 +200,7 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
 
             return ((int)$expiresAt) > $now;
         }));
-        $this->writeArray($data);
+        $this->fileArrayWriter->writeArray($data);
     }
 
     public function type(): string
@@ -197,81 +222,10 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
     }
 
     /**
-     * Return raw array representation for UI usage.
-     *
      * @return list<array<string, mixed>>
      */
     public function listRaw(): array
     {
-        return $this->readArray();
-    }
-
-    /**
-     * Remove entry by its numeric index in the array file.
-     */
-    public function removeAt(int $index): void
-    {
-        $data = $this->readArray();
-        if (!isset($data[$index])) {
-            return;
-        }
-
-        array_splice($data, $index, 1);
-        $this->writeArray($data);
-    }
-
-    private function ensureDirectory(): void
-    {
-        $dir = \dirname($this->filePath);
-        if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
-            throw new \RuntimeException(sprintf('Cannot create directory: %s', $dir));
-        }
-    }
-
-    private function ensureFileExists(): void
-    {
-        if (!@is_file($this->filePath)) {
-            $this->writeArray([]);
-        }
-    }
-
-    /**
-     * @return list<array<mixed>>
-     */
-    private function readArray(): array
-    {
-        if (!@is_file($this->filePath)) {
-            return [];
-        }
-
-        $data = @include $this->filePath;
-        if (!\is_array($data)) {
-            return [];
-        }
-
-        // ensure list semantics
-        $data = array_filter($data, static fn($item): bool => is_array($item));
-
-        return array_values($data);
-    }
-
-    /**
-     * @param list<array<string, mixed>> $data
-     */
-    private function writeArray(array $data): void
-    {
-        $this->ensureDirectory();
-        $tmp = $this->filePath . '.tmp';
-        $php = "<?php\nreturn " . var_export($data, true) . ";\n";
-        if (@file_put_contents($tmp, $php) === false) {
-            throw new \RuntimeException(sprintf('Cannot write temp pattern file: %s', $tmp));
-        }
-
-        // fallback: write directly
-        if (!@rename($tmp, $this->filePath) && @file_put_contents($this->filePath, $php) === false) {
-            throw new \RuntimeException(sprintf('Cannot write pattern file: %s', $this->filePath));
-        }
-
-        @chmod($this->filePath, 0664);
+        return $this->fileArrayWriter->readArray();
     }
 }

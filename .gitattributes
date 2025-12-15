@@ -21,6 +21,14 @@
 *.sql text eol=lf
 *.txt text eol=lf
 
-/.* export-ignore
-/Documentation export-ignore
-/Tests export-ignore
+/.Build/ export-ignore
+/.editorconfig export-ignore
+/.gitattributes export-ignore
+/.github/ export-ignore
+/.gitignore export-ignore
+/Build/ export-ignore
+/Tests/ export-ignore
+/package-lock.json export-ignore
+/package.json export-ignore
+/phive.xml export-ignore
+/tools/ export-ignore binary

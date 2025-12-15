@@ -86,7 +86,7 @@
                         <f:for each="{patterns}" as="row" iteration="it">
                             <tr>
                                 <td>{it.index}</td>
-                                <td><code>{row.kind}</code></td>
+                                <td><code><f:translate key="kind.{row.kind}" default="{row.kind}" /></code></td>
                                 <td><code><f:format.htmlspecialchars>{row.value}</f:format.htmlspecialchars></code></td>
                                 <td><code><f:format.htmlspecialchars>{row.target}</f:format.htmlspecialchars></code></td>
                                 <td>
@@ -151,11 +151,6 @@
                             <td><f:translate key="examples.table.path_prefix.description" /></td>
                         </tr>
                         <tr>
-                            <td><f:translate key="examples.table.path_substring.kind" /></td>
-                            <td><code><f:translate key="examples.table.path_substring.value" /></code></td>
-                            <td><f:translate key="examples.table.path_substring.description" /></td>
-                        </tr>
-                        <tr>
                             <td><f:translate key="examples.table.path_exact.kind" /></td>
                             <td><code><f:translate key="examples.table.path_exact.value" /></code></td>
                             <td><f:translate key="examples.table.path_exact.description" /></td>
@@ -172,7 +167,16 @@
                         </tr>
                         <tr>
                             <td><f:translate key="examples.table.header_regex.kind" /></td>
-                            <td><code><f:translate key="examples.table.header_regex.value" /></code></td>
+                            <td>
+                                <nobr>
+                                    <f:translate key="examples.table.header_regex.value.prefix" />
+                                    <code><f:translate key="examples.table.header_regex.value" /></code><br />
+                                </nobr>
+                                <nobr>
+                                    <f:translate key="examples.table.header_regex.target.prefix" />
+                                    <code><f:translate key="examples.table.header_regex.target" /></code>
+                                </nobr>
+                            </td>
                             <td><f:translate key="examples.table.header_regex.description" /></td>
                         </tr>
                     </tbody>
