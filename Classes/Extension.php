@@ -45,7 +45,7 @@ final class Extension
         $vendorPharFile = GeneralUtility::getFileAbsFileName('EXT:firewall/Resources/Private/Php/vendors.phar');
 
         if (file_exists($vendorPharFile)) {
-            require 'phar://' . $vendorPharFile . '/vendor/autoload.php';
+            require_once 'phar://' . $vendorPharFile . '/vendor/autoload.php';
         }
     }
 }
