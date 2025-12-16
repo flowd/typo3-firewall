@@ -27,11 +27,7 @@ class ConfigFactory
             }
 
             if ($config instanceof Config) {
-                $config->addPatternBackend(
-                    'typo3-managed-patterns',
-                    new PhpArrayPatternBackend(Environment::getConfigPath() . '/system/phirewall.patterns.php')
-                );
-                return $config;
+                return $this->addTypo3ManagedPatternsBlocklist($config);
             }
         }
 
@@ -40,11 +36,15 @@ class ConfigFactory
 
     private function getDefaultConfig(): Config
     {
-        return (new Config(new InMemoryCache(), $this->eventDispatcher))
-            ->addPatternBackend(
-                'typo3-managed-patterns',
-                new PhpArrayPatternBackend(Environment::getConfigPath() . '/system/phirewall.patterns.php')
-            );
+        return $this->addTypo3ManagedPatternsBlocklist(new Config(new InMemoryCache(), $this->eventDispatcher));
+    }
+
+    private function addTypo3ManagedPatternsBlocklist(Config $config): Config
+    {
+        return $config->addPatternBackend(
+            'typo3-managed-patterns',
+            new PhpArrayPatternBackend(Environment::getConfigPath() . '/system/phirewall.patterns.php')
+        )->blocklistFromBackend('typo3-blocklist', 'typo3-managed-patterns');
     }
 
     private function getConfigurationPath(): string
