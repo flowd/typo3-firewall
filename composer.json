@@ -23,6 +23,7 @@
 		"typo3/cms-core": "^12.4 || ^13.4 || ^14.0"
 	},
 	"require-dev": {
+		"clue/phar-composer": "*",
 		"ergebnis/composer-normalize": "2.48.2",
 		"friendsofphp/php-cs-fixer": "3.92.0",
 		"helmich/typo3-typoscript-lint": "^3.3.0",
@@ -47,8 +48,7 @@
 		"tomasvotruba/type-coverage": "1.0.0 || 2.0.2",
 		"typo3/cms-fluid-styled-content": "^12.4 || ^13.4",
 		"typo3/coding-standards": "0.8.0",
-		"typo3/testing-framework": "8.2.7",
-		"webit-de/typo3-extemconf-to-composer-converter": "^2.0"
+		"typo3/testing-framework": "8.2.7"
 	},
 	"replace": {
 		"typo3-ter/firewall": "self.version"
