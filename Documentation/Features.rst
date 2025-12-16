@@ -15,7 +15,7 @@ Configuration overview
 ----------------------
 
 - Core Phirewall configuration: ``config/system/phirewall.php``
-- Static custom patterns managed by this extension: ``config/system/phirewall.patterns.php``
+- Static custom patterns managed by the firewall backend module: ``config/system/phirewall.patterns.php``
 
 Usage Examples
 ==============
@@ -168,3 +168,38 @@ Using InMemoryCache as a cache backend (not recommended for production)
     When using ``InMemoryCache``, only block rules work. Throttling and Fail2Ban do not work as request counts
     cannot be stored between requests. This backend is only suitable for testing or CLI environments,
     not for production use.
+
+Using a custom response for blocked requests
+------------------------------------------
+
+With this example, a custom response is returned when a request is blocked.
+This can be tested by accessing a blocked path (e.g. ``/wp_admin``).
+You should get a 403 response with a custom message.
+
+.. code-block:: php
+
+    <?php
+    use Flowd\Phirewall\Config;
+    use Flowd\Phirewall\Store\InMemoryCache;
+    use Psr\EventDispatcher\EventDispatcherInterface;
+    use TYPO3\CMS\Core\Http\ResponseFactory;
+
+    return fn (EventDispatcherInterface $eventDispatcher) =>
+        (new Config(
+            new InMemoryCache(),
+            $eventDispatcher
+        ))
+        ->blocklist(
+            name: 'blocked-uri-paths',
+            callback: function (ServerRequestInterface $request): bool {
+                $path = strtolower($request->getUri()->getPath());
+                return str_contains($path, '/wp_admin');
+            }
+        )
+        ->blocklistedResponse(function ($rule, $type, $serverRequest) {
+            return (new ResponseFactory)
+                ->createResponse()
+                ->withBody((new \TYPO3\CMS\Core\Http\StreamFactory())->createStream('Access denied by firewall rule: ' . $rule . ' (type: ' . $type . ')'))
+                ->withHeader('Content-Type', 'text/plain')
+                ->withStatus(403);
+        });

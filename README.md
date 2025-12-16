@@ -1,7 +1,7 @@
 # Application Firewall based on flowd/phirewall
 
 This package provides an application firewall implementation based on the `flowd/phirewall` library.
-It includes support for defining custom rules or loading and enforcing rules from the OWASP ModSecurity 
+It includes support for defining custom rules or loading and enforcing rules from the OWASP ModSecurity
 Core Rule Set (CRS) version 4.20.0.
 
 ## Features
@@ -17,10 +17,12 @@ You can install this package via Composer:
 ```bash
 composer require flowd/typo3-firewall
 ```
+
 ## Usage
 Here is a basic example of how to use the firewall.
 
-Create a Phirewall configuration in your application configuration folder.
+Create a Phirewall configuration in your application configuration folder (`/config/system/phirewall.php`).
+Please check the "flowd/phirewall" documentation for more details on configuration options.
 
 ```php
 <?php // /config/system/phirewall.php
