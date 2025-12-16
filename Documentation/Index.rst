@@ -39,7 +39,7 @@ Further information
 * Patterns are stored in the file ``config/system/phirewall.patterns.php``.
 * The extension follows TYPO3 core conventions and can be extended easily.
 
-..  toctree::
+..  menu::
     :maxdepth: 1
     :titlesonly:
 
