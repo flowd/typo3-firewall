@@ -1,68 +1,164 @@
-# Application Firewall based on flowd/phirewall
+# TYPO3 Firewall Extension
 
-This package provides an application firewall implementation based on the `flowd/phirewall` library.
-It includes support for defining custom rules or loading and enforcing rules from the OWASP ModSecurity
-Core Rule Set (CRS) version 4.20.0.
+This extension adds a simple but powerful firewall to your TYPO3 site. It helps protect your website from unwanted traffic, bots, and attacks. You can block or limit requests based on IP, path, or other patterns.
 
-## Features
-- Define custom firewall rules using a flexible rule syntax.
-- Load and enforce OWASP CRS v4.20.0 rules for web application security.
-- Support for common variables, operators, and actions defined in the CRS.
-- Integration with PSR-7 HTTP message interfaces for request inspection.
-- Configurable diagnostics and observability options.
-- Extensible architecture for adding new rules, variables, and operators.
+## Key Features
+- Block requests from specific IPs or patterns
+- Limit how often users can access certain pages (rate limiting)
+- Temporarily block users after repeated abuse (like Fail2Ban)
+- Easy to configure with PHP
+- Works with Redis, APCu, or in-memory cache
 
 ## Installation
-You can install this package via Composer:
+Install with Composer:
+
 ```bash
 composer require flowd/typo3-firewall
 ```
 
-## Usage
-Here is a basic example of how to use the firewall.
-
-Create a Phirewall configuration in your application configuration folder (`/config/system/phirewall.php`).
-Please check the "flowd/phirewall" documentation for more details on configuration options.
+## Quick Start Example
+Add a file at `config/system/phirewall.php` in your TYPO3 project. This example blocks requests to `/wp_admin` using APCu as the cache backend.
 
 ```php
-<?php // /config/system/phirewall.php
+<?php
+use Flowd\Phirewall\Config;
+use Flowd\Phirewall\Store\ApcuCache;
+use Psr\EventDispatcher\EventDispatcherInterface;
 
+return fn(EventDispatcherInterface $eventDispatcher) =>
+    (new Config(new ApcuCache(), $eventDispatcher))
+        ->blocklist(
+            name: 'block-wp-admin',
+            callback: fn($request) => str_contains(strtolower($request->getUri()->getPath()), '/wp_admin')
+        );
+```
+
+## More Examples
+
+### 1. Block Requests from Certain IPs
+This example blocks requests from known bad IP addresses using InMemory as the cache backend as no rate limiting is used.
+
+```php
+<?php
+use Flowd\Phirewall\Config;
+use Flowd\Phirewall\Store\ApcuCache;
+use Psr\EventDispatcher\EventDispatcherInterface;
+
+return fn(EventDispatcherInterface $eventDispatcher) =>
+    (new Config(new ApcuCache(), $eventDispatcher))
+        ->blocklist(
+            name: 'block-bad-ips',
+            callback: fn($request) => in_array($request->getServerParams()['REMOTE_ADDR'] ?? '', [
+                '176.65.149.61',
+                '45.13.214.201',
+            ], true)
+        );
+```
+
+### 2. Rate Limiting
+This example limits users to 10 requests every 10 seconds (per IP) and sends rate limit headers.
+This requires a cache backend that persists between requests, like APCu or Redis.
+
+```php
+<?php
 use Flowd\Phirewall\Config;
 use Flowd\Phirewall\KeyExtractors;
 use Flowd\Phirewall\Store\ApcuCache;
 use Psr\EventDispatcher\EventDispatcherInterface;
-use Psr\Http\Message\ServerRequestInterface;
 
-// Phirewall configuration with ApcuCache for single-server setup.
-return fn(EventDispatcherInterface $eventDispatcher) => (new Config(new ApcuCache(), $eventDispatcher))
-    ->blocklist(
-        name: 'evil-bot-ips',
-        callback: function (ServerRequestInterface $request) {
-            // block some known evil bot IPs - this is just an example
-            return in_array(KeyExtractors::ip()($request), ['176.65.149.61', '45.13.214.201']);
-        },
-    )->blocklist(
-        name: 'blocked-uri-patterns',
-        callback: function (ServerRequestInterface $request) {
-            $uri = strtolower($request->getUri());
-            return str_contains($uri, 'xdebug')
-                || str_contains($uri, 'option=com_')
-                || str_contains($uri, '/admin/');
-        },
-    )->fail2ban(
-    // Fail2Ban-like rule: block IPs for 1 minute that access /search more than 5 times in 10 seconds
-        name: 'search-page-scrapers',
-        threshold: 5,
-        period: 10,
-        ban: 60,
-        filter: function (ServerRequestInterface $request) {
-            return$request->getUri()->getPath() === '/search';
-        },
-        key: KeyExtractors::ip()
-    )->throttle(
-        name: 'slow-down-to-10-requests-in-10-seconds',
-        limit: 10,
-        period: 10,
-        key: KeyExtractors::ip()
-    )->enableRateLimitHeaders();
+return fn(EventDispatcherInterface $eventDispatcher) =>
+    (new Config(new ApcuCache(), $eventDispatcher))
+        ->throttle(
+            name: 'limit-requests',
+            limit: 10,
+            period: 10,
+            key: KeyExtractors::ip()
+        )
+        ->enableRateLimitHeaders();
 ```
+
+### 3. Temporary Blocking After Abuse (Fail2Ban)
+This example blocks users for 1 minute if they access `/search` more than 5 times in 10 seconds.
+
+```php
+<?php
+use Flowd\Phirewall\Config;
+use Flowd\Phirewall\KeyExtractors;
+use Flowd\Phirewall\Store\ApcuCache;
+use Psr\EventDispatcher\EventDispatcherInterface;
+
+return fn(EventDispatcherInterface $eventDispatcher) =>
+    (new Config(new ApcuCache(), $eventDispatcher))
+        ->fail2ban(
+            name: 'block-search-abuse',
+            threshold: 5,
+            period: 10,
+            ban: 60,
+            filter: fn($request) => str_starts_with($request->getUri()->getPath(), '/search'),
+            key: KeyExtractors::ip()
+        );
+```
+
+### 4. Using Redis as a Cache Backend
+This example uses Redis for the cache backend, which is recommended for production and multi-server setups.
+
+```php
+<?php
+use Flowd\Phirewall\Config;
+use Flowd\Phirewall\Store\RedisCache;
+use Predis\Client;
+use Psr\EventDispatcher\EventDispatcherInterface;
+
+return fn(EventDispatcherInterface $eventDispatcher) =>
+    (new Config(new RedisCache(new Client('redis://localhost:6379')), $eventDispatcher))
+        ->blocklist(
+            name: 'block-wp-admin',
+            callback: fn($request) => str_contains(strtolower($request->getUri()->getPath()), '/wp_admin')
+        );
+```
+
+### 5. Using InMemoryCache (Testing Only)
+This example uses InMemoryCache, which is only suitable for testing or CLI environments. Only block rules work; rate limiting and Fail2Ban do not persist between requests.
+
+```php
+<?php
+use Flowd\Phirewall\Config;
+use Flowd\Phirewall\Store\InMemoryCache;
+use Psr\EventDispatcher\EventDispatcherInterface;
+
+return fn(EventDispatcherInterface $eventDispatcher) =>
+    (new Config(new InMemoryCache(), $eventDispatcher))
+        ->blocklist(
+            name: 'block-wp-admin',
+            callback: fn($request) => str_contains(strtolower($request->getUri()->getPath()), '/wp_admin')
+        );
+// ⚠️ With InMemoryCache, only block rules work. Rate limiting and Fail2Ban do not work between requests.
+```
+
+### 6. Custom Response for Blocked Requests
+This example shows how to return a custom message and status code when a request is blocked.
+
+```php
+<?php
+use Flowd\Phirewall\Config;
+use Flowd\Phirewall\Store\ApcuCache;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use TYPO3\CMS\Core\Http\ResponseFactory;
+use TYPO3\CMS\Core\Http\StreamFactory;
+
+return fn(EventDispatcherInterface $eventDispatcher) =>
+    (new Config(new ApcuCache(), $eventDispatcher))
+        ->blocklist(
+            name: 'block-wp-admin',
+            callback: fn($request) => str_contains(strtolower($request->getUri()->getPath()), '/wp_admin')
+        )
+        ->blocklistedResponse(function ($rule, $type, $request) {
+            return (new ResponseFactory())
+                ->createResponse()
+                ->withBody((new StreamFactory())->createStream('Access denied by firewall rule: ' . $rule . ' (type: ' . $type . ')'))
+                ->withStatus(403);
+        });
+```
+
+## Need More?
+See the full documentation in `Documentation/Features.rst` for advanced usage and more examples.
