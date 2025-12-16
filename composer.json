@@ -23,7 +23,6 @@
 		"typo3/cms-core": "^12.4 || ^13.4 || ^14.0"
 	},
 	"require-dev": {
-		"clue/phar-composer": "*",
 		"ergebnis/composer-normalize": "2.48.2",
 		"friendsofphp/php-cs-fixer": "3.92.0",
 		"helmich/typo3-typoscript-lint": "^3.3.0",
