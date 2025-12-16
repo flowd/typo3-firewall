@@ -22,7 +22,7 @@ final class PhpArrayPatternBackend implements PatternBackendInterface
 
     private readonly FileArrayWriter $fileArrayWriter;
 
-    public function __construct(private readonly string $filePath, int $now = null)
+    public function __construct(private readonly string $filePath, ?int $now = null)
     {
         $this->now = $now ?? time();
         $this->fileArrayWriter = new FileArrayWriter($filePath);
