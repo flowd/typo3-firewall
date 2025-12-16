@@ -15,7 +15,7 @@ Configuration overview
 ----------------------
 
 - Core Phirewall configuration: ``config/system/phirewall.php``
-- Static custom patterns managed by this extension: ``config/system/phirewall.patterns.php``
+- Static custom patterns managed by the firewall backend module: ``config/system/phirewall.patterns.php``
 
 Usage Examples
 ==============

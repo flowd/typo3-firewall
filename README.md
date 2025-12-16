@@ -17,10 +17,12 @@ You can install this package via Composer:
 ```bash
 composer require flowd/typo3-firewall
 ```
+
 ## Usage
 Here is a basic example of how to use the firewall.
 
-Create a Phirewall configuration in your application configuration folder.
+Create a Phirewall configuration in your application configuration folder (`/config/system/phirewall.php`).
+Please check the "flowd/phirewall" documentation for more details on configuration options.
 
 ```php
 <?php // /config/system/phirewall.php

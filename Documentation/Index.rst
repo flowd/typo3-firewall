@@ -21,8 +21,7 @@ Phirewall itself is configured in the core configuration file::
 
    config/system/phirewall.php
 
-All details and advanced features can be found in the official Phirewall documentation:
-https://github.com/flowd/phirewall
+All details and advanced features can be found in the official Phirewall documentation: https://github.com/flowd/phirewall
 
 2. Manage static block patterns in the TYPO3 backend
 ----------------------------------------------------
