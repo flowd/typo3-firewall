@@ -6,6 +6,7 @@ namespace Flowd\Typo3Firewall;
 
 use Flowd\Phirewall\Config;
 use Flowd\Phirewall\Store\InMemoryCache;
+use Flowd\Typo3Firewall\Pattern\PhpArrayPatternBackend;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\EventDispatcher\EventDispatcher;
@@ -26,6 +27,10 @@ class ConfigFactory
             }
 
             if ($config instanceof Config) {
+                $config->addPatternBackend(
+                    'typo3-managed-patterns',
+                    new PhpArrayPatternBackend(Environment::getConfigPath() . '/system/phirewall.patterns.php')
+                );
                 return $config;
             }
         }
@@ -35,7 +40,11 @@ class ConfigFactory
 
     private function getDefaultConfig(): Config
     {
-        return new Config(new InMemoryCache(), $this->eventDispatcher);
+        return (new Config(new InMemoryCache(), $this->eventDispatcher))
+            ->addPatternBackend(
+                'typo3-managed-patterns',
+                new PhpArrayPatternBackend(Environment::getConfigPath() . '/system/phirewall.patterns.php')
+            );
     }
 
     private function getConfigurationPath(): string

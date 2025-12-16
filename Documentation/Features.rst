@@ -117,35 +117,6 @@ Rate limiting with clear client feedback
         )
         ->enableRateLimitHeaders();
 
-Using a simple PHP pattern file, like the one managed in TYPO3 backend
----------------------------------------------------------------------
-
-.. code-block:: php
-
-    <?php
-    use Flowd\Phirewall\Config;
-    use Flowd\Phirewall\Store\RedisCache;
-    use Flowd\Typo3Firewall\Pattern\PhpArrayPatternBackend;
-    use Predis\Client;
-    use Psr\EventDispatcher\EventDispatcherInterface;
-
-    return fn (EventDispatcherInterface $eventDispatcher) =>
-        (new Config(
-            new RedisCache(new Client('redis://localhost:6379')),
-            $eventDispatcher
-        ))
-        ->blocklist(
-            name: 'blocked-uri-paths',
-            callback: function (ServerRequestInterface $request): bool {
-                $path = strtolower($request->getUri()->getPath());
-                return str_contains($path, '/wp_admin');
-            }
-        )
-        ->addPatternBackend(
-            'php-array',
-            new PhpArrayPatternBackend(__DIR__ . '/phirewall.patterns.php')
-        );
-
 Using APCu as a cache backend
 ----------------------------
 
@@ -167,10 +138,6 @@ Using APCu as a cache backend
                 $path = strtolower($request->getUri()->getPath());
                 return str_contains($path, '/wp_admin');
             }
-        )
-        ->addPatternBackend(
-            'php-array',
-            new PhpArrayPatternBackend(__DIR__ . '/phirewall.patterns.php')
         );
 
 Using InMemoryCache as a cache backend (not recommended for production)
@@ -194,10 +161,6 @@ Using InMemoryCache as a cache backend (not recommended for production)
                 $path = strtolower($request->getUri()->getPath());
                 return str_contains($path, '/wp_admin');
             }
-        )
-        ->addPatternBackend(
-            'php-array',
-            new PhpArrayPatternBackend(__DIR__ . '/phirewall.patterns.php')
         );
 
 .. note::
