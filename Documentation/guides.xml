@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<guides xmlns="https://www.phpdoc.org/guides"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="https://www.phpdoc.org/guides ../.Build/vendor/phpdocumentor/guides-cli/resources/schema/guides.xsd"
+        links-are-relative="true"
+>
+    <extension class="\T3Docs\Typo3DocsTheme\DependencyInjection\Typo3DocsThemeExtension"
+               project-home="https://extensions.typo3.org/extension/firewall/"
+               project-contact="https://typo3.slack.com/archives/C09HEK1PFEK"
+               project-repository="https://github.com/flowd/typo3-firewall"
+               project-issues="https://github.com/flowd/typo3-firewall/issues"
+               edit-on-github-branch="main"
+               edit-on-github="flowd/typo3-firewall"
+               typo3-core-preferred="main"
+    />
+    <project title="Firwall" release="0.1.4" copyright="since 20250 by Sascha Egerer"/>
+    <inventory id="t3coreapi" url="https://docs.typo3.org/m/typo3/reference-coreapi/main/en-us/"/>
+</guides>
