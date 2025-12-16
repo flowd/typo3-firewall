@@ -4,7 +4,7 @@
 Phirewall
 ====================
 
-This extension uses the open-source package `phirewall` as its technical foundation. The full documentation and all features can be found at:
+This extension uses the open-source package `flowd/phirewall` as its technical foundation. The full documentation and all features can be found at:
 
 https://github.com/flowd/phirewall
 

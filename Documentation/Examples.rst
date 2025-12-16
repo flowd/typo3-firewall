@@ -1,0 +1,193 @@
+..  include:: Includes.txt
+
+====================
+Examples
+====================
+
+Key features of the Firewall extension:
+
+- Integration of the Phirewall package (see :doc:`Phirewall`)
+- Management of static block patterns in the backend
+- Support for various pattern types (IP, CIDR, path, header, user agent, regex)
+- Expiration date for patterns (expiresAt)
+
+Configuration overview
+----------------------
+
+- Core Phirewall configuration: ``config/system/phirewall.php``
+- Static custom patterns managed by the firewall backend module: ``config/system/phirewall.patterns.php``
+
+Usage Examples
+==============
+
+Below are practical examples of configuring the firewall in a TYPO3 context.
+
+Blocking common scanner requests and known bot IPs
+--------------------------------------------------
+
+This example blocks requests from known bad IP addresses and certain paths or query strings. It uses InMemoryCache, which is fine for simple blocklists (no rate limiting).
+
+.. code-block:: php
+
+    <?php
+    use Flowd\Phirewall\Config;
+    use Flowd\Phirewall\Store\InMemoryCache;
+    use Psr\EventDispatcher\EventDispatcherInterface;
+
+    return fn (EventDispatcherInterface $eventDispatcher) =>
+        (new Config(new InMemoryCache(), $eventDispatcher))
+            ->blocklist(
+                name: 'evil-bot-ips',
+                callback: fn(ServerRequestInterface $request) => in_array($request->getServerParams()['REMOTE_ADDR'] ?? '', [
+                    '176.65.149.61',
+                    '45.13.214.201',
+                ], true)
+            )
+            ->blocklist(
+                name: 'blocked-uri-paths',
+                callback: fn(ServerRequestInterface $request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
+            )
+            ->blocklist(
+                name: 'blocked-uri-query-strings',
+                callback: fn(ServerRequestInterface $request) => str_contains(strtolower($request->getUri()->getQuery()), 'xdebug')
+                    || str_contains(strtolower($request->getUri()->getQuery()), 'option=com_')
+            );
+
+Temporary blocking after repeated abuse (Fail2Ban)
+--------------------------------------------------
+
+This example blocks users for 1 minute if they access `/search` more than 5 times in 10 seconds. Requires a persistent cache backend like APCu or Redis.
+
+.. code-block:: php
+
+    <?php
+    use Flowd\Phirewall\Config;
+    use Flowd\Phirewall\KeyExtractors;
+    use Flowd\Phirewall\Store\ApcuCache;
+    use Psr\EventDispatcher\EventDispatcherInterface;
+
+    return fn (EventDispatcherInterface $eventDispatcher) =>
+        (new Config(new ApcuCache(), $eventDispatcher))
+            ->fail2ban(
+                name: 'search-page-scrapers',
+                threshold: 5,
+                period: 10,
+                ban: 60,
+                filter: fn($request) => str_starts_with($request->getUri()->getPath(), '/search'),
+                key: KeyExtractors::ip()
+            );
+
+Rate limiting with clear client feedback
+----------------------------------------
+
+This example limits users to 10 requests every 10 seconds (per IP) and sends rate limit headers. Requires a persistent cache backend like APCu or Redis.
+
+.. code-block:: php
+
+    <?php
+    use Flowd\Phirewall\Config;
+    use Flowd\Phirewall\KeyExtractors;
+    use Flowd\Phirewall\Store\ApcuCache;
+    use Psr\EventDispatcher\EventDispatcherInterface;
+
+    return fn (EventDispatcherInterface $eventDispatcher) =>
+        (new Config(new ApcuCache(), $eventDispatcher))
+            ->throttle(
+                name: 'slow-down-to-10-requests-in-10-seconds',
+                limit: 10,
+                period: 10,
+                key: KeyExtractors::ip()
+            )
+            ->enableRateLimitHeaders();
+
+Using APCu as a cache backend
+-----------------------------
+
+This example shows how to use APCu as a cache backend. Use this for single-server setups.
+
+.. code-block:: php
+
+    <?php
+    use Flowd\Phirewall\Config;
+    use Flowd\Phirewall\Store\ApcuCache;
+    use Psr\EventDispatcher\EventDispatcherInterface;
+
+    return fn (EventDispatcherInterface $eventDispatcher) =>
+        (new Config(new ApcuCache(), $eventDispatcher))
+            ->blocklist(
+                name: 'blocked-uri-paths',
+                callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
+            );
+
+Using Redis as a cache backend
+------------------------------
+
+This example uses Redis for the cache backend, which is recommended for production and multi-server setups.
+
+.. code-block:: php
+
+    <?php
+    use Flowd\Phirewall\Config;
+    use Flowd\Phirewall\Store\RedisCache;
+    use Predis\Client;
+    use Psr\EventDispatcher\EventDispatcherInterface;
+
+    return fn (EventDispatcherInterface $eventDispatcher) =>
+        (new Config(new RedisCache(new Client('redis://localhost:6379')), $eventDispatcher))
+            ->blocklist(
+                name: 'blocked-uri-paths',
+                callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
+            );
+
+Using InMemoryCache as a cache backend (not recommended for production)
+-----------------------------------------------------------------------
+
+This example uses InMemoryCache, which is only suitable for testing or CLI environments. Only block rules work; rate limiting and Fail2Ban do not persist between requests.
+
+.. code-block:: php
+
+    <?php
+    use Flowd\Phirewall\Config;
+    use Flowd\Phirewall\Store\InMemoryCache;
+    use Psr\EventDispatcher\EventDispatcherInterface;
+
+    return fn (EventDispatcherInterface $eventDispatcher) =>
+        (new Config(new InMemoryCache(), $eventDispatcher))
+            ->blocklist(
+                name: 'blocked-uri-paths',
+                callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
+            );
+
+.. note::
+
+    When using ``InMemoryCache``, only block rules work. Throttling and Fail2Ban do not work as request counts
+    cannot be stored between requests. This backend is only suitable for testing or CLI environments,
+    not for production use.
+
+Using a custom response for blocked requests
+--------------------------------------------
+
+This example shows how to return a custom message and status code when a request is blocked.
+
+.. code-block:: php
+
+    <?php
+    use Flowd\Phirewall\Config;
+    use Flowd\Phirewall\Store\ApcuCache;
+    use Psr\EventDispatcher\EventDispatcherInterface;
+    use TYPO3\CMS\Core\Http\ResponseFactory;
+    use TYPO3\CMS\Core\Http\StreamFactory;
+
+    return fn (EventDispatcherInterface $eventDispatcher) =>
+        (new Config(new ApcuCache(), $eventDispatcher))
+            ->blocklist(
+                name: 'blocked-uri-paths',
+                callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
+            )
+            ->blocklistedResponse(function ($rule, $type, $request) {
+                return (new ResponseFactory())
+                    ->createResponse()
+                    ->withBody((new StreamFactory())->createStream('Access denied by firewall rule: ' . $rule . ' (type: ' . $type . ')'))
+                    ->withHeader('Content-Type', 'text/plain')
+                    ->withStatus(403);
+            });
