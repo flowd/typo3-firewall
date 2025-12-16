@@ -29,7 +29,7 @@ return fn(EventDispatcherInterface $eventDispatcher) =>
     (new Config(new ApcuCache(), $eventDispatcher))
         ->blocklist(
             name: 'block-wp-admin',
-            callback: fn($request) => str_contains(strtolower($request->getUri()->getPath()), '/wp_admin')
+            callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
         );
 ```
 
@@ -41,11 +41,11 @@ This example blocks requests from known bad IP addresses using InMemory as the c
 ```php
 <?php
 use Flowd\Phirewall\Config;
-use Flowd\Phirewall\Store\ApcuCache;
+use Flowd\Phirewall\Store\InMemoryCache;
 use Psr\EventDispatcher\EventDispatcherInterface;
 
 return fn(EventDispatcherInterface $eventDispatcher) =>
-    (new Config(new ApcuCache(), $eventDispatcher))
+    (new Config(new InMemoryCache(), $eventDispatcher))
         ->blocklist(
             name: 'block-bad-ips',
             callback: fn($request) => in_array($request->getServerParams()['REMOTE_ADDR'] ?? '', [
@@ -113,7 +113,7 @@ return fn(EventDispatcherInterface $eventDispatcher) =>
     (new Config(new RedisCache(new Client('redis://localhost:6379')), $eventDispatcher))
         ->blocklist(
             name: 'block-wp-admin',
-            callback: fn($request) => str_contains(strtolower($request->getUri()->getPath()), '/wp_admin')
+            callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
         );
 ```
 
@@ -130,7 +130,7 @@ return fn(EventDispatcherInterface $eventDispatcher) =>
     (new Config(new InMemoryCache(), $eventDispatcher))
         ->blocklist(
             name: 'block-wp-admin',
-            callback: fn($request) => str_contains(strtolower($request->getUri()->getPath()), '/wp_admin')
+            callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
         );
 // ⚠️ With InMemoryCache, only block rules work. Rate limiting and Fail2Ban do not work between requests.
 ```
@@ -150,7 +150,7 @@ return fn(EventDispatcherInterface $eventDispatcher) =>
     (new Config(new ApcuCache(), $eventDispatcher))
         ->blocklist(
             name: 'block-wp-admin',
-            callback: fn($request) => str_contains(strtolower($request->getUri()->getPath()), '/wp_admin')
+            callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
         )
         ->blocklistedResponse(function ($rule, $type, $request) {
             return (new ResponseFactory())
