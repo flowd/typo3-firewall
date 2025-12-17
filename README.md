@@ -161,4 +161,4 @@ return fn(EventDispatcherInterface $eventDispatcher) =>
 ```
 
 ## Need More?
-See the full documentation in `Documentation/Features.rst` for advanced usage and more examples.
+See `Documentation/Examples.rst` for advanced usage and more examples.
