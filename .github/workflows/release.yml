@@ -20,7 +20,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: 8.5
-          tools: composer:v2, typo3/tailor, clue/phar-composer
+          tools: composer:v2, typo3/tailor
           coverage: none
 
       - name: Reset files
@@ -28,8 +28,7 @@ jobs:
 
       - name: Download vendor files
         run: |
-          composer install -d Resources/Private/Php/ComposerLibraries
-          composer global exec phar-composer build Resources/Private/Php/ComposerLibraries Resources/Private/Php/vendors.phar
+          composer install  --no-autoloader --no-dev --no-scripts --no-plugins -d Resources/Private/Php/ComposerLibraries
 
       - name: Create artefact
         run: |

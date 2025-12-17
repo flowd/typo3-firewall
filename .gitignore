@@ -11,5 +11,4 @@ composer.lock
 /composer.lock
 /generate-documentation.sh
 /var
-/Resources/Private/Php/vendors.phar
 /Resources/Private/Php/ComposerLibraries/vendor
