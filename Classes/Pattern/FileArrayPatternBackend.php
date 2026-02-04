@@ -282,7 +282,6 @@ final class FileArrayPatternBackend implements PatternBackendInterface
     {
         $addedAt = $patternEntry->addedAt ?? $existingRow['addedAt'] ?? $now;
         $lastModifiedAt = null;
-
         if ($isUpdate) {
             $lastModifiedAt = $now;
         }
@@ -293,6 +292,7 @@ final class FileArrayPatternBackend implements PatternBackendInterface
         }
 
         // Remove lastModifiedAt from metadata to avoid duplication since we store it as a direct field
+        // BUT keep the id in metadata as it's needed for update detection
         $metadata = $patternEntry->metadata;
         unset($metadata['lastModifiedAt']);
 

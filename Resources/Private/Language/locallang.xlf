@@ -87,7 +87,7 @@
         <source>Actions</source>
       </trans-unit>
       <trans-unit id="field.expiresAt">
-        <source>Expires at (date/time)</source>
+        <source>Expires at</source>
       </trans-unit>
       <trans-unit id="field.expiresAt.help">
         <source>Optional: Date and time. Leave empty for no automatic expiry.</source>
@@ -226,6 +226,9 @@
       </trans-unit>
       <trans-unit id="examples.table.user_agent.description">
         <source>Blocks requests from this exact User-Agent.</source>
+      </trans-unit>
+      <trans-unit id="note.patternsStorage">
+        <source>Patterns are stored in config/system/phirewall.patterns.json and enforced immediately.</source>
       </trans-unit>
     </body>
   </file>
