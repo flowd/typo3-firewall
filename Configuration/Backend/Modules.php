@@ -14,7 +14,7 @@ return [
         'extensionName' => 'firewall',
         'inheritNavigationComponentFromMainModule' => false,
         'controllerActions' => [
-            FirewallController::class => ['overview', 'create', 'delete', 'prune', 'edit', 'update'],
+            FirewallController::class => ['overview', 'create', 'delete', 'prune', 'update'],
         ],
     ],
 ];

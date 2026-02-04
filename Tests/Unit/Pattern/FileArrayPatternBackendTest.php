@@ -25,7 +25,7 @@ final class FileArrayPatternBackendTest extends TestCase
         parent::setUp();
         $this->testDir = sys_get_temp_dir() . '/typo3_firewall_backend_test_' . bin2hex(random_bytes(8));
         @mkdir($this->testDir, 0777, true);
-        $this->testFile = $this->testDir . '/patterns.php';
+        $this->testFile = $this->testDir . '/patterns.json';
     }
 
     protected function tearDown(): void

@@ -64,8 +64,8 @@ class FirewallController extends ActionController
     {
         try {
             $backend = $this->getBackend();
-            $backend->removeById($id);
             $patternEntry = $patternEntryDto->toPatternEntry();
+            $backend->removeById($id);
             $backend->append($patternEntry);
             $this->addFlashMessage('Pattern updated successfully.');
         } catch (\InvalidArgumentException $invalidArgumentException) {
