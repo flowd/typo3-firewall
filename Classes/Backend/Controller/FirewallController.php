@@ -69,6 +69,7 @@ class FirewallController extends ActionController
             if (!is_array($patternEntryDto->metadata)) {
                 $patternEntryDto->metadata = [];
             }
+
             $patternEntryDto->metadata['id'] = $id;
 
             $patternEntry = $patternEntryDto->toPatternEntry();
