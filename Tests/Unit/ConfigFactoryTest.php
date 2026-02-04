@@ -34,7 +34,6 @@ final class ConfigFactoryTest extends TestCase
         $path = ConfigFactory::getBaseConfigPath();
 
         self::assertNotEmpty($path);
-        self::assertIsString($path);
     }
 
     #[Test]

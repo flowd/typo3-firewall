@@ -64,12 +64,6 @@ class FirewallController extends ActionController
     {
         try {
             $backend = $this->getBackend();
-
-            // Ensure metadata array exists and contains the ID for proper update detection
-            if (!is_array($patternEntryDto->metadata)) {
-                $patternEntryDto->metadata = [];
-            }
-
             $patternEntryDto->metadata['id'] = $id;
 
             $patternEntry = $patternEntryDto->toPatternEntry();

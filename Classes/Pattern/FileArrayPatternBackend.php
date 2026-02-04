@@ -151,20 +151,19 @@ final class FileArrayPatternBackend implements PatternBackendInterface
             $id = $this->generatePatternHash($patternEntry);
         }
 
-        $isUpdate = isset($data[$id]);
-        $existingRow = $isUpdate ? $data[$id] : null;
+        $existingRow = $data[$id] ?? null;
 
-        if (!$isUpdate && count($data) >= self::MAX_ENTRIES) {
+        if ($existingRow === null && count($data) >= self::MAX_ENTRIES) {
             throw new \RuntimeException(
                 sprintf('Pattern file exceeds maximum entries (%d).', self::MAX_ENTRIES),
                 1770244690
             );
         }
 
-        $data[$id] = $this->createRow($patternEntry, $now, $isUpdate, $existingRow);
+        $data[$id] = $this->createRow($patternEntry, $now, $existingRow);
         $this->fileArrayWriter->writeArray($data);
 
-        $this->logger?->info($isUpdate ? 'Firewall pattern updated' : 'Firewall pattern added', [
+        $this->logger?->info($existingRow !== null ? 'Firewall pattern updated' : 'Firewall pattern added', [
             'id' => $id,
             'kind' => $patternEntry->kind,
             'value' => $patternEntry->value,
@@ -278,11 +277,11 @@ final class FileArrayPatternBackend implements PatternBackendInterface
      * @param array<string, mixed>|null $existingRow
      * @return array<string, mixed>
      */
-    private function createRow(PatternEntry $patternEntry, int $now, bool $isUpdate = false, ?array $existingRow = null): array
+    private function createRow(PatternEntry $patternEntry, int $now, ?array $existingRow = null): array
     {
         $addedAt = $patternEntry->addedAt ?? $existingRow['addedAt'] ?? $now;
         $lastModifiedAt = null;
-        if ($isUpdate) {
+        if ($existingRow !== null) {
             $lastModifiedAt = $now;
         }
 
