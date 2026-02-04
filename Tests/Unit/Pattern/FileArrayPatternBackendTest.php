@@ -235,7 +235,7 @@ final class FileArrayPatternBackendTest extends TestCase
     #[Test]
     public function createStaticMethodCreatesWorkingInstance(): void
     {
-        $fileArrayPatternBackend = FileArrayPatternBackend::create($this->testFile);
+        $fileArrayPatternBackend =  new FileArrayPatternBackend($this->testFile, new FileArrayWriter($this->testFile));
 
         // Verify the instance works by calling a method
         self::assertSame('php_array', $fileArrayPatternBackend->type());

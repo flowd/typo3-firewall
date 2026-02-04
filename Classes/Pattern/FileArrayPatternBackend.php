@@ -12,7 +12,7 @@ use Flowd\Typo3Firewall\Writer\FileArrayWriter;
 use Psr\Log\LoggerInterface;
 
 /**
- * Pattern backend that persists patterns into a PHP file returning an array.
+ * Pattern backend that persists patterns into a file returning an array.
  * The file returns a list of associative arrays with keys: kind, value, target, expiresAt, addedAt, metadata.
  */
 final class FileArrayPatternBackend implements PatternBackendInterface
@@ -28,14 +28,6 @@ final class FileArrayPatternBackend implements PatternBackendInterface
         ?int $now = null,
     ) {
         $this->now = $now ?? time();
-    }
-
-    /**
-     * Factory method for convenience when DI is not available.
-     */
-    public static function create(string $filePath, ?int $now = null): self
-    {
-        return new self($filePath, new FileArrayWriter($filePath), null, $now);
     }
 
     public function consume(): PatternSnapshot
