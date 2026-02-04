@@ -6,7 +6,7 @@ includes:
   - ../../.Build/vendor/spaze/phpstan-disallowed-calls/disallowed-loose-calls.neon
 
 parameters:
-  phpVersion: 80200
+  phpVersion: 80300
   treatPhpDocTypesAsCertain: false
 
   parallel:

@@ -1,0 +1,103 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+
+<f:section name="Content">
+    <f:flashMessages />
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <core:icon identifier="actions-open" size="small" />
+                    <strong><f:translate key="edit.title" /></strong>
+                </div>
+                <div class="card-body">
+                    <f:form action="update" method="post" objectName="patternEntryDto">
+                        <f:form.hidden name="id" value="{pattern.id}" />
+
+                        <div class="mb-3">
+                            <label class="form-label" for="firewall-kind">
+                                <f:translate key="field.kind" /> <span class="text-danger">*</span>
+                            </label>
+                            <f:form.select class="form-select" id="firewall-kind" property="kind" required="1" value="{pattern.kind}">
+                                <f:for each="{kinds}" as="kind">
+                                    <f:form.select.option value="{kind}">
+                                        <f:translate key="kind.{kind}" />
+                                    </f:form.select.option>
+                                </f:for>
+                            </f:form.select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="firewall-value">
+                                <f:translate key="field.value" /> <span class="text-danger">*</span>
+                            </label>
+                            <f:form.textfield class="form-control" id="firewall-value" property="value" required="1"
+                                value="{pattern.value}"
+                                placeholder="{f:translate(key: 'field.value.placeholder')}" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="firewall-target">
+                                <f:translate key="field.target" />
+                            </label>
+                            <f:form.textfield class="form-control" id="firewall-target" property="target"
+                                value="{pattern.target}"
+                                placeholder="{f:translate(key: 'field.target.placeholder')}" />
+                            <small class="form-text text-muted">
+                                <f:translate key="field.target.help" />
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="firewall-expiresAt">
+                                <f:translate key="field.expiresAt" />
+                            </label>
+                            <f:form.textfield class="form-control" id="firewall-expiresAt" property="expiresAt"
+                                type="datetime-local" step="1"
+                                value="{f:if(condition: pattern.expiresAt, then: '{pattern.expiresAt -> f:format.date(format: \"Y-m-d\\TH:i:s\")}')}" />
+                            <small class="form-text text-muted">
+                                <f:translate key="field.expiresAt.help" />
+                            </small>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <f:form.button class="btn btn-primary" type="submit">
+                                <core:icon identifier="actions-save" size="small" />
+                                <f:translate key="action.save" />
+                            </f:form.button>
+                            <a href="{f:uri.action(action: 'overview')}" class="btn btn-secondary">
+                                <core:icon identifier="actions-close" size="small" />
+                                <f:translate key="action.cancel" />
+                            </a>
+                        </div>
+                    </f:form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card bg-light">
+                <div class="card-header">
+                    <core:icon identifier="actions-info" size="small" />
+                    <strong><f:translate key="edit.info.title" /></strong>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4"><f:translate key="edit.info.id" /></dt>
+                        <dd class="col-sm-8"><code>{pattern.id}</code></dd>
+
+                        <f:if condition="{pattern.addedAt}">
+                            <dt class="col-sm-4"><f:translate key="edit.info.addedAt" /></dt>
+                            <dd class="col-sm-8">{pattern.addedAt -> f:format.date(format: 'd.m.Y H:i:s')}</dd>
+                        </f:if>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+</f:section>
+
+</html>

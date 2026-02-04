@@ -12,4 +12,4 @@ The TYPO3 backend provides a dedicated module for managing block patterns easily
 - Overview of all active patterns
 - Immediate activation after saving
 
-Patterns are stored in the file ``config/system/phirewall.patterns.php`` and are used directly by the firewall.
+Patterns are stored in the file ``config/system/phirewall.patterns.json`` and are used directly by the firewall.

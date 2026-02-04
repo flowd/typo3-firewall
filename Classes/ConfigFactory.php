@@ -6,7 +6,9 @@ namespace Flowd\Typo3Firewall;
 
 use Flowd\Phirewall\Config;
 use Flowd\Phirewall\Store\InMemoryCache;
-use Flowd\Typo3Firewall\Pattern\PhpArrayPatternBackend;
+use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
+use Flowd\Typo3Firewall\Writer\FileArrayWriter;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\EventDispatcher\EventDispatcher;
@@ -14,12 +16,17 @@ use TYPO3\CMS\Core\EventDispatcher\EventDispatcher;
 #[Autoconfigure(autowire: true)]
 class ConfigFactory
 {
-    public function __construct(private readonly EventDispatcher $eventDispatcher) {}
+    public function __construct(
+        private readonly EventDispatcher $eventDispatcher,
+        private readonly ?LoggerInterface $logger = null,
+    ) {}
 
     public function fromConfigurationFile(): Config
     {
-        if (@is_file($this->getConfigurationPath())) {
-            $configClosure = require $this->getConfigurationPath();
+        $configPath = self::getConfigurationPath();
+
+        if (is_file($configPath)) {
+            $configClosure = require $configPath;
             $config = null;
 
             if ($configClosure instanceof \Closure) {
@@ -29,6 +36,8 @@ class ConfigFactory
             if ($config instanceof Config) {
                 return $this->addTypo3ManagedPatternsBlocklist($config);
             }
+
+            $this->logger?->warning('Invalid phirewall.php configuration file', ['path' => $configPath]);
         }
 
         return $this->getDefaultConfig();
@@ -41,18 +50,29 @@ class ConfigFactory
 
     private function addTypo3ManagedPatternsBlocklist(Config $config): Config
     {
-        return $config->addPatternBackend(
-            'typo3-managed-patterns',
-            new PhpArrayPatternBackend(Environment::getConfigPath() . '/system/phirewall.patterns.php')
-        )->blocklistFromBackend('typo3-blocklist', 'typo3-managed-patterns');
+        $patternPath = self::getPatternsFilePath();
+        $fileArrayPatternBackend = new FileArrayPatternBackend($patternPath, new FileArrayWriter($patternPath, $this->logger), $this->logger);
+
+        return $config->addPatternBackend('typo3-managed-patterns', $fileArrayPatternBackend)
+            ->blocklistFromBackend('typo3-blocklist', 'typo3-managed-patterns');
     }
 
-    private function getConfigurationPath(): string
+    public static function getBaseConfigPath(): string
     {
         if (Environment::getProjectPath() !== Environment::getPublicPath()) {
-            return Environment::getConfigPath() . '/system/phirewall.php';
+            return Environment::getConfigPath();
         }
 
-        return Environment::getLegacyConfigPath() . '/system/phirewall.php';
+        return Environment::getLegacyConfigPath();
+    }
+
+    public static function getConfigurationPath(): string
+    {
+        return self::getBaseConfigPath() . '/system/phirewall.php';
+    }
+
+    public static function getPatternsFilePath(): string
+    {
+        return self::getBaseConfigPath() . '/system/phirewall.patterns.json';
     }
 }
