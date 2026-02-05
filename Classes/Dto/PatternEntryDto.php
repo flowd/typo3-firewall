@@ -6,7 +6,10 @@ namespace Flowd\Typo3Firewall\Dto;
 
 use Flowd\Phirewall\Pattern\PatternEntry;
 
-class PatternEntryDto
+/**
+ * Data transfer object for pattern entry form submissions.
+ */
+final class PatternEntryDto
 {
     /**
      * @param array<string, bool|float|int|string> $metadata
@@ -17,26 +20,43 @@ class PatternEntryDto
         public ?string $target = null,
         public ?string $expiresAt = null,
         public ?int $addedAt = null,
-        public array $metadata = []
+        public ?int $lastModifiedAt = null,
+        public array $metadata = [],
     ) {}
 
     public function toPatternEntry(): PatternEntry
     {
-        $expiresAt = null;
-        if (($this->expiresAt ?? '') !== '') {
-            $expiresAt = strtotime((string)$this->expiresAt);
-            if ($expiresAt === false) {
-                $expiresAt = null;
-            }
+        $metadata = $this->metadata;
+        if ($this->lastModifiedAt !== null) {
+            $metadata['lastModifiedAt'] = $this->lastModifiedAt;
         }
 
         return new PatternEntry(
-            kind: $this->kind,
-            value: $this->value,
-            target: $this->target,
-            expiresAt: $expiresAt,
+            kind: trim($this->kind),
+            value: trim($this->value),
+            target: $this->target !== null ? trim($this->target) : null,
+            expiresAt: $this->parseExpiresAt(),
             addedAt: $this->addedAt,
-            metadata: $this->metadata
+            metadata: $metadata,
         );
+    }
+
+    private function parseExpiresAt(): ?int
+    {
+        if ($this->expiresAt === null || trim($this->expiresAt) === '') {
+            return null;
+        }
+
+        $timestamp = strtotime(trim($this->expiresAt));
+        if ($timestamp === false) {
+            return null;
+        }
+
+        // Ensure expiration is in the future
+        if ($timestamp <= time()) {
+            return null;
+        }
+
+        return $timestamp;
     }
 }

@@ -32,7 +32,7 @@ Via the TYPO3 backend, editors and administrators can create, edit, and delete c
 - Overview and management of all active patterns
 - Support for expiration date (expiresAt) and various pattern types
 - Immediate enforcement of rules without deployment
-- Patterns are stored in the file ``config/system/phirewall.patterns.php``.
+- Patterns are stored in the file ``config/system/phirewall.patterns.json``.
 
 ..  menu::
     :maxdepth: 1

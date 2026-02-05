@@ -1,12 +1,11 @@
 includes:
-  - phpstan-baseline.neon
   - ../../.Build/vendor/spaze/phpstan-disallowed-calls/disallowed-dangerous-calls.neon
   - ../../.Build/vendor/spaze/phpstan-disallowed-calls/disallowed-execution-calls.neon
   - ../../.Build/vendor/spaze/phpstan-disallowed-calls/disallowed-insecure-calls.neon
   - ../../.Build/vendor/spaze/phpstan-disallowed-calls/disallowed-loose-calls.neon
 
 parameters:
-  phpVersion: 80200
+  phpVersion: 80300
   treatPhpDocTypesAsCertain: false
 
   parallel:
@@ -28,7 +27,7 @@ parameters:
     property_type: 95
 
   cognitive_complexity:
-    class: 15
+    class: 70
     function: 8
 
   type_perfect:

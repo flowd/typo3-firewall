@@ -3,25 +3,64 @@
   <file source-language="en" datatype="plaintext" original="messages" product-name="firewall">
     <body>
       <trans-unit id="module.title">
-        <source>Firewall patterns</source>
+        <source>Firewall</source>
       </trans-unit>
       <trans-unit id="list.title">
-        <source>Existing patterns</source>
+        <source>Active Patterns</source>
       </trans-unit>
       <trans-unit id="list.empty">
-        <source>No patterns yet</source>
+        <source>No patterns configured yet. Add your first pattern using the form.</source>
       </trans-unit>
       <trans-unit id="create.title">
         <source>Add pattern</source>
       </trans-unit>
+      <trans-unit id="edit.title">
+        <source>Edit pattern</source>
+      </trans-unit>
+      <trans-unit id="edit.notice.title">
+        <source>Editing Mode</source>
+      </trans-unit>
+      <trans-unit id="edit.notice.message">
+        <source>You are currently editing an existing pattern. Make your changes and click Save to update it.</source>
+      </trans-unit>
+      <trans-unit id="edit.notice.id">
+        <source>Pattern ID</source>
+      </trans-unit>
+      <trans-unit id="edit.info.title">
+        <source>Pattern information</source>
+      </trans-unit>
+      <trans-unit id="edit.info.id">
+        <source>ID</source>
+      </trans-unit>
+      <trans-unit id="edit.info.addedAt">
+        <source>Added at</source>
+      </trans-unit>
       <trans-unit id="action.add">
-        <source>Add</source>
+        <source>Add pattern</source>
+      </trans-unit>
+      <trans-unit id="action.edit">
+        <source>Edit</source>
+      </trans-unit>
+      <trans-unit id="action.save">
+        <source>Save</source>
+      </trans-unit>
+      <trans-unit id="action.cancel">
+        <source>Cancel</source>
       </trans-unit>
       <trans-unit id="action.delete">
         <source>Delete</source>
       </trans-unit>
+      <trans-unit id="action.delete.confirm">
+        <source>Are you sure you want to delete this pattern? This action cannot be undone.</source>
+      </trans-unit>
+      <trans-unit id="action.delete.confirmTitle">
+        <source>Delete pattern</source>
+      </trans-unit>
       <trans-unit id="action.prune">
         <source>Prune expired</source>
+      </trans-unit>
+      <trans-unit id="action.prune.title">
+        <source>Remove all expired patterns</source>
       </trans-unit>
       <trans-unit id="field.kind">
         <source>Kind</source>
@@ -32,17 +71,32 @@
       <trans-unit id="field.value">
         <source>Value</source>
       </trans-unit>
+      <trans-unit id="field.value.placeholder">
+        <source>e.g. 192.168.1.1 or /admin</source>
+      </trans-unit>
       <trans-unit id="field.target">
         <source>Target</source>
       </trans-unit>
+      <trans-unit id="field.target.placeholder">
+        <source>e.g. User-Agent</source>
+      </trans-unit>
       <trans-unit id="field.target.help">
-        <source>Optional: additional qualifier, e.g. HTTP header name for header_* kinds.</source>
+        <source>Required for header_* kinds (e.g. User-Agent, X-Forwarded-For)</source>
+      </trans-unit>
+      <trans-unit id="field.actions">
+        <source>Actions</source>
       </trans-unit>
       <trans-unit id="field.expiresAt">
-        <source>Expires at (date/time)</source>
+        <source>Expires at</source>
       </trans-unit>
       <trans-unit id="field.expiresAt.help">
         <source>Optional: Date and time. Leave empty for no automatic expiry.</source>
+      </trans-unit>
+      <trans-unit id="field.addedAt">
+        <source>Added</source>
+      </trans-unit>
+      <trans-unit id="field.lastModifiedAt">
+        <source>Last Modified</source>
       </trans-unit>
       <trans-unit id="kind.ip">
         <source>IP address (exact match)</source>
@@ -75,7 +129,10 @@
         <source>Request Regex</source>
       </trans-unit>
       <trans-unit id="examples.title">
-        <source>Real world examples</source>
+        <source>Examples &amp; Help</source>
+      </trans-unit>
+      <trans-unit id="examples.clickToExpand">
+        <source>(click to expand)</source>
       </trans-unit>
       <trans-unit id="examples.intro">
         <source>The following examples illustrate how different kinds and values behave in practice.</source>
@@ -171,7 +228,7 @@
         <source>Blocks requests from this exact User-Agent.</source>
       </trans-unit>
       <trans-unit id="note.patternsStorage">
-        <source>Patterns are stored in config/system/phirewall.patterns.php and enforced immediately.</source>
+        <source>Patterns are stored in config/system/phirewall.patterns.json and enforced immediately.</source>
       </trans-unit>
     </body>
   </file>
