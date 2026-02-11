@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Flowd\Typo3Firewall\Writer;
 
 use Psr\Log\LoggerInterface;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Handles safe file I/O for pattern array persistence using JSON format.
@@ -116,7 +115,17 @@ final class FileArrayWriter
 
     public function ensureDirectory(): void
     {
-        GeneralUtility::mkdir_deep(dirname($this->filePath));
+        $directory = dirname($this->filePath);
+        if (is_dir($directory)) {
+            return;
+        }
+
+        if (!@mkdir($directory, 0775, true) && !is_dir($directory)) {
+            $this->logger?->warning('Cannot create directory for pattern file', [
+                'path' => $this->filePath,
+                'directory' => $directory,
+            ]);
+        }
     }
 
     /**
@@ -126,28 +135,52 @@ final class FileArrayWriter
      */
     public function writeArray(array $data): void
     {
-        $this->assertScalarData($data);
         $this->ensureDirectory();
 
-        try {
-            $json = json_encode($data, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        } catch (\JsonException $jsonException) {
-            throw new \RuntimeException(
-                sprintf('Cannot encode pattern data to JSON: %s', $jsonException->getMessage()),
-                1770238500,
-                $jsonException
-            );
-        }
-
-        $tmp = $this->filePath . '.' . bin2hex(random_bytes(16));
+        $lockHandle = $this->acquireExclusiveLock();
 
         try {
-            $this->writeWithLock($tmp, $json);
-            $this->invalidateCaches();
+            $this->writeArrayLocked($data);
         } finally {
-            if (is_file($tmp)) {
-                @unlink($tmp);
+            flock($lockHandle, LOCK_UN);
+            fclose($lockHandle);
+        }
+    }
+
+    /**
+     * Atomically reads, modifies, and writes the array file while holding an exclusive lock.
+     *
+     * The modifier callable receives the current data array and must return either:
+     * - an array: the new data to write
+     * - null: skip writing (no-op signal)
+     *
+     * @param callable(array<string, array<string, mixed>>): (?array<string, array<string, mixed>>) $modifier
+     */
+    public function readModifyWrite(callable $modifier): void
+    {
+        $this->ensureDirectory();
+        $lockHandle = $this->acquireExclusiveLock();
+
+        try {
+            clearstatcache(true, $this->filePath);
+            $data = $this->readArray();
+            $result = $modifier($data);
+
+            if ($result === null) {
+                return;
             }
+
+            if (!is_array($result)) {
+                throw new \LogicException(
+                    sprintf('readModifyWrite modifier must return array|null, got %s', get_debug_type($result)),
+                    1779133201
+                );
+            }
+
+            $this->writeArrayLocked($result);
+        } finally {
+            flock($lockHandle, LOCK_UN);
+            fclose($lockHandle);
         }
     }
 
@@ -177,17 +210,15 @@ final class FileArrayWriter
         $this->logger?->debug('Pattern file written', ['path' => $this->filePath]);
     }
 
-    private function writeWithLock(string $tmpFile, string $content): void
+    /**
+     * Opens the lock file and acquires an exclusive lock.
+     *
+     * @return resource The lock file handle (caller must unlock and close)
+     */
+    private function acquireExclusiveLock(): mixed
     {
-        if (!GeneralUtility::writeFile($tmpFile, $content)) {
-            throw new \RuntimeException(
-                sprintf('Cannot write temporary pattern file: %s', $tmpFile),
-                1770238507
-            );
-        }
-
         $lockFile = $this->filePath . '.lock';
-        $lockHandle = fopen($lockFile, 'c');
+        $lockHandle = fopen($lockFile, 'cb');
         if ($lockHandle === false) {
             throw new \RuntimeException(
                 sprintf('Cannot create lock file: %s', $lockFile),
@@ -195,26 +226,58 @@ final class FileArrayWriter
             );
         }
 
+        if (!flock($lockHandle, LOCK_EX)) {
+            fclose($lockHandle);
+            throw new \RuntimeException(
+                sprintf('Cannot acquire lock for pattern file: %s', $this->filePath),
+                1770238497
+            );
+        }
+
+        return $lockHandle;
+    }
+
+    /**
+     * Writes the array to the file. Assumes caller holds the exclusive lock.
+     *
+     * @param array<string, array<string, mixed>> $data
+     */
+    private function writeArrayLocked(array $data): void
+    {
+        $this->assertScalarData($data);
+
         try {
-            if (!flock($lockHandle, LOCK_EX)) {
+            $json = json_encode($data, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        } catch (\JsonException $jsonException) {
+            throw new \RuntimeException(
+                sprintf('Cannot encode pattern data to JSON: %s', $jsonException->getMessage()),
+                1770238500,
+                $jsonException
+            );
+        }
+
+        $tmp = $this->filePath . '.' . bin2hex(random_bytes(16));
+
+        try {
+            if (file_put_contents($tmp, $json) === false) {
                 throw new \RuntimeException(
-                    sprintf('Cannot acquire lock for pattern file: %s', $this->filePath),
-                    1770238497
+                    sprintf('Cannot write temporary pattern file: %s', $tmp),
+                    1770238507
                 );
             }
 
-            if (!@rename($tmpFile, $this->filePath) && file_put_contents($this->filePath, $content) === false) {
+            if (!@rename($tmp, $this->filePath) && file_put_contents($this->filePath, $json) === false) {
                 throw new \RuntimeException(
                     sprintf('Cannot write pattern file: %s', $this->filePath),
                     1770238512
                 );
             }
 
-            $this->logger?->debug('Pattern file written successfully', ['path' => $this->filePath]);
+            $this->invalidateCaches();
         } finally {
-            flock($lockHandle, LOCK_UN);
-            fclose($lockHandle);
-            @unlink($lockFile);
+            if (is_file($tmp)) {
+                @unlink($tmp);
+            }
         }
     }
 }
