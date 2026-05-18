@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Flowd\Typo3Firewall\Tests\Unit\Writer;
 
 use Flowd\Typo3Firewall\Writer\FileArrayWriter;
+use org\bovigo\vfs\vfsStream;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -18,30 +19,8 @@ final class FileArrayWriterTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->testDir = sys_get_temp_dir() . '/typo3_firewall_test_' . bin2hex(random_bytes(8));
-        @mkdir($this->testDir, 0777, true);
-    }
-
-    protected function tearDown(): void
-    {
-        parent::tearDown();
-        $this->removeDirectory($this->testDir);
-    }
-
-    private function removeDirectory(string $dir): void
-    {
-        if (!is_dir($dir)) {
-            return;
-        }
-
-        $scanned = scandir($dir);
-        $files = array_diff($scanned !== false ? $scanned : [], ['.', '..']);
-        foreach ($files as $file) {
-            $path = $dir . '/' . $file;
-            is_dir($path) ? $this->removeDirectory($path) : @unlink($path);
-        }
-
-        @rmdir($dir);
+        vfsStream::setup('root');
+        $this->testDir = vfsStream::url('root');
     }
 
     #[Test]
@@ -214,9 +193,13 @@ final class FileArrayWriterTest extends TestCase
 
         $fileArrayWriter->writeArray(['id-1' => ['kind' => 'ip', 'value' => '1.1.1.1']]);
 
-        // Check no temp files remain
-        $files = glob($this->testDir . '/cleanup.json.*');
-        self::assertEmpty($files);
+        // Check no temp files remain (lock file is expected to persist)
+        $allFiles = scandir($this->testDir);
+        $tempFiles = array_filter(
+            $allFiles !== false ? $allFiles : [],
+            static fn(string $f): bool => str_starts_with($f, 'cleanup.json.') && !str_ends_with($f, '.lock'),
+        );
+        self::assertEmpty($tempFiles);
     }
 
     #[Test]
@@ -270,5 +253,91 @@ final class FileArrayWriterTest extends TestCase
 
         self::assertCount($expectedCount, $result);
         self::assertSame($data, $result);
+    }
+
+    #[Test]
+    public function readModifyWriteAppliesModification(): void
+    {
+        $filePath = $this->testDir . '/rmw.json';
+        $fileArrayWriter = new FileArrayWriter($filePath);
+        $fileArrayWriter->writeArray(['id-1' => ['kind' => 'ip', 'value' => '1.1.1.1']]);
+
+        $fileArrayWriter->readModifyWrite(function (array $data): array {
+            $data['id-2'] = ['kind' => 'cidr', 'value' => '10.0.0.0/8'];
+            return $data;
+        });
+
+        $result = $fileArrayWriter->readArray();
+        self::assertCount(2, $result);
+        self::assertArrayHasKey('id-1', $result);
+        self::assertArrayHasKey('id-2', $result);
+        self::assertSame('10.0.0.0/8', $result['id-2']['value']);
+    }
+
+    #[Test]
+    public function readModifyWriteSkipsWriteWhenModifierReturnsNull(): void
+    {
+        $filePath = $this->testDir . '/rmw_null.json';
+        $fileArrayWriter = new FileArrayWriter($filePath);
+        $original = ['id-1' => ['kind' => 'ip', 'value' => '1.1.1.1']];
+        $fileArrayWriter->writeArray($original);
+
+        // Set mtime to a known value in the past so any write would change it
+        touch($filePath, 1000);
+        clearstatcache(true, $filePath);
+
+        $fileArrayWriter->readModifyWrite(fn(array $data): ?array => null);
+
+        clearstatcache(true, $filePath);
+        self::assertSame(1000, filemtime($filePath), 'File should not have been rewritten');
+        self::assertSame($original, $fileArrayWriter->readArray());
+    }
+
+    #[Test]
+    public function readModifyWriteStartsFromEmptyArrayWhenFileMissing(): void
+    {
+        $filePath = $this->testDir . '/missing.json';
+        $fileArrayWriter = new FileArrayWriter($filePath);
+
+        $seen = null;
+        $fileArrayWriter->readModifyWrite(function (array $data) use (&$seen): array {
+            $seen = $data;
+            $data['id-1'] = ['kind' => 'ip', 'value' => '1.1.1.1'];
+            return $data;
+        });
+
+        self::assertSame([], $seen);
+        self::assertSame(['id-1' => ['kind' => 'ip', 'value' => '1.1.1.1']], $fileArrayWriter->readArray());
+    }
+
+    #[Test]
+    public function readModifyWriteReleasesLockAndPreservesFileWhenModifierThrows(): void
+    {
+        $filePath = $this->testDir . '/throws.json';
+        $fileArrayWriter = new FileArrayWriter($filePath);
+        $original = ['id-1' => ['kind' => 'ip', 'value' => '1.1.1.1']];
+        $fileArrayWriter->writeArray($original);
+        touch($filePath, 1000);
+        clearstatcache(true, $filePath);
+
+        try {
+            $fileArrayWriter->readModifyWrite(function (): array {
+                throw new \RuntimeException('boom', 1495786251);
+            });
+            self::fail('Expected RuntimeException');
+        } catch (\RuntimeException) {
+            // expected
+        }
+
+        clearstatcache(true, $filePath);
+        self::assertSame(1000, filemtime($filePath), 'File should not have been rewritten');
+        self::assertSame($original, $fileArrayWriter->readArray());
+
+        // The lock must be released, so a subsequent call must succeed.
+        $fileArrayWriter->readModifyWrite(function (array $data): array {
+            $data['id-2'] = ['kind' => 'cidr', 'value' => '10.0.0.0/8'];
+            return $data;
+        });
+        self::assertArrayHasKey('id-2', $fileArrayWriter->readArray());
     }
 }

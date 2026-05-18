@@ -8,6 +8,7 @@ use Flowd\Phirewall\Pattern\PatternEntry;
 use Flowd\Phirewall\Pattern\PatternKind;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
 use Flowd\Typo3Firewall\Writer\FileArrayWriter;
+use org\bovigo\vfs\vfsStream;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -23,31 +24,9 @@ final class FileArrayPatternBackendTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->testDir = sys_get_temp_dir() . '/typo3_firewall_backend_test_' . bin2hex(random_bytes(8));
-        @mkdir($this->testDir, 0777, true);
+        vfsStream::setup('root');
+        $this->testDir = vfsStream::url('root');
         $this->testFile = $this->testDir . '/patterns.json';
-    }
-
-    protected function tearDown(): void
-    {
-        parent::tearDown();
-        $this->removeDirectory($this->testDir);
-    }
-
-    private function removeDirectory(string $dir): void
-    {
-        if (!is_dir($dir)) {
-            return;
-        }
-
-        $scanned = scandir($dir);
-        $files = array_diff($scanned !== false ? $scanned : [], ['.', '..']);
-        foreach ($files as $file) {
-            $path = $dir . '/' . $file;
-            is_dir($path) ? $this->removeDirectory($path) : @unlink($path);
-        }
-
-        @rmdir($dir);
     }
 
     private function createBackend(?int $now = null): FileArrayPatternBackend

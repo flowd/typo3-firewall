@@ -115,21 +115,26 @@ final class FileArrayPatternBackend implements PatternBackendInterface
 
     public function removeById(string $id): void
     {
-        $data = $this->fileArrayWriter->readArray();
+        $removedPattern = null;
 
-        if (!isset($data[$id])) {
-            return;
+        $this->fileArrayWriter->readModifyWrite(function (array $data) use ($id, &$removedPattern): ?array {
+            if (!isset($data[$id])) {
+                return null;
+            }
+
+            $removedPattern = $data[$id];
+            unset($data[$id]);
+
+            return $data;
+        });
+
+        if ($removedPattern !== null) {
+            $this->logger?->info('Firewall pattern removed', [
+                'id' => $id,
+                'kind' => $removedPattern['kind'] ?? 'unknown',
+                'value' => $removedPattern['value'] ?? 'unknown',
+            ]);
         }
-
-        $removedPattern = $data[$id];
-        unset($data[$id]);
-
-        $this->fileArrayWriter->writeArray($data);
-        $this->logger?->info('Firewall pattern removed', [
-            'id' => $id,
-            'kind' => $removedPattern['kind'] ?? 'unknown',
-            'value' => $removedPattern['value'] ?? 'unknown',
-        ]);
     }
 
     private function generatePatternHash(PatternEntry $patternEntry): string
@@ -141,29 +146,31 @@ final class FileArrayPatternBackend implements PatternBackendInterface
     {
         $this->validatePatternEntry($patternEntry);
 
-        $this->fileArrayWriter->ensureDirectory();
-        $this->fileArrayWriter->ensureFileExists();
-
         $now = $this->now;
-        $data = $this->fileArrayWriter->readArray();
         $id = $patternEntry->metadata['id'] ?? null;
         if (!is_string($id) || $id === '') {
             $id = $this->generatePatternHash($patternEntry);
         }
 
-        $existingRow = $data[$id] ?? null;
+        $wasUpdate = false;
 
-        if ($existingRow === null && count($data) >= self::MAX_ENTRIES) {
-            throw new \RuntimeException(
-                sprintf('Pattern file exceeds maximum entries (%d).', self::MAX_ENTRIES),
-                1770244690
-            );
-        }
+        $this->fileArrayWriter->readModifyWrite(function (array $data) use ($patternEntry, $now, $id, &$wasUpdate): array {
+            $existingRow = $data[$id] ?? null;
 
-        $data[$id] = $this->createRow($patternEntry, $now, $existingRow);
-        $this->fileArrayWriter->writeArray($data);
+            if ($existingRow === null && count($data) >= self::MAX_ENTRIES) {
+                throw new \RuntimeException(
+                    sprintf('Pattern file exceeds maximum entries (%d).', self::MAX_ENTRIES),
+                    1770244690
+                );
+            }
 
-        $this->logger?->info($existingRow !== null ? 'Firewall pattern updated' : 'Firewall pattern added', [
+            $wasUpdate = $existingRow !== null;
+            $data[$id] = $this->createRow($patternEntry, $now, $existingRow);
+
+            return $data;
+        });
+
+        $this->logger?->info($wasUpdate ? 'Firewall pattern updated' : 'Firewall pattern added', [
             'id' => $id,
             'kind' => $patternEntry->kind,
             'value' => $patternEntry->value,
@@ -313,22 +320,31 @@ final class FileArrayPatternBackend implements PatternBackendInterface
 
     public function pruneExpired(): void
     {
-        $data = $this->fileArrayWriter->readArray();
         $now = $this->now;
-        $originalCount = count($data);
+        $prunedCount = 0;
 
-        $data = array_filter($data, static function (array $row) use ($now): bool {
-            $expiresAt = $row['expiresAt'] ?? null;
-            if (!is_scalar($expiresAt)) {
-                return true;
+        $this->fileArrayWriter->readModifyWrite(function (array $data) use ($now, &$prunedCount): ?array {
+            $originalCount = count($data);
+
+            $data = array_filter($data, static function (array $row) use ($now): bool {
+                $expiresAt = $row['expiresAt'] ?? null;
+                if (!is_scalar($expiresAt)) {
+                    return true;
+                }
+
+                return ((int)$expiresAt) > $now;
+            });
+
+            $prunedCount = $originalCount - count($data);
+
+            if ($prunedCount === 0) {
+                return null;
             }
 
-            return ((int)$expiresAt) > $now;
+            return $data;
         });
 
-        $prunedCount = $originalCount - count($data);
         if ($prunedCount > 0) {
-            $this->fileArrayWriter->writeArray($data);
             $this->logger?->info('Expired firewall patterns pruned', ['count' => $prunedCount]);
         }
     }
