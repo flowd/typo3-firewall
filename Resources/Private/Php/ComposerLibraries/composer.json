@@ -9,7 +9,7 @@
 	},
 	"require": {
 		"php": "^8.2",
-		"flowd/phirewall": "^0.1.0"
+		"flowd/phirewall": "^0.3.0"
 	},
 	"replace": {
 		"psr/http-message": "^1.1 || ^2.0",

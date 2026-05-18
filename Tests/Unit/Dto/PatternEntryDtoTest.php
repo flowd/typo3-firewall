@@ -23,35 +23,29 @@ final class PatternEntryDtoTest extends TestCase
         self::assertSame('', $patternEntryDto->value);
         self::assertNull($patternEntryDto->target);
         self::assertNull($patternEntryDto->expiresAt);
-        self::assertNull($patternEntryDto->addedAt);
-        self::assertSame([], $patternEntryDto->metadata);
     }
 
     #[Test]
     public function constructorAcceptsAllParameters(): void
     {
         $patternEntryDto = new PatternEntryDto(
-            kind: PatternKind::IP,
+            kind: 'ip',
             value: '192.168.1.1',
             target: 'User-Agent',
             expiresAt: '2025-12-31 23:59:59',
-            addedAt: 1704067200,
-            metadata: ['note' => 'test']
         );
 
-        self::assertSame(PatternKind::IP, $patternEntryDto->kind);
+        self::assertSame('ip', $patternEntryDto->kind);
         self::assertSame('192.168.1.1', $patternEntryDto->value);
         self::assertSame('User-Agent', $patternEntryDto->target);
         self::assertSame('2025-12-31 23:59:59', $patternEntryDto->expiresAt);
-        self::assertSame(1704067200, $patternEntryDto->addedAt);
-        self::assertSame(['note' => 'test'], $patternEntryDto->metadata);
     }
 
     #[Test]
     public function toPatternEntryReturnsPatternEntry(): void
     {
         $patternEntryDto = new PatternEntryDto(
-            kind: PatternKind::IP,
+            kind: 'ip',
             value: '192.168.1.1'
         );
 
@@ -72,9 +66,37 @@ final class PatternEntryDtoTest extends TestCase
 
         $patternEntry = $patternEntryDto->toPatternEntry();
 
-        self::assertSame('ip', $patternEntry->kind);
+        self::assertSame(PatternKind::IP, $patternEntry->kind);
         self::assertSame('192.168.1.1', $patternEntry->value);
         self::assertSame('User-Agent', $patternEntry->target);
+    }
+
+    #[Test]
+    public function toPatternEntryThrowsForUnknownKind(): void
+    {
+        $patternEntryDto = new PatternEntryDto(
+            kind: 'not_a_kind',
+            value: '192.168.1.1'
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid pattern kind: not_a_kind');
+
+        $patternEntryDto->toPatternEntry();
+    }
+
+    #[Test]
+    public function toPatternEntryThrowsForEmptyKind(): void
+    {
+        $patternEntryDto = new PatternEntryDto(
+            kind: '',
+            value: '192.168.1.1'
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid pattern kind:');
+
+        $patternEntryDto->toPatternEntry();
     }
 
     #[Test]
@@ -83,7 +105,7 @@ final class PatternEntryDtoTest extends TestCase
         // Use a date far in the future to ensure it's always valid
         $futureDate = date('Y-m-d H:i:s', strtotime('+1 year'));
         $patternEntryDto = new PatternEntryDto(
-            kind: PatternKind::IP,
+            kind: 'ip',
             value: '192.168.1.1',
             expiresAt: $futureDate
         );
@@ -98,7 +120,7 @@ final class PatternEntryDtoTest extends TestCase
     public function toPatternEntryReturnsNullForEmptyExpiresAt(): void
     {
         $patternEntryDto = new PatternEntryDto(
-            kind: PatternKind::IP,
+            kind: 'ip',
             value: '192.168.1.1',
             expiresAt: ''
         );
@@ -112,7 +134,7 @@ final class PatternEntryDtoTest extends TestCase
     public function toPatternEntryReturnsNullForWhitespaceExpiresAt(): void
     {
         $patternEntryDto = new PatternEntryDto(
-            kind: PatternKind::IP,
+            kind: 'ip',
             value: '192.168.1.1',
             expiresAt: '   '
         );
@@ -123,68 +145,54 @@ final class PatternEntryDtoTest extends TestCase
     }
 
     #[Test]
-    public function toPatternEntryReturnsNullForInvalidExpiresAt(): void
+    public function toPatternEntryThrowsForInvalidExpiresAt(): void
     {
         $patternEntryDto = new PatternEntryDto(
-            kind: PatternKind::IP,
+            kind: 'ip',
             value: '192.168.1.1',
             expiresAt: 'not-a-date'
         );
 
-        $patternEntry = $patternEntryDto->toPatternEntry();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid expiration date: not-a-date');
 
-        self::assertNull($patternEntry->expiresAt);
+        $patternEntryDto->toPatternEntry();
     }
 
     #[Test]
-    public function toPatternEntryReturnsNullForPastExpiresAt(): void
+    public function toPatternEntryThrowsForPastExpiresAt(): void
     {
         $patternEntryDto = new PatternEntryDto(
-            kind: PatternKind::IP,
+            kind: 'ip',
             value: '192.168.1.1',
             expiresAt: '2020-01-01 00:00:00'
         );
 
-        $patternEntry = $patternEntryDto->toPatternEntry();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Expiration date must be in the future');
 
-        self::assertNull($patternEntry->expiresAt);
+        $patternEntryDto->toPatternEntry();
     }
 
     #[Test]
-    public function toPatternEntryPreservesAddedAt(): void
+    public function toPatternEntryProducesEmptyMetadata(): void
     {
-        $addedAt = 1704067200;
         $patternEntryDto = new PatternEntryDto(
-            kind: PatternKind::IP,
+            kind: 'ip',
             value: '192.168.1.1',
-            addedAt: $addedAt
         );
 
         $patternEntry = $patternEntryDto->toPatternEntry();
 
-        self::assertSame($addedAt, $patternEntry->addedAt);
-    }
-
-    #[Test]
-    public function toPatternEntryPreservesMetadata(): void
-    {
-        $metadata = ['note' => 'test', 'source' => 'backend'];
-        $patternEntryDto = new PatternEntryDto(
-            kind: PatternKind::IP,
-            value: '192.168.1.1',
-            metadata: $metadata
-        );
-
-        $patternEntry = $patternEntryDto->toPatternEntry();
-
-        self::assertSame($metadata, $patternEntry->metadata);
+        self::assertSame([], $patternEntry->metadata);
+        self::assertNull($patternEntry->addedAt);
     }
 
     #[Test]
     public function toPatternEntryHandlesNullTarget(): void
     {
         $patternEntryDto = new PatternEntryDto(
-            kind: PatternKind::IP,
+            kind: 'ip',
             value: '192.168.1.1',
             target: null
         );
@@ -195,39 +203,60 @@ final class PatternEntryDtoTest extends TestCase
     }
 
     /**
-     * @return array<string, array{0: string, 1: bool}>
+     * @return array<string, array{0: string}>
      */
-    public static function expiresAtDateFormatProvider(): array
+    public static function validExpiresAtFormatProvider(): array
     {
         $futureYear = (int)date('Y') + 1;
         return [
-            'ISO 8601' => [$futureYear . '-12-31T23:59:59', true],
-            'MySQL datetime' => [$futureYear . '-12-31 23:59:59', true],
-            'relative future' => ['+1 month', true],
-            'relative past' => ['-1 day', false],
-            'date only future' => [$futureYear . '-12-31', true],
-            'date only past' => ['2020-01-01', false],
+            'ISO 8601' => [$futureYear . '-12-31T23:59:59'],
+            'MySQL datetime' => [$futureYear . '-12-31 23:59:59'],
+            'relative future' => ['+1 month'],
+            'date only future' => [$futureYear . '-12-31'],
         ];
     }
 
     #[Test]
-    #[DataProvider('expiresAtDateFormatProvider')]
-    public function toPatternEntryHandlesVariousDateFormats(string $expiresAt, bool $shouldBeValid): void
+    #[DataProvider('validExpiresAtFormatProvider')]
+    public function toPatternEntryAcceptsValidFutureDates(string $expiresAt): void
     {
         $patternEntryDto = new PatternEntryDto(
-            kind: PatternKind::IP,
+            kind: 'ip',
             value: '192.168.1.1',
             expiresAt: $expiresAt
         );
 
         $patternEntry = $patternEntryDto->toPatternEntry();
 
-        if ($shouldBeValid) {
-            self::assertNotNull($patternEntry->expiresAt);
-            self::assertGreaterThan(time(), $patternEntry->expiresAt);
-        } else {
-            self::assertNull($patternEntry->expiresAt);
-        }
+        self::assertNotNull($patternEntry->expiresAt);
+        self::assertGreaterThan(time(), $patternEntry->expiresAt);
+    }
+
+    /**
+     * @return array<string, array{0: string}>
+     */
+    public static function pastExpiresAtFormatProvider(): array
+    {
+        return [
+            'relative past' => ['-1 day'],
+            'date only past' => ['2020-01-01'],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('pastExpiresAtFormatProvider')]
+    public function toPatternEntryRejectsPastDates(string $expiresAt): void
+    {
+        $patternEntryDto = new PatternEntryDto(
+            kind: 'ip',
+            value: '192.168.1.1',
+            expiresAt: $expiresAt
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Expiration date must be in the future');
+
+        $patternEntryDto->toPatternEntry();
     }
 
     #[Test]
@@ -235,18 +264,14 @@ final class PatternEntryDtoTest extends TestCase
     {
         $patternEntryDto = new PatternEntryDto();
 
-        $patternEntryDto->kind = PatternKind::CIDR;
+        $patternEntryDto->kind = 'cidr';
         $patternEntryDto->value = '10.0.0.0/8';
         $patternEntryDto->target = 'X-Custom-Header';
         $patternEntryDto->expiresAt = '+1 week';
-        $patternEntryDto->addedAt = 1704067200;
-        $patternEntryDto->metadata = ['key' => 'value'];
 
-        self::assertSame(PatternKind::CIDR, $patternEntryDto->kind);
+        self::assertSame('cidr', $patternEntryDto->kind);
         self::assertSame('10.0.0.0/8', $patternEntryDto->value);
         self::assertSame('X-Custom-Header', $patternEntryDto->target);
         self::assertSame('+1 week', $patternEntryDto->expiresAt);
-        self::assertSame(1704067200, $patternEntryDto->addedAt);
-        self::assertSame(['key' => 'value'], $patternEntryDto->metadata);
     }
 }

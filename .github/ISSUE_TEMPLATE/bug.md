@@ -23,7 +23,7 @@ assignees: ''
 (A description of the faulty behavior you're seeing. Add error messages or
 screenshot if possible/helpful.)
 
-## Expected behaviour
+## Expected behavior
 
 (what you expect to happen instead)
 

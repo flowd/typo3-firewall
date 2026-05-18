@@ -223,37 +223,13 @@ final class FileArrayPatternBackendTest extends TestCase
     // Validation tests
 
     #[Test]
-    public function appendThrowsExceptionForEmptyKind(): void
-    {
-        $fileArrayPatternBackend = $this->createBackend();
-        $patternEntry = new PatternEntry(kind: '', value: '192.168.1.1');
-
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Pattern kind and value must not be empty');
-
-        $fileArrayPatternBackend->append($patternEntry);
-    }
-
-    #[Test]
     public function appendThrowsExceptionForEmptyValue(): void
     {
         $fileArrayPatternBackend = $this->createBackend();
         $patternEntry = new PatternEntry(kind: PatternKind::IP, value: '');
 
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Pattern kind and value must not be empty');
-
-        $fileArrayPatternBackend->append($patternEntry);
-    }
-
-    #[Test]
-    public function appendThrowsExceptionForInvalidKind(): void
-    {
-        $fileArrayPatternBackend = $this->createBackend();
-        $patternEntry = new PatternEntry(kind: 'invalid_kind', value: 'test');
-
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Invalid pattern kind: invalid_kind');
+        $this->expectExceptionMessage('Pattern value must not be empty');
 
         $fileArrayPatternBackend->append($patternEntry);
     }
@@ -438,7 +414,7 @@ final class FileArrayPatternBackendTest extends TestCase
             $data['id-' . $i] = ['kind' => 'ip', 'value' => '1.1.1.1'];
         }
 
-        file_put_contents($this->testFile, json_encode($data));
+        file_put_contents($this->testFile, json_encode($data, JSON_THROW_ON_ERROR));
 
         $fileArrayPatternBackend = $this->createBackend();
         $patternEntry = new PatternEntry(kind: PatternKind::IP, value: '192.168.1.1');
@@ -501,5 +477,41 @@ final class FileArrayPatternBackendTest extends TestCase
         $patternSnapshot = $fileArrayPatternBackend->consume();
 
         self::assertSame('User-Agent', $patternSnapshot->entries[0]->target);
+    }
+
+    #[Test]
+    public function checkIntegrityFlagsUnknownKinds(): void
+    {
+        $data = [
+            'ok' => ['kind' => 'ip', 'value' => '1.1.1.1'],
+            'gone' => ['kind' => 'no_such_kind', 'value' => '2.2.2.2'],
+        ];
+        file_put_contents($this->testFile, json_encode($data, JSON_THROW_ON_ERROR));
+
+        $fileArrayPatternBackend = $this->createBackend();
+
+        $issue = $fileArrayPatternBackend->checkIntegrity();
+        self::assertNotNull($issue);
+        self::assertStringContainsString('1 of 2', $issue);
+        self::assertStringContainsString('unknown kind', $issue);
+    }
+
+    #[Test]
+    public function consumeSkipsRowsWithUnknownKind(): void
+    {
+        $data = [
+            'valid' => ['kind' => 'ip', 'value' => '1.1.1.1'],
+            'unknown' => ['kind' => 'no_such_kind', 'value' => '2.2.2.2'],
+            'missing' => ['value' => '3.3.3.3'],
+            'non-string' => ['kind' => 42, 'value' => '4.4.4.4'],
+        ];
+        file_put_contents($this->testFile, json_encode($data, JSON_THROW_ON_ERROR));
+
+        $fileArrayPatternBackend = $this->createBackend();
+        $patternSnapshot = $fileArrayPatternBackend->consume();
+
+        self::assertCount(1, $patternSnapshot->entries);
+        self::assertSame(PatternKind::IP, $patternSnapshot->entries[0]->kind);
+        self::assertSame('1.1.1.1', $patternSnapshot->entries[0]->value);
     }
 }

@@ -5,39 +5,39 @@ declare(strict_types=1);
 namespace Flowd\Typo3Firewall\Dto;
 
 use Flowd\Phirewall\Pattern\PatternEntry;
+use Flowd\Phirewall\Pattern\PatternKind;
 
 /**
  * Data transfer object for pattern entry form submissions.
+ *
+ * Only fields that are user-editable via the backend form are exposed. Timestamps
+ * (addedAt, lastModifiedAt) and identity (id) are managed by the backend itself
+ * and intentionally not mappable from the request to prevent mass-assignment.
  */
 final class PatternEntryDto
 {
-    /**
-     * @param array<string, bool|float|int|string> $metadata
-     */
     public function __construct(
         public string $kind = '',
         public string $value = '',
         public ?string $target = null,
         public ?string $expiresAt = null,
-        public ?int $addedAt = null,
-        public ?int $lastModifiedAt = null,
-        public array $metadata = [],
     ) {}
 
     public function toPatternEntry(): PatternEntry
     {
-        $metadata = $this->metadata;
-        if ($this->lastModifiedAt !== null) {
-            $metadata['lastModifiedAt'] = $this->lastModifiedAt;
+        $kind = PatternKind::tryFrom(trim($this->kind));
+        if ($kind === null) {
+            throw new \InvalidArgumentException(
+                sprintf('Invalid pattern kind: %s', $this->kind),
+                1779107801
+            );
         }
 
         return new PatternEntry(
-            kind: trim($this->kind),
+            kind: $kind,
             value: trim($this->value),
             target: $this->target !== null ? trim($this->target) : null,
             expiresAt: $this->parseExpiresAt(),
-            addedAt: $this->addedAt,
-            metadata: $metadata,
         );
     }
 
@@ -47,14 +47,20 @@ final class PatternEntryDto
             return null;
         }
 
-        $timestamp = strtotime(trim($this->expiresAt));
+        $value = trim($this->expiresAt);
+        $timestamp = strtotime($value);
         if ($timestamp === false) {
-            return null;
+            throw new \InvalidArgumentException(
+                sprintf('Invalid expiration date: %s', $value),
+                1779107802
+            );
         }
 
-        // Ensure expiration is in the future
         if ($timestamp <= time()) {
-            return null;
+            throw new \InvalidArgumentException(
+                sprintf('Expiration date must be in the future: %s', $value),
+                1779107803
+            );
         }
 
         return $timestamp;

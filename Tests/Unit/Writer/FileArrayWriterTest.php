@@ -46,7 +46,7 @@ final class FileArrayWriterTest extends TestCase
         self::assertFileExists($filePath);
         $content = file_get_contents($filePath);
         self::assertIsString($content);
-        $result = json_decode($content, true);
+        $result = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
         self::assertSame($data, $result);
     }
 
@@ -92,7 +92,7 @@ final class FileArrayWriterTest extends TestCase
         self::assertFileExists($filePath);
         $content = file_get_contents($filePath);
         self::assertIsString($content);
-        $result = json_decode($content, true);
+        $result = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
         self::assertSame([], $result);
     }
 
@@ -129,7 +129,7 @@ final class FileArrayWriterTest extends TestCase
             'id-1' => ['kind' => 'ip', 'value' => '1.1.1.1'],  // valid
             'id-2' => 'invalid_string',  // invalid: value is string not array
             'id-3' => [0 => 'numeric_key'],  // invalid: numeric keys in value
-        ]);
+        ], JSON_THROW_ON_ERROR);
         file_put_contents($filePath, $content);
 
         $fileArrayWriter = new FileArrayWriter($filePath);
@@ -339,5 +339,77 @@ final class FileArrayWriterTest extends TestCase
             return $data;
         });
         self::assertArrayHasKey('id-2', $fileArrayWriter->readArray());
+    }
+
+    #[Test]
+    public function checkIntegrityReturnsNullForMissingFile(): void
+    {
+        $fileArrayWriter = new FileArrayWriter($this->testDir . '/missing-integrity.json');
+
+        self::assertNull($fileArrayWriter->checkIntegrity());
+    }
+
+    #[Test]
+    public function checkIntegrityReturnsNullForEmptyJsonObject(): void
+    {
+        $filePath = $this->testDir . '/empty.json';
+        file_put_contents($filePath, '{}');
+
+        $fileArrayWriter = new FileArrayWriter($filePath);
+
+        self::assertNull($fileArrayWriter->checkIntegrity());
+    }
+
+    #[Test]
+    public function checkIntegrityReturnsNullForHealthyFile(): void
+    {
+        $filePath = $this->testDir . '/healthy.json';
+        $fileArrayWriter = new FileArrayWriter($filePath);
+        $fileArrayWriter->writeArray(['id-1' => ['kind' => 'ip', 'value' => '1.1.1.1']]);
+
+        self::assertNull($fileArrayWriter->checkIntegrity());
+    }
+
+    #[Test]
+    public function checkIntegrityReportsInvalidJson(): void
+    {
+        $filePath = $this->testDir . '/broken.json';
+        file_put_contents($filePath, '{not valid json');
+
+        $fileArrayWriter = new FileArrayWriter($filePath);
+
+        $issue = $fileArrayWriter->checkIntegrity();
+        self::assertNotNull($issue);
+        self::assertStringContainsString('invalid JSON', $issue);
+    }
+
+    #[Test]
+    public function checkIntegrityReportsNonArrayContent(): void
+    {
+        $filePath = $this->testDir . '/string.json';
+        file_put_contents($filePath, '"just a string"');
+
+        $fileArrayWriter = new FileArrayWriter($filePath);
+
+        $issue = $fileArrayWriter->checkIntegrity();
+        self::assertNotNull($issue);
+        self::assertStringContainsString('does not contain an array', $issue);
+    }
+
+    #[Test]
+    public function checkIntegrityReportsPartiallyMalformedEntries(): void
+    {
+        $filePath = $this->testDir . '/partial.json';
+        file_put_contents($filePath, json_encode([
+            'id-1' => ['kind' => 'ip', 'value' => '1.1.1.1'],
+            'id-2' => 'broken',
+            'id-3' => ['kind' => 'cidr', 'value' => '10.0.0.0/8'],
+        ], JSON_THROW_ON_ERROR));
+
+        $fileArrayWriter = new FileArrayWriter($filePath);
+
+        $issue = $fileArrayWriter->checkIntegrity();
+        self::assertNotNull($issue);
+        self::assertStringContainsString('1 of 3', $issue);
     }
 }

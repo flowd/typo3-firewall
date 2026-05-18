@@ -44,8 +44,17 @@ final class FileArrayPatternBackend implements PatternBackendInterface
         $raw = $this->fileArrayWriter->readArray();
         $entries = [];
         foreach ($raw as $id => $row) {
-            if (is_string($id) && is_array($row)) {
-                $entries[] = $this->rowToPatternEntry($id, $row);
+            if (!is_string($id)) {
+                continue;
+            }
+
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $entry = $this->rowToPatternEntry($id, $row);
+            if ($entry instanceof PatternEntry) {
+                $entries[] = $entry;
             }
         }
 
@@ -55,9 +64,18 @@ final class FileArrayPatternBackend implements PatternBackendInterface
     /**
      * @param array<string, mixed> $row
      */
-    private function rowToPatternEntry(string $id, array $row): PatternEntry
+    private function rowToPatternEntry(string $id, array $row): ?PatternEntry
     {
         $row = $this->ensureRowScalars($row);
+        $kind = is_string($row['kind'] ?? null) ? PatternKind::tryFrom($row['kind']) : null;
+        if ($kind === null) {
+            $this->logger?->warning('Skipping pattern row with unknown kind', [
+                'id' => $id,
+                'kind' => $row['kind'] ?? null,
+            ]);
+            return null;
+        }
+
         $metadata = $this->extractMetadata($row);
         $metadata['id'] = $id;
 
@@ -67,7 +85,7 @@ final class FileArrayPatternBackend implements PatternBackendInterface
         }
 
         return new PatternEntry(
-            kind: is_string($row['kind'] ?? null) ? $row['kind'] : '',
+            kind: $kind,
             value: is_string($row['value'] ?? null) ? $row['value'] : '',
             target: is_string($row['target'] ?? null) ? $row['target'] : null,
             expiresAt: is_int($row['expiresAt'] ?? null) ? $row['expiresAt'] : null,
@@ -139,7 +157,7 @@ final class FileArrayPatternBackend implements PatternBackendInterface
 
     private function generatePatternHash(PatternEntry $patternEntry): string
     {
-        return hash('sha256', $patternEntry->kind . '|' . $patternEntry->value . '|' . ($patternEntry->target ?? ''));
+        return hash('sha256', $patternEntry->kind->value . '|' . $patternEntry->value . '|' . ($patternEntry->target ?? ''));
     }
 
     public function append(PatternEntry $patternEntry): void
@@ -185,26 +203,15 @@ final class FileArrayPatternBackend implements PatternBackendInterface
     private function validatePatternEntry(PatternEntry $patternEntry): void
     {
         $this->validateNotEmpty($patternEntry);
-        $this->validateKind($patternEntry);
         $this->validateValueByKind($patternEntry);
     }
 
     private function validateNotEmpty(PatternEntry $patternEntry): void
     {
-        if ($patternEntry->kind === '' || $patternEntry->value === '') {
+        if ($patternEntry->value === '') {
             throw new \InvalidArgumentException(
-                'Pattern kind and value must not be empty',
+                'Pattern value must not be empty',
                 1770244701
-            );
-        }
-    }
-
-    private function validateKind(PatternEntry $patternEntry): void
-    {
-        if (!in_array($patternEntry->kind, PatternKind::all(), true)) {
-            throw new \InvalidArgumentException(
-                sprintf('Invalid pattern kind: %s', $patternEntry->kind),
-                1770244706
             );
         }
     }
@@ -303,7 +310,7 @@ final class FileArrayPatternBackend implements PatternBackendInterface
         unset($metadata['lastModifiedAt']);
 
         $row = [
-            'kind' => $patternEntry->kind,
+            'kind' => $patternEntry->kind->value,
             'value' => $patternEntry->value,
             'target' => $patternEntry->target,
             'expiresAt' => $patternEntry->expiresAt,
@@ -365,6 +372,33 @@ final class FileArrayPatternBackend implements PatternBackendInterface
             'format' => 'php',
             'path' => $this->filePath,
         ];
+    }
+
+    public function checkIntegrity(): ?string
+    {
+        $shapeIssue = $this->fileArrayWriter->checkIntegrity();
+        if ($shapeIssue !== null) {
+            return $shapeIssue;
+        }
+
+        $data = $this->fileArrayWriter->readArray();
+        $unknownKinds = 0;
+        foreach ($data as $row) {
+            $kindValue = is_string($row['kind'] ?? null) ? $row['kind'] : null;
+            if ($kindValue === null || PatternKind::tryFrom($kindValue) === null) {
+                $unknownKinds++;
+            }
+        }
+
+        if ($unknownKinds > 0) {
+            return sprintf(
+                '%d of %d pattern entries reference an unknown kind and were skipped.',
+                $unknownKinds,
+                count($data),
+            );
+        }
+
+        return null;
     }
 
     /**

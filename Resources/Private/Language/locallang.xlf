@@ -110,9 +110,6 @@
       <trans-unit id="kind.header_exact">
         <source>HTTP header equals value</source>
       </trans-unit>
-      <trans-unit id="kind.header_substring">
-        <source>HTTP header contains value</source>
-      </trans-unit>
       <trans-unit id="kind.path_exact">
         <source>Path (exact match)</source>
       </trans-unit>
@@ -121,9 +118,6 @@
       </trans-unit>
       <trans-unit id="kind.header_regex">
         <source>HTTP header (regular expression)</source>
-      </trans-unit>
-      <trans-unit id="kind.user_agent">
-        <source>User-Agent (exact match)</source>
       </trans-unit>
       <trans-unit id="kind.request_regex">
         <source>Request Regex</source>
@@ -218,14 +212,11 @@
       <trans-unit id="examples.table.header_regex.description">
         <source>Blocks requests where the header value matches the given regular expression.</source>
       </trans-unit>
-      <trans-unit id="examples.table.user_agent.kind">
-        <source>User-Agent (exact match)</source>
+      <trans-unit id="integrity.title">
+        <source>Pattern file has issues</source>
       </trans-unit>
-      <trans-unit id="examples.table.user_agent.value">
-        <source>Googlebot/2.1</source>
-      </trans-unit>
-      <trans-unit id="examples.table.user_agent.description">
-        <source>Blocks requests from this exact User-Agent.</source>
+      <trans-unit id="integrity.hint">
+        <source>Affected entries are silently dropped during enforcement. Inspect config/system/phirewall.patterns.json and fix or remove the malformed entries.</source>
       </trans-unit>
       <trans-unit id="note.patternsStorage">
         <source>Patterns are stored in config/system/phirewall.patterns.json and enforced immediately.</source>

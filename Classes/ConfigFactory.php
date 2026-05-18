@@ -53,8 +53,8 @@ class ConfigFactory
         $patternPath = self::getPatternsFilePath();
         $fileArrayPatternBackend = new FileArrayPatternBackend($patternPath, new FileArrayWriter($patternPath, $this->logger), $this->logger);
 
-        return $config->addPatternBackend('typo3-managed-patterns', $fileArrayPatternBackend)
-            ->blocklistFromBackend('typo3-blocklist', 'typo3-managed-patterns');
+        $config->blocklists->addPatternBackend('typo3-managed-patterns', $fileArrayPatternBackend)->fromBackend('typo3-blocklist', 'typo3-managed-patterns');
+        return $config;
     }
 
     public static function getBaseConfigPath(): string

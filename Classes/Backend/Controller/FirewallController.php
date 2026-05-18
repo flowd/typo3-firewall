@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowd\Typo3Firewall\Backend\Controller;
 
+use Flowd\Phirewall\Pattern\PatternEntry;
 use Flowd\Phirewall\Pattern\PatternKind;
 use Flowd\Typo3Firewall\ConfigFactory;
 use Flowd\Typo3Firewall\Dto\PatternEntryDto;
@@ -19,12 +20,14 @@ use TYPO3\CMS\Extbase\Mvc\Controller\ActionController;
 #[AsController]
 class FirewallController extends ActionController
 {
+    private ?FileArrayPatternBackend $fileArrayPatternBackend = null;
+
     public function __construct(
         private readonly ModuleTemplateFactory $moduleTemplateFactory,
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
-    public function overviewAction(string $editId = null): ResponseInterface
+    public function overviewAction(?string $editId = null): ResponseInterface
     {
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
         $fileArrayPatternBackend = $this->getBackend();
@@ -39,10 +42,11 @@ class FirewallController extends ActionController
 
         $moduleTemplate->assignMultiple([
             'patterns' => $fileArrayPatternBackend->listRaw(),
-            'kinds' => array_combine(PatternKind::all(), PatternKind::all()),
+            'kinds' => PatternKind::cases(),
             'now' => time(),
             'editPattern' => $editPattern,
             'isEditMode' => $editPattern !== null,
+            'integrityIssue' => $fileArrayPatternBackend->checkIntegrity(),
         ]);
 
         return $moduleTemplate->renderResponse('Backend/Firewall/Overview');
@@ -63,13 +67,14 @@ class FirewallController extends ActionController
     public function updateAction(string $id, PatternEntryDto $patternEntryDto): ResponseInterface
     {
         try {
-            $backend = $this->getBackend();
-            $patternEntryDto->metadata['id'] = $id;
-
-            $patternEntry = $patternEntryDto->toPatternEntry();
-
-            // The append method handles updates when the ID already exists
-            $backend->append($patternEntry);
+            $entry = $patternEntryDto->toPatternEntry();
+            $this->getBackend()->append(new PatternEntry(
+                kind: $entry->kind,
+                value: $entry->value,
+                target: $entry->target,
+                expiresAt: $entry->expiresAt,
+                metadata: ['id' => $id],
+            ));
 
             $this->addFlashMessage('Pattern updated successfully.');
         } catch (\InvalidArgumentException $invalidArgumentException) {
@@ -96,8 +101,12 @@ class FirewallController extends ActionController
 
     private function getBackend(): FileArrayPatternBackend
     {
+        if ($this->fileArrayPatternBackend instanceof FileArrayPatternBackend) {
+            return $this->fileArrayPatternBackend;
+        }
+
         $path = ConfigFactory::getPatternsFilePath();
-        return new FileArrayPatternBackend(
+        return $this->fileArrayPatternBackend = new FileArrayPatternBackend(
             $path,
             new FileArrayWriter($path, $this->logger),
             $this->logger
