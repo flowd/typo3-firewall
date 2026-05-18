@@ -26,7 +26,7 @@ final class PatternEntryDto
     public function toPatternEntry(): PatternEntry
     {
         $kind = PatternKind::tryFrom(trim($this->kind));
-        if ($kind === null) {
+        if (!$kind instanceof PatternKind) {
             throw new \InvalidArgumentException(
                 sprintf('Invalid pattern kind: %s', $this->kind),
                 1779107801

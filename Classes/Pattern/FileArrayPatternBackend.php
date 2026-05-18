@@ -21,17 +21,14 @@ final class FileArrayPatternBackend implements PatternBackendInterface
 
     private readonly int $now;
 
-    private readonly PatternEntryValidator $patternEntryValidator;
-
     public function __construct(
         private readonly string $filePath,
         private readonly FileArrayWriter $fileArrayWriter,
         private readonly ?LoggerInterface $logger = null,
         ?int $now = null,
-        ?PatternEntryValidator $patternEntryValidator = null,
+        private readonly PatternEntryValidator $patternEntryValidator = new PatternEntryValidator(),
     ) {
         $this->now = $now ?? time();
-        $this->patternEntryValidator = $patternEntryValidator ?? new PatternEntryValidator();
     }
 
     public function consume(): PatternSnapshot
@@ -72,7 +69,7 @@ final class FileArrayPatternBackend implements PatternBackendInterface
     {
         $row = $this->ensureRowScalars($row);
         $kind = is_string($row['kind'] ?? null) ? PatternKind::tryFrom($row['kind']) : null;
-        if ($kind === null) {
+        if (!$kind instanceof PatternKind) {
             $this->logger?->warning('Skipping pattern row with unknown kind', [
                 'id' => $id,
                 'kind' => $row['kind'] ?? null,
@@ -297,7 +294,7 @@ final class FileArrayPatternBackend implements PatternBackendInterface
         $unknownKinds = 0;
         foreach ($data as $row) {
             $kindValue = is_string($row['kind'] ?? null) ? $row['kind'] : null;
-            if ($kindValue === null || PatternKind::tryFrom($kindValue) === null) {
+            if ($kindValue === null || !PatternKind::tryFrom($kindValue) instanceof PatternKind) {
                 $unknownKinds++;
             }
         }
