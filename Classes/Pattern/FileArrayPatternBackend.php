@@ -285,7 +285,7 @@ final class FileArrayPatternBackend implements PatternBackendInterface
 
     public function checkIntegrity(): ?string
     {
-        $shapeIssue = $this->fileArrayWriter->checkIntegrity();
+        $shapeIssue = $this->fileArrayWriter->checkFileShape();
         if ($shapeIssue !== null) {
             return $shapeIssue;
         }

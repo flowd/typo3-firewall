@@ -74,11 +74,18 @@ final class FileArrayWriter
     }
 
     /**
-     * Reports whether the on-disk pattern file is in a state where some or all entries
-     * would silently be dropped by readArray(). Returns null when the file is healthy
-     * (or genuinely empty); otherwise a human-readable description of the issue.
+     * Reports issues with the on-disk pattern file at the *shape* level only:
+     * readability, JSON validity, top-level array, and per-row array shape.
+     *
+     * Returns null when the file is healthy (or genuinely empty); otherwise a
+     * human-readable description of the issue.
+     *
+     * Semantic checks that depend on knowing what a row means (for example
+     * whether `kind` maps to a valid PatternKind) intentionally live in
+     * FileArrayPatternBackend::checkIntegrity(), which is the user-facing
+     * entry point called by the backend module.
      */
-    public function checkIntegrity(): ?string
+    public function checkFileShape(): ?string
     {
         if (!is_file($this->filePath)) {
             return null;

@@ -342,62 +342,62 @@ final class FileArrayWriterTest extends TestCase
     }
 
     #[Test]
-    public function checkIntegrityReturnsNullForMissingFile(): void
+    public function checkFileShapeReturnsNullForMissingFile(): void
     {
         $fileArrayWriter = new FileArrayWriter($this->testDir . '/missing-integrity.json');
 
-        self::assertNull($fileArrayWriter->checkIntegrity());
+        self::assertNull($fileArrayWriter->checkFileShape());
     }
 
     #[Test]
-    public function checkIntegrityReturnsNullForEmptyJsonObject(): void
+    public function checkFileShapeReturnsNullForEmptyJsonObject(): void
     {
         $filePath = $this->testDir . '/empty.json';
         file_put_contents($filePath, '{}');
 
         $fileArrayWriter = new FileArrayWriter($filePath);
 
-        self::assertNull($fileArrayWriter->checkIntegrity());
+        self::assertNull($fileArrayWriter->checkFileShape());
     }
 
     #[Test]
-    public function checkIntegrityReturnsNullForHealthyFile(): void
+    public function checkFileShapeReturnsNullForHealthyFile(): void
     {
         $filePath = $this->testDir . '/healthy.json';
         $fileArrayWriter = new FileArrayWriter($filePath);
         $fileArrayWriter->writeArray(['id-1' => ['kind' => 'ip', 'value' => '1.1.1.1']]);
 
-        self::assertNull($fileArrayWriter->checkIntegrity());
+        self::assertNull($fileArrayWriter->checkFileShape());
     }
 
     #[Test]
-    public function checkIntegrityReportsInvalidJson(): void
+    public function checkFileShapeReportsInvalidJson(): void
     {
         $filePath = $this->testDir . '/broken.json';
         file_put_contents($filePath, '{not valid json');
 
         $fileArrayWriter = new FileArrayWriter($filePath);
 
-        $issue = $fileArrayWriter->checkIntegrity();
+        $issue = $fileArrayWriter->checkFileShape();
         self::assertNotNull($issue);
         self::assertStringContainsString('invalid JSON', $issue);
     }
 
     #[Test]
-    public function checkIntegrityReportsNonArrayContent(): void
+    public function checkFileShapeReportsNonArrayContent(): void
     {
         $filePath = $this->testDir . '/string.json';
         file_put_contents($filePath, '"just a string"');
 
         $fileArrayWriter = new FileArrayWriter($filePath);
 
-        $issue = $fileArrayWriter->checkIntegrity();
+        $issue = $fileArrayWriter->checkFileShape();
         self::assertNotNull($issue);
         self::assertStringContainsString('does not contain an array', $issue);
     }
 
     #[Test]
-    public function checkIntegrityReportsPartiallyMalformedEntries(): void
+    public function checkFileShapeReportsPartiallyMalformedEntries(): void
     {
         $filePath = $this->testDir . '/partial.json';
         file_put_contents($filePath, json_encode([
@@ -408,7 +408,7 @@ final class FileArrayWriterTest extends TestCase
 
         $fileArrayWriter = new FileArrayWriter($filePath);
 
-        $issue = $fileArrayWriter->checkIntegrity();
+        $issue = $fileArrayWriter->checkFileShape();
         self::assertNotNull($issue);
         self::assertStringContainsString('1 of 3', $issue);
     }
