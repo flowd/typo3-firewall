@@ -189,10 +189,19 @@
         <source>HTTP header equals value</source>
       </trans-unit>
       <trans-unit id="examples.table.header_exact.value">
-        <source>User-Agent: curl/7.68.0</source>
+        <source>curl/7.68.0</source>
+      </trans-unit>
+      <trans-unit id="examples.table.header_exact.value.prefix">
+        <source>Value:</source>
+      </trans-unit>
+      <trans-unit id="examples.table.header_exact.target">
+        <source>user-agent</source>
+      </trans-unit>
+      <trans-unit id="examples.table.header_exact.target.prefix">
+        <source>Target:</source>
       </trans-unit>
       <trans-unit id="examples.table.header_exact.description">
-        <source>Blocks requests with exactly this User-Agent header.</source>
+        <source>Blocks requests where the User-Agent header is exactly this value. The header name goes into the target field; the expected value into the value field.</source>
       </trans-unit>
       <trans-unit id="examples.table.header_regex.kind">
         <source>HTTP header (regular expression)</source>

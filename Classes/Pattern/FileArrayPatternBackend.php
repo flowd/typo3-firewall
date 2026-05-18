@@ -203,6 +203,7 @@ final class FileArrayPatternBackend implements PatternBackendInterface
     private function validatePatternEntry(PatternEntry $patternEntry): void
     {
         $this->validateNotEmpty($patternEntry);
+        $this->validateTargetByKind($patternEntry);
         $this->validateValueByKind($patternEntry);
     }
 
@@ -212,6 +213,20 @@ final class FileArrayPatternBackend implements PatternBackendInterface
             throw new \InvalidArgumentException(
                 'Pattern value must not be empty',
                 1770244701
+            );
+        }
+    }
+
+    private function validateTargetByKind(PatternEntry $patternEntry): void
+    {
+        if (!in_array($patternEntry->kind, [PatternKind::HEADER_EXACT, PatternKind::HEADER_REGEX], true)) {
+            return;
+        }
+
+        if ($patternEntry->target === null || trim($patternEntry->target) === '') {
+            throw new \InvalidArgumentException(
+                sprintf('Pattern kind "%s" requires the target field to contain the header name', $patternEntry->kind->value),
+                1779136101
             );
         }
     }

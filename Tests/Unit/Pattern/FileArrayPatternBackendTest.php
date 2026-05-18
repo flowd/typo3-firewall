@@ -247,6 +247,45 @@ final class FileArrayPatternBackendTest extends TestCase
     }
 
     /**
+     * @return array<string, array{0: PatternKind}>
+     */
+    public static function headerKindProvider(): array
+    {
+        return [
+            'header_exact' => [PatternKind::HEADER_EXACT],
+            'header_regex' => [PatternKind::HEADER_REGEX],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('headerKindProvider')]
+    public function appendThrowsExceptionWhenHeaderKindHasNoTarget(PatternKind $kind): void
+    {
+        $fileArrayPatternBackend = $this->createBackend();
+        $value = $kind === PatternKind::HEADER_REGEX ? '/curl/' : 'curl/7.68.0';
+        $patternEntry = new PatternEntry(kind: $kind, value: $value);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('requires the target field to contain the header name');
+
+        $fileArrayPatternBackend->append($patternEntry);
+    }
+
+    #[Test]
+    #[DataProvider('headerKindProvider')]
+    public function appendThrowsExceptionWhenHeaderKindTargetIsWhitespace(PatternKind $kind): void
+    {
+        $fileArrayPatternBackend = $this->createBackend();
+        $value = $kind === PatternKind::HEADER_REGEX ? '/curl/' : 'curl/7.68.0';
+        $patternEntry = new PatternEntry(kind: $kind, value: $value, target: '   ');
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('requires the target field to contain the header name');
+
+        $fileArrayPatternBackend->append($patternEntry);
+    }
+
+    /**
      * @return array<string, array{0: string}>
      */
     public static function validIpAddressProvider(): array
