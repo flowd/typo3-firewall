@@ -8,7 +8,7 @@ Key features of the Firewall extension:
 
 - Integration of the Phirewall package (see :doc:`Phirewall`)
 - Management of static block patterns in the backend
-- Support for various pattern types (IP, CIDR, path, header, user agent, regex)
+- Support for various pattern types (IP, CIDR, path, header, regex)
 - Expiration date for patterns (expiresAt)
 
 Configuration overview
@@ -33,25 +33,28 @@ This example blocks requests from known bad IP addresses and certain paths or qu
     use Flowd\Phirewall\Config;
     use Flowd\Phirewall\Store\InMemoryCache;
     use Psr\EventDispatcher\EventDispatcherInterface;
+    use Psr\Http\Message\ServerRequestInterface;
 
-    return fn (EventDispatcherInterface $eventDispatcher) =>
-        (new Config(new InMemoryCache(), $eventDispatcher))
-            ->blocklist(
-                name: 'evil-bot-ips',
-                callback: fn(ServerRequestInterface $request) => in_array($request->getServerParams()['REMOTE_ADDR'] ?? '', [
-                    '176.65.149.61',
-                    '45.13.214.201',
-                ], true)
-            )
-            ->blocklist(
-                name: 'blocked-uri-paths',
-                callback: fn(ServerRequestInterface $request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
-            )
-            ->blocklist(
-                name: 'blocked-uri-query-strings',
-                callback: fn(ServerRequestInterface $request) => str_contains(strtolower($request->getUri()->getQuery()), 'xdebug')
-                    || str_contains(strtolower($request->getUri()->getQuery()), 'option=com_')
-            );
+    return function (EventDispatcherInterface $eventDispatcher): Config {
+        $config = new Config(new InMemoryCache(), $eventDispatcher);
+        $config->blocklists->add(
+            name: 'evil-bot-ips',
+            callback: fn(ServerRequestInterface $request) => in_array($request->getServerParams()['REMOTE_ADDR'] ?? '', [
+                '176.65.149.61',
+                '45.13.214.201',
+            ], true)
+        );
+        $config->blocklists->add(
+            name: 'blocked-uri-paths',
+            callback: fn(ServerRequestInterface $request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
+        );
+        $config->blocklists->add(
+            name: 'blocked-uri-query-strings',
+            callback: fn(ServerRequestInterface $request) => str_contains(strtolower($request->getUri()->getQuery()), 'xdebug')
+                || str_contains(strtolower($request->getUri()->getQuery()), 'option=com_')
+        );
+        return $config;
+    };
 
 Temporary blocking after repeated abuse (Fail2Ban)
 --------------------------------------------------
@@ -66,16 +69,18 @@ This example blocks users for 1 minute if they access `/search` more than 5 time
     use Flowd\Phirewall\Store\ApcuCache;
     use Psr\EventDispatcher\EventDispatcherInterface;
 
-    return fn (EventDispatcherInterface $eventDispatcher) =>
-        (new Config(new ApcuCache(), $eventDispatcher))
-            ->fail2ban(
-                name: 'search-page-scrapers',
-                threshold: 5,
-                period: 10,
-                ban: 60,
-                filter: fn($request) => str_starts_with($request->getUri()->getPath(), '/search'),
-                key: KeyExtractors::ip()
-            );
+    return function (EventDispatcherInterface $eventDispatcher): Config {
+        $config = new Config(new ApcuCache(), $eventDispatcher);
+        $config->fail2ban->add(
+            name: 'search-page-scrapers',
+            threshold: 5,
+            period: 10,
+            ban: 60,
+            filter: fn($request) => str_starts_with($request->getUri()->getPath(), '/search'),
+            key: KeyExtractors::ip()
+        );
+        return $config;
+    };
 
 Rate limiting with clear client feedback
 ----------------------------------------
@@ -90,15 +95,17 @@ This example limits users to 10 requests every 10 seconds (per IP) and sends rat
     use Flowd\Phirewall\Store\ApcuCache;
     use Psr\EventDispatcher\EventDispatcherInterface;
 
-    return fn (EventDispatcherInterface $eventDispatcher) =>
-        (new Config(new ApcuCache(), $eventDispatcher))
-            ->throttle(
-                name: 'slow-down-to-10-requests-in-10-seconds',
-                limit: 10,
-                period: 10,
-                key: KeyExtractors::ip()
-            )
-            ->enableRateLimitHeaders();
+    return function (EventDispatcherInterface $eventDispatcher): Config {
+        $config = new Config(new ApcuCache(), $eventDispatcher);
+        $config->throttles->add(
+            name: 'slow-down-to-10-requests-in-10-seconds',
+            limit: 10,
+            period: 10,
+            key: KeyExtractors::ip()
+        );
+        $config->enableRateLimitHeaders();
+        return $config;
+    };
 
 Using APCu as a cache backend
 -----------------------------
@@ -112,12 +119,14 @@ This example shows how to use APCu as a cache backend. Use this for single-serve
     use Flowd\Phirewall\Store\ApcuCache;
     use Psr\EventDispatcher\EventDispatcherInterface;
 
-    return fn (EventDispatcherInterface $eventDispatcher) =>
-        (new Config(new ApcuCache(), $eventDispatcher))
-            ->blocklist(
-                name: 'blocked-uri-paths',
-                callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
-            );
+    return function (EventDispatcherInterface $eventDispatcher): Config {
+        $config = new Config(new ApcuCache(), $eventDispatcher);
+        $config->blocklists->add(
+            name: 'blocked-uri-paths',
+            callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
+        );
+        return $config;
+    };
 
 Using Redis as a cache backend
 ------------------------------
@@ -132,12 +141,14 @@ This example uses Redis for the cache backend, which is recommended for producti
     use Predis\Client;
     use Psr\EventDispatcher\EventDispatcherInterface;
 
-    return fn (EventDispatcherInterface $eventDispatcher) =>
-        (new Config(new RedisCache(new Client('redis://localhost:6379')), $eventDispatcher))
-            ->blocklist(
-                name: 'blocked-uri-paths',
-                callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
-            );
+    return function (EventDispatcherInterface $eventDispatcher): Config {
+        $config = new Config(new RedisCache(new Client('redis://localhost:6379')), $eventDispatcher);
+        $config->blocklists->add(
+            name: 'blocked-uri-paths',
+            callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
+        );
+        return $config;
+    };
 
 Using InMemoryCache as a cache backend (not recommended for production)
 -----------------------------------------------------------------------
@@ -151,12 +162,14 @@ This example uses InMemoryCache, which is only suitable for testing or CLI envir
     use Flowd\Phirewall\Store\InMemoryCache;
     use Psr\EventDispatcher\EventDispatcherInterface;
 
-    return fn (EventDispatcherInterface $eventDispatcher) =>
-        (new Config(new InMemoryCache(), $eventDispatcher))
-            ->blocklist(
-                name: 'blocked-uri-paths',
-                callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
-            );
+    return function (EventDispatcherInterface $eventDispatcher): Config {
+        $config = new Config(new InMemoryCache(), $eventDispatcher);
+        $config->blocklists->add(
+            name: 'blocked-uri-paths',
+            callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
+        );
+        return $config;
+    };
 
 .. note::
 
@@ -173,21 +186,24 @@ This example shows how to return a custom message and status code when a request
 
     <?php
     use Flowd\Phirewall\Config;
+    use Flowd\Phirewall\Config\Response\ClosureBlocklistedResponseFactory;
     use Flowd\Phirewall\Store\ApcuCache;
     use Psr\EventDispatcher\EventDispatcherInterface;
     use TYPO3\CMS\Core\Http\ResponseFactory;
     use TYPO3\CMS\Core\Http\StreamFactory;
 
-    return fn (EventDispatcherInterface $eventDispatcher) =>
-        (new Config(new ApcuCache(), $eventDispatcher))
-            ->blocklist(
-                name: 'blocked-uri-paths',
-                callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
-            )
-            ->blocklistedResponse(function ($rule, $type, $request) {
-                return (new ResponseFactory())
-                    ->createResponse()
-                    ->withBody((new StreamFactory())->createStream('Access denied by firewall rule: ' . $rule . ' (type: ' . $type . ')'))
-                    ->withHeader('Content-Type', 'text/plain')
-                    ->withStatus(403);
-            });
+    return function (EventDispatcherInterface $eventDispatcher): Config {
+        $config = new Config(new ApcuCache(), $eventDispatcher);
+        $config->blocklists->add(
+            name: 'blocked-uri-paths',
+            callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
+        );
+        $config->blocklistedResponseFactory = new ClosureBlocklistedResponseFactory(
+            fn(string $rule, string $type, $request) => (new ResponseFactory())
+                ->createResponse()
+                ->withBody((new StreamFactory())->createStream('Access denied by firewall rule: ' . $rule . ' (type: ' . $type . ')'))
+                ->withHeader('Content-Type', 'text/plain')
+                ->withStatus(403)
+        );
+        return $config;
+    };

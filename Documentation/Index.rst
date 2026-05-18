@@ -12,8 +12,8 @@ The TYPO3 Firewall extension provides two main possibilities:
 This extension integrates the powerful open-source package `phirewall` and makes its features available in the TYPO3 context. This includes:
 
 - Protection against brute-force and other attacks
-- Flexible pattern and rule definitions (IP, path, header, user agent, etc.)
-- Support for blacklists, whitelists, rate limiting, and more
+- Flexible pattern and rule definitions (IP, CIDR, path, header, etc.)
+- Support for blocklists, safelists, rate limiting, and more
 - Central configuration via PHP array files
 
 **Configuration of Phirewall**
@@ -21,7 +21,7 @@ Phirewall itself is configured in the core configuration file::
 
    config/system/phirewall.php
 
-All details and advanced features can be found in the official Phirewall documentation: https://github.com/flowd/phirewall
+All details and advanced features can be found in the official Phirewall documentation: https://phirewall.de/
 
 2. Manage static block patterns in the TYPO3 backend
 ----------------------------------------------------

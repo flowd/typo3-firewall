@@ -6,6 +6,10 @@ Phirewall
 
 This extension uses the open-source package `flowd/phirewall` as its technical foundation. The full documentation and all features can be found at:
 
+https://phirewall.de/
+
+The source code lives at:
+
 https://github.com/flowd/phirewall
 
 Core configuration
