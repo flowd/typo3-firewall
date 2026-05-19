@@ -14,11 +14,11 @@
 	"support": {
 		"issues": "https://github.com/flowd/typo3-firewall/issues",
 		"source": "https://github.com/flowd/typo3-firewall",
-		"docs": "https://docs.typo3.org/p/saschae/firewall/main/en-us/"
+		"docs": "https://docs.typo3.org/p/flowd/typo3-firewall/main/en-us/Index.html"
 	},
 	"require": {
 		"php": ">=8.3",
-		"flowd/phirewall": "^0.2.0",
+		"flowd/phirewall": "^0.4.0",
 		"typo3/cms-backend": "^12.4 || ^13.4 || ^14.0",
 		"typo3/cms-core": "^12.4 || ^13.4 || ^14.0"
 	},

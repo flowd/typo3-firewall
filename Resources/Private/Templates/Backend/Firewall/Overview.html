@@ -6,6 +6,17 @@
 <f:section name="Content">
     <f:flashMessages />
 
+    <f:if condition="{integrityIssue}">
+        <div class="alert alert-danger d-flex align-items-start gap-2" role="alert">
+            <core:icon identifier="actions-exclamation-triangle" size="small" />
+            <div>
+                <strong><f:translate key="integrity.title" /></strong>
+                <div>{integrityIssue}</div>
+                <small class="text-muted"><f:translate key="integrity.hint" /></small>
+            </div>
+        </div>
+    </f:if>
+
     <div class="row">
         <div class="col-lg-8">
             <div class="card mb-4">
@@ -49,9 +60,7 @@
                                                 <f:case value="path_exact"><span class="badge text-bg-info"><f:translate key="kind.{row.kind}" default="{row.kind}" /></span></f:case>
                                                 <f:case value="path_regex"><span class="badge text-bg-warning"><f:translate key="kind.{row.kind}" default="{row.kind}" /></span></f:case>
                                                 <f:case value="header_exact"><span class="badge text-bg-secondary"><f:translate key="kind.{row.kind}" default="{row.kind}" /></span></f:case>
-                                                <f:case value="header_substring"><span class="badge text-bg-secondary"><f:translate key="kind.{row.kind}" default="{row.kind}" /></span></f:case>
                                                 <f:case value="header_regex"><span class="badge text-bg-warning"><f:translate key="kind.{row.kind}" default="{row.kind}" /></span></f:case>
-                                                <f:case value="user_agent"><span class="badge text-bg-secondary"><f:translate key="kind.{row.kind}" default="{row.kind}" /></span></f:case>
                                                 <f:case value="request_regex"><span class="badge text-bg-warning"><f:translate key="kind.{row.kind}" default="{row.kind}" /></span></f:case>
                                                 <f:defaultCase><span class="badge text-bg-dark"><f:translate key="kind.{row.kind}" default="{row.kind}" /></span></f:defaultCase>
                                             </f:switch>
@@ -188,8 +197,8 @@
                             </label>
                             <f:form.select class="form-select" id="firewall-kind" property="kind" required="1" value="{f:if(condition: isEditMode, then: editPattern.kind)}">
                                 <f:for each="{kinds}" as="kind">
-                                    <f:form.select.option value="{kind}">
-                                        <f:translate key="kind.{kind}" />
+                                    <f:form.select.option value="{kind.value}">
+                                        <f:translate key="kind.{kind.value}" />
                                     </f:form.select.option>
                                 </f:for>
                             </f:form.select>
@@ -313,7 +322,12 @@
                             </tr>
                             <tr>
                                 <td><span class="badge text-bg-secondary"><f:translate key="examples.table.header_exact.kind" /></span></td>
-                                <td><code><f:translate key="examples.table.header_exact.value" /></code></td>
+                                <td>
+                                    <small class="text-muted"><f:translate key="examples.table.header_exact.value.prefix" /></small>
+                                    <code><f:translate key="examples.table.header_exact.value" /></code><br />
+                                    <small class="text-muted"><f:translate key="examples.table.header_exact.target.prefix" /></small>
+                                    <code><f:translate key="examples.table.header_exact.target" /></code>
+                                </td>
                                 <td><small><f:translate key="examples.table.header_exact.description" /></small></td>
                             </tr>
                             <tr>
@@ -325,11 +339,6 @@
                                     <code><f:translate key="examples.table.header_regex.target" /></code>
                                 </td>
                                 <td><small><f:translate key="examples.table.header_regex.description" /></small></td>
-                            </tr>
-                            <tr>
-                                <td><span class="badge text-bg-secondary"><f:translate key="examples.table.user_agent.kind" /></span></td>
-                                <td><code><f:translate key="examples.table.user_agent.value" /></code></td>
-                                <td><small><f:translate key="examples.table.user_agent.description" /></small></td>
                             </tr>
                         </tbody>
                     </table>

@@ -26,6 +26,7 @@ final class FileArrayPatternBackend implements PatternBackendInterface
         private readonly FileArrayWriter $fileArrayWriter,
         private readonly ?LoggerInterface $logger = null,
         ?int $now = null,
+        private readonly PatternEntryValidator $patternEntryValidator = new PatternEntryValidator(),
     ) {
         $this->now = $now ?? time();
     }
@@ -44,8 +45,17 @@ final class FileArrayPatternBackend implements PatternBackendInterface
         $raw = $this->fileArrayWriter->readArray();
         $entries = [];
         foreach ($raw as $id => $row) {
-            if (is_string($id) && is_array($row)) {
-                $entries[] = $this->rowToPatternEntry($id, $row);
+            if (!is_string($id)) {
+                continue;
+            }
+
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $entry = $this->rowToPatternEntry($id, $row);
+            if ($entry instanceof PatternEntry) {
+                $entries[] = $entry;
             }
         }
 
@@ -55,9 +65,18 @@ final class FileArrayPatternBackend implements PatternBackendInterface
     /**
      * @param array<string, mixed> $row
      */
-    private function rowToPatternEntry(string $id, array $row): PatternEntry
+    private function rowToPatternEntry(string $id, array $row): ?PatternEntry
     {
         $row = $this->ensureRowScalars($row);
+        $kind = is_string($row['kind'] ?? null) ? PatternKind::tryFrom($row['kind']) : null;
+        if (!$kind instanceof PatternKind) {
+            $this->logger?->warning('Skipping pattern row with unknown kind', [
+                'id' => $id,
+                'kind' => $row['kind'] ?? null,
+            ]);
+            return null;
+        }
+
         $metadata = $this->extractMetadata($row);
         $metadata['id'] = $id;
 
@@ -67,7 +86,7 @@ final class FileArrayPatternBackend implements PatternBackendInterface
         }
 
         return new PatternEntry(
-            kind: is_string($row['kind'] ?? null) ? $row['kind'] : '',
+            kind: $kind,
             value: is_string($row['value'] ?? null) ? $row['value'] : '',
             target: is_string($row['target'] ?? null) ? $row['target'] : null,
             expiresAt: is_int($row['expiresAt'] ?? null) ? $row['expiresAt'] : null,
@@ -139,12 +158,12 @@ final class FileArrayPatternBackend implements PatternBackendInterface
 
     private function generatePatternHash(PatternEntry $patternEntry): string
     {
-        return hash('sha256', $patternEntry->kind . '|' . $patternEntry->value . '|' . ($patternEntry->target ?? ''));
+        return hash('sha256', $patternEntry->kind->value . '|' . $patternEntry->value . '|' . ($patternEntry->target ?? ''));
     }
 
     public function append(PatternEntry $patternEntry): void
     {
-        $this->validatePatternEntry($patternEntry);
+        $this->patternEntryValidator->validate($patternEntry);
 
         $now = $this->now;
         $id = $patternEntry->metadata['id'] ?? null;
@@ -178,109 +197,6 @@ final class FileArrayPatternBackend implements PatternBackendInterface
     }
 
     /**
-     * Validates the pattern entry before storage.
-     *
-     * @throws \InvalidArgumentException If the pattern is invalid
-     */
-    private function validatePatternEntry(PatternEntry $patternEntry): void
-    {
-        $this->validateNotEmpty($patternEntry);
-        $this->validateKind($patternEntry);
-        $this->validateValueByKind($patternEntry);
-    }
-
-    private function validateNotEmpty(PatternEntry $patternEntry): void
-    {
-        if ($patternEntry->kind === '' || $patternEntry->value === '') {
-            throw new \InvalidArgumentException(
-                'Pattern kind and value must not be empty',
-                1770244701
-            );
-        }
-    }
-
-    private function validateKind(PatternEntry $patternEntry): void
-    {
-        if (!in_array($patternEntry->kind, PatternKind::all(), true)) {
-            throw new \InvalidArgumentException(
-                sprintf('Invalid pattern kind: %s', $patternEntry->kind),
-                1770244706
-            );
-        }
-    }
-
-    private function validateValueByKind(PatternEntry $patternEntry): void
-    {
-        match ($patternEntry->kind) {
-            PatternKind::IP => $this->validateIpAddress($patternEntry->value),
-            PatternKind::CIDR => $this->validateCidr($patternEntry->value),
-            PatternKind::PATH_REGEX, PatternKind::HEADER_REGEX, PatternKind::REQUEST_REGEX => $this->validateRegex($patternEntry->value),
-            default => null,
-        };
-    }
-
-    private function validateIpAddress(string $value): void
-    {
-        if (filter_var($value, FILTER_VALIDATE_IP) === false) {
-            throw new \InvalidArgumentException(
-                sprintf('Invalid IP address: %s', $value),
-                1770244710
-            );
-        }
-    }
-
-    private function validateCidr(string $value): void
-    {
-        if (!$this->isValidCidr($value)) {
-            throw new \InvalidArgumentException(
-                sprintf('Invalid CIDR notation: %s', $value),
-                1770244715
-            );
-        }
-    }
-
-    private function validateRegex(string $value): void
-    {
-        if (@preg_match($value, '') === false) {
-            throw new \InvalidArgumentException(
-                sprintf('Invalid regex pattern: %s', $value),
-                1770244720
-            );
-        }
-    }
-
-    private function isValidCidr(string $cidr): bool
-    {
-        $parts = explode('/', $cidr);
-        if (count($parts) !== 2) {
-            return false;
-        }
-
-        [$ip, $prefix] = $parts;
-
-        return $this->isValidCidrPrefix($ip, $prefix);
-    }
-
-    private function isValidCidrPrefix(string $ip, string $prefix): bool
-    {
-        if (!is_numeric($prefix)) {
-            return false;
-        }
-
-        $prefixInt = (int)$prefix;
-
-        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
-            return $prefixInt >= 0 && $prefixInt <= 32;
-        }
-
-        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false) {
-            return $prefixInt >= 0 && $prefixInt <= 128;
-        }
-
-        return false;
-    }
-
-    /**
      * @param array<string, mixed>|null $existingRow
      * @return array<string, mixed>
      */
@@ -303,7 +219,7 @@ final class FileArrayPatternBackend implements PatternBackendInterface
         unset($metadata['lastModifiedAt']);
 
         $row = [
-            'kind' => $patternEntry->kind,
+            'kind' => $patternEntry->kind->value,
             'value' => $patternEntry->value,
             'target' => $patternEntry->target,
             'expiresAt' => $patternEntry->expiresAt,
@@ -365,6 +281,33 @@ final class FileArrayPatternBackend implements PatternBackendInterface
             'format' => 'php',
             'path' => $this->filePath,
         ];
+    }
+
+    public function checkIntegrity(): ?string
+    {
+        $shapeIssue = $this->fileArrayWriter->checkFileShape();
+        if ($shapeIssue !== null) {
+            return $shapeIssue;
+        }
+
+        $data = $this->fileArrayWriter->readArray();
+        $unknownKinds = 0;
+        foreach ($data as $row) {
+            $kindValue = is_string($row['kind'] ?? null) ? $row['kind'] : null;
+            if ($kindValue === null || !PatternKind::tryFrom($kindValue) instanceof PatternKind) {
+                $unknownKinds++;
+            }
+        }
+
+        if ($unknownKinds > 0) {
+            return sprintf(
+                '%d of %d pattern entries reference an unknown kind and were skipped.',
+                $unknownKinds,
+                count($data),
+            );
+        }
+
+        return null;
     }
 
     /**

@@ -74,6 +74,57 @@ final class FileArrayWriter
     }
 
     /**
+     * Reports issues with the on-disk pattern file at the *shape* level only:
+     * readability, JSON validity, top-level array, and per-row array shape.
+     *
+     * Returns null when the file is healthy (or genuinely empty); otherwise a
+     * human-readable description of the issue.
+     *
+     * Semantic checks that depend on knowing what a row means (for example
+     * whether `kind` maps to a valid PatternKind) intentionally live in
+     * FileArrayPatternBackend::checkIntegrity(), which is the user-facing
+     * entry point called by the backend module.
+     */
+    public function checkFileShape(): ?string
+    {
+        if (!is_file($this->filePath)) {
+            return null;
+        }
+
+        $content = file_get_contents($this->filePath);
+        if ($content === false) {
+            return 'Pattern file cannot be read.';
+        }
+
+        $trimmed = trim($content);
+        if ($trimmed === '' || $trimmed === '[]' || $trimmed === '{}') {
+            return null;
+        }
+
+        try {
+            $data = json_decode($content, true, 16, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $jsonException) {
+            return sprintf('Pattern file contains invalid JSON: %s', $jsonException->getMessage());
+        }
+
+        if (!is_array($data)) {
+            return 'Pattern file does not contain an array.';
+        }
+
+        $rawCount = count($data);
+        $validCount = count($this->filterInvalidEntries($data));
+        if ($validCount < $rawCount) {
+            return sprintf(
+                '%d of %d pattern entries are malformed and were skipped.',
+                $rawCount - $validCount,
+                $rawCount,
+            );
+        }
+
+        return null;
+    }
+
+    /**
      * @param array<mixed> $data
      * @return array<string, array<string, mixed>>
      */
