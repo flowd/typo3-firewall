@@ -153,7 +153,7 @@ class FirewallController extends ActionController
     public function unbanAction(string $rule, string $key, string $type): ResponseInterface
     {
         $banType = BanType::tryFrom($type);
-        if ($banType === null) {
+        if (!$banType instanceof BanType) {
             $this->addFlashMessage('Unknown ban type: ' . $type, 'Error', ContextualFeedbackSeverity::ERROR);
             return $this->redirect('bans');
         }
