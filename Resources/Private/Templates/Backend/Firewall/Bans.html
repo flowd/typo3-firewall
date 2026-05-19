@@ -1,0 +1,124 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+
+<f:section name="Content">
+    <f:flashMessages />
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>
+                <core:icon identifier="actions-ban" size="small" />
+                <strong><f:translate key="bans.title" /></strong>
+                <span class="badge bg-secondary ms-2">{totalBans}</span>
+            </span>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-0">
+                <core:icon identifier="actions-info" size="small" />
+                <f:translate key="bans.intro" />
+            </p>
+        </div>
+    </div>
+
+    <f:if condition="{banGroups}">
+        <f:then>
+            <f:for each="{banGroups}" as="group">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>
+                            <f:switch expression="{group.type}">
+                                <f:case value="fail2ban"><span class="badge text-bg-danger me-2"><f:translate key="bans.type.fail2ban" /></span></f:case>
+                                <f:case value="allow2ban"><span class="badge text-bg-warning me-2"><f:translate key="bans.type.allow2ban" /></span></f:case>
+                                <f:defaultCase><span class="badge text-bg-dark me-2">{group.type}</span></f:defaultCase>
+                            </f:switch>
+                            <strong>{group.rule}</strong>
+                            <span class="badge bg-secondary ms-2">{group.bans -> f:count()}</span>
+                        </span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 55%"><f:translate key="bans.field.key" /></th>
+                                    <th style="width: 30%"><f:translate key="bans.field.expiresAt" /></th>
+                                    <th style="width: 15%" class="text-end"><f:translate key="bans.field.actions" /></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <f:for each="{group.bans}" as="ban" iteration="iteration">
+                                    <f:variable name="modalId" value="unbanModal-{group.type}-{group.rule}-{iteration.index}" />
+                                    <tr>
+                                        <td>
+                                            <code class="text-break"><f:format.htmlspecialchars>{ban.key}</f:format.htmlspecialchars></code>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {ban.expiresAt -> f:format.date(format:'d.m.Y H:i:s')}
+                                            </small>
+                                        </td>
+                                        <td class="text-end text-nowrap">
+                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                                title="{f:translate(key: 'bans.action.unban')}"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#{modalId}">
+                                                <core:icon identifier="actions-delete" size="small" />
+                                                <f:translate key="bans.action.unban" />
+                                            </button>
+
+                                            <div class="modal fade" id="{modalId}" tabindex="-1" aria-hidden="true">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title"><f:translate key="bans.action.unban.confirmTitle" /></h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body text-start">
+                                                            <p><f:translate key="bans.action.unban.confirm" /></p>
+                                                            <dl class="row mb-0">
+                                                                <dt class="col-sm-4"><f:translate key="bans.field.rule" /></dt>
+                                                                <dd class="col-sm-8"><code>{group.rule}</code></dd>
+                                                                <dt class="col-sm-4"><f:translate key="bans.field.type" /></dt>
+                                                                <dd class="col-sm-8"><code>{group.type}</code></dd>
+                                                                <dt class="col-sm-4"><f:translate key="bans.field.key" /></dt>
+                                                                <dd class="col-sm-8"><code>{ban.key}</code></dd>
+                                                            </dl>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                                <f:translate key="action.cancel" />
+                                                            </button>
+                                                            <f:form action="unban" method="post" class="d-inline m-0">
+                                                                <f:form.hidden name="rule" value="{group.rule}" />
+                                                                <f:form.hidden name="key" value="{ban.key}" />
+                                                                <f:form.hidden name="type" value="{group.type}" />
+                                                                <f:form.button class="btn btn-danger" type="submit">
+                                                                    <f:translate key="bans.action.unban" />
+                                                                </f:form.button>
+                                                            </f:form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </f:for>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </f:for>
+        </f:then>
+        <f:else>
+            <div class="card mb-4">
+                <div class="card-body text-center py-5">
+                    <core:icon identifier="actions-ban" size="large" />
+                    <p class="text-muted mt-3 mb-0"><f:translate key="bans.empty" /></p>
+                </div>
+            </div>
+        </f:else>
+    </f:if>
+</f:section>
+
+</html>

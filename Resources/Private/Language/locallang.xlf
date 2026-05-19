@@ -230,6 +230,54 @@
       <trans-unit id="note.patternsStorage">
         <source>Patterns are stored in config/system/phirewall.patterns.json and enforced immediately.</source>
       </trans-unit>
+      <trans-unit id="nav.label">
+        <source>View</source>
+      </trans-unit>
+      <trans-unit id="nav.patterns">
+        <source>Patterns</source>
+      </trans-unit>
+      <trans-unit id="nav.bans">
+        <source>Blocked keys</source>
+      </trans-unit>
+      <trans-unit id="bans.title">
+        <source>Currently blocked keys</source>
+      </trans-unit>
+      <trans-unit id="bans.intro">
+        <source>Keys (e.g. IP addresses) that have been banned automatically by fail2ban or allow2ban rules. Remove a ban to immediately allow the key again.</source>
+      </trans-unit>
+      <trans-unit id="bans.empty">
+        <source>No keys are currently blocked.</source>
+      </trans-unit>
+      <trans-unit id="bans.type.fail2ban">
+        <source>fail2ban</source>
+      </trans-unit>
+      <trans-unit id="bans.type.allow2ban">
+        <source>allow2ban</source>
+      </trans-unit>
+      <trans-unit id="bans.field.key">
+        <source>Key</source>
+      </trans-unit>
+      <trans-unit id="bans.field.rule">
+        <source>Rule</source>
+      </trans-unit>
+      <trans-unit id="bans.field.type">
+        <source>Type</source>
+      </trans-unit>
+      <trans-unit id="bans.field.expiresAt">
+        <source>Expires at</source>
+      </trans-unit>
+      <trans-unit id="bans.field.actions">
+        <source>Actions</source>
+      </trans-unit>
+      <trans-unit id="bans.action.unban">
+        <source>Unban</source>
+      </trans-unit>
+      <trans-unit id="bans.action.unban.confirmTitle">
+        <source>Remove ban</source>
+      </trans-unit>
+      <trans-unit id="bans.action.unban.confirm">
+        <source>Are you sure you want to remove this ban? The key will be allowed again immediately.</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>
