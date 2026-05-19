@@ -18,7 +18,7 @@
 	},
 	"require": {
 		"php": ">=8.3",
-		"flowd/phirewall": "^0.3.0",
+		"flowd/phirewall": "^0.4.0",
 		"typo3/cms-backend": "^12.4 || ^13.4 || ^14.0",
 		"typo3/cms-core": "^12.4 || ^13.4 || ^14.0"
 	},
