@@ -38,6 +38,7 @@ Via the TYPO3 backend, editors and administrators can create, edit, and delete c
     :maxdepth: 1
     :titlesonly:
 
+    FAQ <Faq>
     Examples <Examples>
     Backend <Backend>
     Phirewall <Phirewall>
