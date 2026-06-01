@@ -42,10 +42,10 @@ final class FloodProtectionFinisher extends AbstractFinisher
             return;
         }
 
-        $event = new FloodProtectionFinisherTriggered(self::DEFAULT_RULE_IDENTIFIER);
-        $this->eventDispatcher->dispatch($event);
+        $floodProtectionFinisherTriggered = new FloodProtectionFinisherTriggered(self::DEFAULT_RULE_IDENTIFIER);
+        $this->eventDispatcher->dispatch($floodProtectionFinisherTriggered);
 
-        $rule = trim($event->ruleIdentifier);
+        $rule = trim($floodProtectionFinisherTriggered->ruleIdentifier);
         if ($rule === '') {
             return;
         }
