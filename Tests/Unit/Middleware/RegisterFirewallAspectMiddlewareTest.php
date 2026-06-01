@@ -24,14 +24,15 @@ class RegisterFirewallAspectMiddlewareTest extends TestCase
         $request = $this->getMockBuilder(ServerRequestInterface::class)
             ->getMock();
         $request
-            ->expects($this->once())
+            ->expects(self::once())
             ->method('getAttribute')
             ->willReturn($requestContext);
 
-        $middleware = new RegisterFirewallAspectMiddleware();
-        $middleware->process(
+        $context = GeneralUtility::makeInstance(Context::class);
+        $registerFirewallAspectMiddleware = new RegisterFirewallAspectMiddleware($context);
+        $registerFirewallAspectMiddleware->process(
             $request,
-            new class implements RequestHandlerInterface {
+            new class () implements RequestHandlerInterface {
                 public function handle(ServerRequestInterface $request): ResponseInterface
                 {
                     return new Response();
@@ -41,8 +42,7 @@ class RegisterFirewallAspectMiddlewareTest extends TestCase
 
         self::assertInstanceOf(
             FirewallAspect::class,
-            GeneralUtility::makeInstance(Context::class)
-                ->getAspect('firewall')
+            $context->getAspect('firewall')
         );
     }
 }

@@ -1,4 +1,5 @@
 includes:
+  - ../../phpstan-extension.neon
   - ../../.Build/vendor/spaze/phpstan-disallowed-calls/disallowed-dangerous-calls.neon
   - ../../.Build/vendor/spaze/phpstan-disallowed-calls/disallowed-execution-calls.neon
   - ../../.Build/vendor/spaze/phpstan-disallowed-calls/disallowed-insecure-calls.neon

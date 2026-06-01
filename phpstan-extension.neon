@@ -1,0 +1,4 @@
+parameters:
+    typo3:
+        contextApiGetAspectMapping:
+            firewall: Flowd\Typo3Firewall\Context\FirewallAspect

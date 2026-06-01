@@ -7,8 +7,8 @@ namespace Flowd\Typo3Firewall\Form\Finisher;
 use Flowd\Phirewall\Context\RequestContext;
 use Flowd\Typo3Firewall\Event\FloodProtectionFinisherTriggered;
 use Psr\EventDispatcher\EventDispatcherInterface;
-use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Core\Http\NormalizedParams;
+use TYPO3\CMS\Extbase\Mvc\Request;
 use TYPO3\CMS\Form\Domain\Finishers\AbstractFinisher;
 
 /**
@@ -31,8 +31,7 @@ final class FloodProtectionFinisher extends AbstractFinisher
 {
     public const string DEFAULT_RULE_IDENTIFIER = 'form-flood';
 
-    public function __construct(private readonly EventDispatcherInterface $eventDispatcher)
-    {}
+    public function __construct(private readonly EventDispatcherInterface $eventDispatcher) {}
 
     protected function executeInternal(): void
     {
@@ -43,9 +42,8 @@ final class FloodProtectionFinisher extends AbstractFinisher
             return;
         }
 
-        $event = $this->eventDispatcher->dispatch(new FloodProtectionFinisherTriggered(
-            self::DEFAULT_RULE_IDENTIFIER
-        ));
+        $event = new FloodProtectionFinisherTriggered(self::DEFAULT_RULE_IDENTIFIER);
+        $this->eventDispatcher->dispatch($event);
 
         $rule = trim($event->ruleIdentifier);
         if ($rule === '') {
@@ -55,9 +53,9 @@ final class FloodProtectionFinisher extends AbstractFinisher
         $requestContext->recordFailure($rule, $this->resolveClientIp($request));
     }
 
-    private function resolveClientIp(ServerRequestInterface $request): string
+    private function resolveClientIp(Request $serverRequest): string
     {
-        $normalizedParams = $request->getAttribute('normalizedParams');
+        $normalizedParams = $serverRequest->getAttribute('normalizedParams');
 
         return $normalizedParams instanceof NormalizedParams
             ? $normalizedParams->getRemoteAddress()

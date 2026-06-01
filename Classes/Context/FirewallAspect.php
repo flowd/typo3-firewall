@@ -11,8 +11,7 @@ use TYPO3\CMS\Core\Context\Exception\AspectPropertyNotFoundException;
 
 final readonly class FirewallAspect implements AspectInterface
 {
-    public function __construct(private RequestContext $requestContext)
-    {}
+    public function __construct(private RequestContext $requestContext) {}
 
     public function get(string $name): RequestContext|FirewallResult
     {

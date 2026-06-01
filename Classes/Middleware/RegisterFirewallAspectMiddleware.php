@@ -15,9 +15,11 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 final readonly class RegisterFirewallAspectMiddleware implements MiddlewareInterface
 {
+    public function __construct(private Context $context) {}
+
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        GeneralUtility::makeInstance(Context::class)
+        $this->context
             ->setAspect(
                 'firewall',
                 GeneralUtility::makeInstance(

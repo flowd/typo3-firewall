@@ -7,11 +7,21 @@ namespace Flowd\Typo3Firewall\Configuration;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
+/**
+ * @phpstan-import-type FloodingSettings from FormFloodingProtection
+ */
 #[Autoconfigure(public: true)]
 final readonly class ExtensionConfiguration
 {
     public FormFloodingProtection $formFloodingProtection;
 
+    /**
+     * @param array{
+     *     form?: array{
+     *         flooding?: FloodingSettings
+     *     }
+     * } $setting
+     */
     public function __construct(
         #[Autowire(expression: 'service("extension-configuration").get("firewall")')]
         array $setting

@@ -16,7 +16,7 @@ return [
         ],
         'flowd/typo3-firewall-aspect' => [
             'target' => RegisterFirewallAspectMiddleware::class,
-//            'disabled' => true,
+            //            'disabled' => true,
             'after' => [
                 'flowd/typo3-firewall',
             ],

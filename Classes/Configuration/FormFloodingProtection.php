@@ -4,6 +4,14 @@ declare(strict_types=1);
 
 namespace Flowd\Typo3Firewall\Configuration;
 
+/**
+ * @phpstan-type FloodingSettings array{
+ *     enable?: bool,
+ *     threshold?: positive-int,
+ *     period?: positive-int,
+ *     ban?: positive-int
+ * }
+ */
 final readonly class FormFloodingProtection
 {
     public function __construct(
@@ -18,12 +26,7 @@ final readonly class FormFloodingProtection
     ) {}
 
     /**
-     * @param array{
-     *     enable?:bool,
-     *     threshold?:positive-int,
-     *     period?:positive-int,
-     *     ban?:positive-int
-     * } $array
+     * @param FloodingSettings $array
      */
     public static function tryFrom(array $array): self
     {
@@ -39,6 +42,6 @@ final readonly class FormFloodingProtection
 
     private static function intOrDefault(mixed $value, int $default): int
     {
-        return is_numeric($value) ? (int) $value : $default;
+        return is_numeric($value) ? (int)$value : $default;
     }
 }

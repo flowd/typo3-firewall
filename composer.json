@@ -47,6 +47,7 @@
 		"tomasvotruba/cognitive-complexity": "0.2.3 || 1.0.0",
 		"tomasvotruba/type-coverage": "1.0.0 || 2.0.2",
 		"typo3/cms-fluid-styled-content": "^12.4 || ^13.4",
+		"typo3/cms-form": "^12.4 || ^13.4 || ^14.0",
 		"typo3/coding-standards": "0.8.0",
 		"typo3/testing-framework": "8.2.7"
 	},
@@ -81,6 +82,11 @@
 	"extra": {
 		"branch-alias": {
 			"dev-main": "0.1.x-dev"
+		},
+		"phpstan": {
+			"includes": [
+				"phpstan-extension.neon"
+			]
 		},
 		"typo3/cms": {
 			"extension-key": "firewall",
