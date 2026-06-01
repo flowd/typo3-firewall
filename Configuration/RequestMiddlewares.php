@@ -1,7 +1,7 @@
 <?php
 
 use Flowd\Phirewall\Middleware;
-use Flowd\Typo3Firewall\Middleware\AttachFirewallToTypo3ContextMiddleware;
+use Flowd\Typo3Firewall\Middleware\RegisterFirewallAspectMiddleware;
 
 return [
     'frontend' => [
@@ -15,7 +15,7 @@ return [
             ],
         ],
         'flowd/typo3-firewall-aspect' => [
-            'target' => AttachFirewallToTypo3ContextMiddleware::class,
+            'target' => RegisterFirewallAspectMiddleware::class,
             'disabled' => true,
             'after' => [
                 'flowd/typo3-firewall',

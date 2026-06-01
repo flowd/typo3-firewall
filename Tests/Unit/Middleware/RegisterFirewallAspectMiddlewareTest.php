@@ -7,7 +7,7 @@ namespace Flowd\Typo3Firewall\Tests\Unit\Middleware;
 use Flowd\Phirewall\Context\RequestContext;
 use Flowd\Phirewall\Http\FirewallResult;
 use Flowd\Typo3Firewall\Context\FirewallAspect;
-use Flowd\Typo3Firewall\Middleware\AttachFirewallToTypo3ContextMiddleware;
+use Flowd\Typo3Firewall\Middleware\RegisterFirewallAspectMiddleware;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
@@ -16,7 +16,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
-class AttachFirewallToTypo3ContextMiddlewareTest extends TestCase
+class RegisterFirewallAspectMiddlewareTest extends TestCase
 {
     public function testProcessAddsFirewallAspectToContext(): void
     {
@@ -28,7 +28,7 @@ class AttachFirewallToTypo3ContextMiddlewareTest extends TestCase
             ->method('getAttribute')
             ->willReturn($requestContext);
 
-        $middleware = new AttachFirewallToTypo3ContextMiddleware();
+        $middleware = new RegisterFirewallAspectMiddleware();
         $middleware->process(
             $request,
             new class implements RequestHandlerInterface {
