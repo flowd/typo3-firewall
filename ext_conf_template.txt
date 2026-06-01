@@ -1,0 +1,11 @@
+# cat=formFlood/enable/10; type=boolean; label=Enable form flood protection: registers a default "form-flood" fail2ban rule, fed by the FloodProtection finisher. Requires a persistent cache configured in phirewall.php.
+form.flooding.enable = 0
+
+# cat=formFlood/thresholds/10; type=int+; label=Threshold: number of submissions before the client is banned
+form.flooding.threshold = 5
+
+# cat=formFlood/thresholds/20; type=int+; label=Period (seconds): time window for counting submissions
+form.flooding.period = 60
+
+# cat=formFlood/thresholds/30; type=int+; label=Ban duration (seconds)
+form.flooding.ban = 3600

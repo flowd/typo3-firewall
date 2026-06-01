@@ -13,16 +13,18 @@ use Psr\Http\Server\RequestHandlerInterface;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
-readonly class RegisterFirewallAspectMiddleware implements MiddlewareInterface
+final readonly class RegisterFirewallAspectMiddleware implements MiddlewareInterface
 {
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $firewall = GeneralUtility::makeInstance(
-            FirewallAspect::class,
-            $request->getAttribute(RequestContext::ATTRIBUTE_NAME)
-        );
-        $context = GeneralUtility::makeInstance(Context::class);
-        $context->setAspect('firewall', $firewall);
+        GeneralUtility::makeInstance(Context::class)
+            ->setAspect(
+                'firewall',
+                GeneralUtility::makeInstance(
+                    FirewallAspect::class,
+                    $request->getAttribute(RequestContext::ATTRIBUTE_NAME)
+                )
+            );
 
         return $handler->handle($request);
     }

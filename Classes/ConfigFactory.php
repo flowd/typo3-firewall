@@ -7,21 +7,21 @@ namespace Flowd\Typo3Firewall;
 use Flowd\Phirewall\Config;
 use Flowd\Phirewall\KeyExtractors;
 use Flowd\Phirewall\Store\InMemoryCache;
+use Flowd\Typo3Firewall\Configuration\ExtensionConfiguration;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
 use Flowd\Typo3Firewall\Writer\FileArrayWriter;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
-use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\EventDispatcher\EventDispatcher;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 #[Autoconfigure(autowire: true)]
-class ConfigFactory
+readonly class ConfigFactory
 {
     public function __construct(
-        private readonly EventDispatcher $eventDispatcher,
-        private readonly ?LoggerInterface $logger = null,
+        private EventDispatcher $eventDispatcher,
+        private ExtensionConfiguration $extensionConfiguration,
+        private ?LoggerInterface $logger = null,
     ) {}
 
     public function fromConfigurationFile(): Config
@@ -64,7 +64,7 @@ class ConfigFactory
 
     /**
      * Registers a default "form-flood" fail2ban rule when enabled via extension
-     * configuration: $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['firewall']['formFlood'].
+     * configuration: $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['firewall']['form']['flooding'].
      *
      * The rule is fed by the FloodProtectionFinisher (via
      * RequestContext::recordFailure()). A "form-flood" rule defined in
@@ -72,26 +72,21 @@ class ConfigFactory
      */
     private function addFormFloodRuleIfEnabled(Config $config): Config
     {
-        try {
-            $settings = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get('firewall');
-        } catch (\Throwable) {
-            return $config;
-        }
-
-        $formFlood = is_array($settings['formFlood'] ?? null) ? $settings['formFlood'] : [];
-        if (empty($formFlood['enable'])) {
+        if (!$this->extensionConfiguration->formFloodingProtection->enabled) {
             return $config;
         }
 
         if (isset($config->fail2ban->rules()['form-flood'])) {
+            // rule already present => default has been overridden
             return $config;
         }
 
+        $formFloodProtectionSettings = $this->extensionConfiguration->formFloodingProtection;
         $config->fail2ban->add(
             'form-flood',
-            threshold: (int)($formFlood['threshold'] ?? 5),
-            period: (int)($formFlood['period'] ?? 60),
-            ban: (int)($formFlood['ban'] ?? 3600),
+            threshold: $formFloodProtectionSettings->threshold,
+            period: $formFloodProtectionSettings->period,
+            ban: $formFloodProtectionSettings->ban,
             filter: static fn(): bool => false,
             key: KeyExtractors::ip(),
         );

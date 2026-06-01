@@ -1,20 +1,24 @@
 TYPO3:
   CMS:
     Form:
+
       prototypes:
         standard:
+          formEditor:
+            translationFiles:
+              1780300620: 'EXT:firewall/Resources/Private/Language/locallang.xlf'
           finishersDefinition:
             FlowdFirewallFloodProtection:
               implementationClassName: Flowd\Typo3Firewall\Form\Finisher\FloodProtectionFinisher
               formEditor:
                 iconIdentifier: form-finisher
-                label: 'LLL:EXT:firewall/Resources/Private/Language/locallang.xlf:finisher.floodProtection.label'
+                label: 'finisher.floodProtection.label'
           formElementsDefinition:
             Form:
               formEditor:
                 editors:
                   900:
                     selectOptions:
-                      1780000070:
+                      1780296610:
                         value: FlowdFirewallFloodProtection
-                        label: 'LLL:EXT:firewall/Resources/Private/Language/locallang.xlf:finisher.floodProtection.label'
+                        label: 'finisher.floodProtection.label'
