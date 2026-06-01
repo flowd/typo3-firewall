@@ -5,13 +5,16 @@ declare(strict_types=1);
 namespace Flowd\Typo3Firewall;
 
 use Flowd\Phirewall\Config;
+use Flowd\Phirewall\KeyExtractors;
 use Flowd\Phirewall\Store\InMemoryCache;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
 use Flowd\Typo3Firewall\Writer\FileArrayWriter;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
+use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\EventDispatcher\EventDispatcher;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 #[Autoconfigure(autowire: true)]
 class ConfigFactory
@@ -34,7 +37,7 @@ class ConfigFactory
             }
 
             if ($config instanceof Config) {
-                return $this->addTypo3ManagedPatternsBlocklist($config);
+                return $this->addFormFloodRuleIfEnabled($this->addTypo3ManagedPatternsBlocklist($config));
             }
 
             $this->logger?->warning('Invalid phirewall.php configuration file', ['path' => $configPath]);
@@ -45,7 +48,9 @@ class ConfigFactory
 
     private function getDefaultConfig(): Config
     {
-        return $this->addTypo3ManagedPatternsBlocklist(new Config(new InMemoryCache(), $this->eventDispatcher));
+        return $this->addFormFloodRuleIfEnabled(
+            $this->addTypo3ManagedPatternsBlocklist(new Config(new InMemoryCache(), $this->eventDispatcher))
+        );
     }
 
     private function addTypo3ManagedPatternsBlocklist(Config $config): Config
@@ -54,6 +59,43 @@ class ConfigFactory
         $fileArrayPatternBackend = new FileArrayPatternBackend($patternPath, new FileArrayWriter($patternPath, $this->logger), $this->logger);
 
         $config->blocklists->addPatternBackend('typo3-managed-patterns', $fileArrayPatternBackend)->fromBackend('typo3-blocklist', 'typo3-managed-patterns');
+        return $config;
+    }
+
+    /**
+     * Registers a default "form-flood" fail2ban rule when enabled via extension
+     * configuration: $GLOBALS['TYPO3_CONF_VARS']['EXTENSIONS']['firewall']['formFlood'].
+     *
+     * The rule is fed by the FloodProtectionFinisher (via
+     * RequestContext::recordFailure()). A "form-flood" rule defined in
+     * phirewall.php takes precedence and is left untouched.
+     */
+    private function addFormFloodRuleIfEnabled(Config $config): Config
+    {
+        try {
+            $settings = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get('firewall');
+        } catch (\Throwable) {
+            return $config;
+        }
+
+        $formFlood = is_array($settings['formFlood'] ?? null) ? $settings['formFlood'] : [];
+        if (empty($formFlood['enable'])) {
+            return $config;
+        }
+
+        if (isset($config->fail2ban->rules()['form-flood'])) {
+            return $config;
+        }
+
+        $config->fail2ban->add(
+            'form-flood',
+            threshold: (int)($formFlood['threshold'] ?? 5),
+            period: (int)($formFlood['period'] ?? 60),
+            ban: (int)($formFlood['ban'] ?? 3600),
+            filter: static fn(): bool => false,
+            key: KeyExtractors::ip(),
+        );
+
         return $config;
     }
 

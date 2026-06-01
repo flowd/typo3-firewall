@@ -2,6 +2,9 @@
 <xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
   <file source-language="en" datatype="plaintext" original="messages" product-name="firewall">
     <body>
+      <trans-unit id="finisher.floodProtection.label">
+        <source>Firewall: flood protection</source>
+      </trans-unit>
       <trans-unit id="module.title">
         <source>Firewall</source>
       </trans-unit>
