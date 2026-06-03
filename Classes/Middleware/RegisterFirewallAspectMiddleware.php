@@ -19,14 +19,13 @@ final readonly class RegisterFirewallAspectMiddleware implements MiddlewareInter
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $this->context
-            ->setAspect(
-                'firewall',
-                GeneralUtility::makeInstance(
-                    FirewallAspect::class,
-                    $request->getAttribute(RequestContext::ATTRIBUTE_NAME)
-                )
-            );
+        $this->context->setAspect(
+            'firewall',
+            GeneralUtility::makeInstance(
+                FirewallAspect::class,
+                $request->getAttribute(RequestContext::ATTRIBUTE_NAME)
+            )
+        );
 
         return $handler->handle($request);
     }

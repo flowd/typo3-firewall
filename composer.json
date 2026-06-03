@@ -112,7 +112,7 @@
 		],
 		"check:coverage:unit": [
 			"@coverage:create-directories",
-			"phpunit -c Build/phpunit/UnitTests.xml --coverage-php=build/coverage/unit.cov"
+			"phpunit -c Build/phpunit/UnitTests.xml --coverage-php=build/coverage/unit.cov --coverage-html=build/coverage/html"
 		],
 		"check:php": [
 			"@check:php:cs-fixer",

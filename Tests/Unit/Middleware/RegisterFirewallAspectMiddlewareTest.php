@@ -9,6 +9,7 @@ use Flowd\Phirewall\Http\FirewallResult;
 use Flowd\Typo3Firewall\Context\FirewallAspect;
 use Flowd\Typo3Firewall\Middleware\RegisterFirewallAspectMiddleware;
 use GuzzleHttp\Psr7\Response;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -16,6 +17,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
+#[CoversClass(RegisterFirewallAspectMiddleware::class)]
 class RegisterFirewallAspectMiddlewareTest extends TestCase
 {
     public function testProcessAddsFirewallAspectToContext(): void

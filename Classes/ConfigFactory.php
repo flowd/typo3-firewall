@@ -10,23 +10,23 @@ use Flowd\Phirewall\Store\InMemoryCache;
 use Flowd\Typo3Firewall\Configuration\ExtensionConfiguration;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
 use Flowd\Typo3Firewall\Writer\FileArrayWriter;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use TYPO3\CMS\Core\Core\Environment;
-use TYPO3\CMS\Core\EventDispatcher\EventDispatcher;
 
 #[Autoconfigure(autowire: true)]
-readonly class ConfigFactory
+class ConfigFactory implements ConfigFactoryInterface
 {
     public function __construct(
-        private EventDispatcher $eventDispatcher,
-        private ExtensionConfiguration $extensionConfiguration,
-        private ?LoggerInterface $logger = null,
+        protected readonly EventDispatcherInterface $eventDispatcher,
+        protected readonly ExtensionConfiguration $extensionConfiguration,
+        protected readonly ?LoggerInterface $logger = null,
     ) {}
 
     public function fromConfigurationFile(): Config
     {
-        $configPath = self::getConfigurationPath();
+        $configPath = $this->getConfigurationPath();
 
         if (is_file($configPath)) {
             $configClosure = require $configPath;
@@ -37,7 +37,7 @@ readonly class ConfigFactory
             }
 
             if ($config instanceof Config) {
-                return $this->addFormFloodRuleIfEnabled($this->addTypo3ManagedPatternsBlocklist($config));
+                return $this->applyActiveManagedRules($config);
             }
 
             $this->logger?->warning('Invalid phirewall.php configuration file', ['path' => $configPath]);
@@ -46,19 +46,38 @@ readonly class ConfigFactory
         return $this->getDefaultConfig();
     }
 
+    public static function getBaseConfigPath(): string
+    {
+        if (Environment::getProjectPath() !== Environment::getPublicPath()) {
+            return Environment::getConfigPath();
+        }
+
+        return Environment::getLegacyConfigPath();
+    }
+
+    public function getConfigurationPath(): string
+    {
+        return static::getBaseConfigPath() . '/system/phirewall.php';
+    }
+
+    public function getPatternsFilePath(): string
+    {
+        return static::getBaseConfigPath() . '/system/phirewall.patterns.json';
+    }
+
     private function getDefaultConfig(): Config
     {
-        return $this->addFormFloodRuleIfEnabled(
-            $this->addTypo3ManagedPatternsBlocklist(new Config(new InMemoryCache(), $this->eventDispatcher))
-        );
+        return $this->applyActiveManagedRules(new Config(new InMemoryCache(), $this->eventDispatcher));
     }
 
     private function addTypo3ManagedPatternsBlocklist(Config $config): Config
     {
-        $patternPath = self::getPatternsFilePath();
+        $patternPath = $this->getPatternsFilePath();
         $fileArrayPatternBackend = new FileArrayPatternBackend($patternPath, new FileArrayWriter($patternPath, $this->logger), $this->logger);
 
-        $config->blocklists->addPatternBackend('typo3-managed-patterns', $fileArrayPatternBackend)->fromBackend('typo3-blocklist', 'typo3-managed-patterns');
+        $config->blocklists
+            ->addPatternBackend('typo3-managed-patterns', $fileArrayPatternBackend)
+            ->fromBackend('typo3-blocklist', 'typo3-managed-patterns');
         return $config;
     }
 
@@ -94,22 +113,10 @@ readonly class ConfigFactory
         return $config;
     }
 
-    public static function getBaseConfigPath(): string
+    private function applyActiveManagedRules(Config $config): Config
     {
-        if (Environment::getProjectPath() !== Environment::getPublicPath()) {
-            return Environment::getConfigPath();
-        }
-
-        return Environment::getLegacyConfigPath();
-    }
-
-    public static function getConfigurationPath(): string
-    {
-        return self::getBaseConfigPath() . '/system/phirewall.php';
-    }
-
-    public static function getPatternsFilePath(): string
-    {
-        return self::getBaseConfigPath() . '/system/phirewall.patterns.json';
+        return $this->addFormFloodRuleIfEnabled(
+            $this->addTypo3ManagedPatternsBlocklist($config)
+        );
     }
 }

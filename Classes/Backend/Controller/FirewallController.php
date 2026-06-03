@@ -8,7 +8,7 @@ use Flowd\Phirewall\BanType;
 use Flowd\Phirewall\Config;
 use Flowd\Phirewall\Pattern\PatternEntry;
 use Flowd\Phirewall\Pattern\PatternKind;
-use Flowd\Typo3Firewall\ConfigFactory;
+use Flowd\Typo3Firewall\ConfigFactoryInterface;
 use Flowd\Typo3Firewall\Dto\PatternEntryDto;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
 use Flowd\Typo3Firewall\Writer\FileArrayWriter;
@@ -29,6 +29,7 @@ class FirewallController extends ActionController
     public function __construct(
         private readonly ModuleTemplateFactory $moduleTemplateFactory,
         private readonly Config $config,
+        private readonly ConfigFactoryInterface $configFactory,
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
@@ -220,7 +221,7 @@ class FirewallController extends ActionController
             return $this->fileArrayPatternBackend;
         }
 
-        $path = ConfigFactory::getPatternsFilePath();
+        $path = $this->configFactory->getPatternsFilePath();
         return $this->fileArrayPatternBackend = new FileArrayPatternBackend(
             $path,
             new FileArrayWriter($path, $this->logger),

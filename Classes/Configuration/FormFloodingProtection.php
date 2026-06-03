@@ -6,10 +6,10 @@ namespace Flowd\Typo3Firewall\Configuration;
 
 /**
  * @phpstan-type FloodingSettings array{
- *     enable?: bool,
- *     threshold?: positive-int,
- *     period?: positive-int,
- *     ban?: positive-int
+ *     enable?: bool|int|string,
+ *     threshold?: int|string,
+ *     period?: int|string,
+ *     ban?: int|string
  * }
  */
 final readonly class FormFloodingProtection

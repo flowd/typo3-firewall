@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Flowd\Typo3Firewall\Form\Finisher;
 
 use Flowd\Phirewall\Context\RequestContext;
+use Flowd\Typo3Firewall\Configuration\ExtensionConfiguration;
 use Flowd\Typo3Firewall\Event\FloodProtectionFinisherTriggered;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use TYPO3\CMS\Core\Http\NormalizedParams;
@@ -31,10 +32,17 @@ final class FloodProtectionFinisher extends AbstractFinisher
 {
     public const string DEFAULT_RULE_IDENTIFIER = 'form-flood';
 
-    public function __construct(private readonly EventDispatcherInterface $eventDispatcher) {}
+    public function __construct(
+        private readonly EventDispatcherInterface $eventDispatcher,
+        private readonly ExtensionConfiguration $extensionConfiguration,
+    ) {}
 
     protected function executeInternal(): void
     {
+        if (!$this->extensionConfiguration->formFloodingProtection->enabled) {
+            return;
+        }
+
         $request = $this->finisherContext->getRequest();
         $requestContext = $request->getAttribute(RequestContext::ATTRIBUTE_NAME);
         if (!$requestContext instanceof RequestContext) {
