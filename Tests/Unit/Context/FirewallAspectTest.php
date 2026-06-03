@@ -50,12 +50,12 @@ final class FirewallAspectTest extends TestCase
         $requestContext = new RequestContext(FirewallResult::pass());
         $firewallAspect = new FirewallAspect($requestContext);
 
-        $firewallAspect->recordFailure('form-flood', '203.0.113.7');
+        $firewallAspect->recordFailure('form-flood', '10.0.0.7');
 
         self::assertTrue($requestContext->hasRecordedSignals());
         $failures = $requestContext->getRecordedFailures();
         self::assertCount(1, $failures);
         self::assertSame('form-flood', $failures[0]->ruleName);
-        self::assertSame('203.0.113.7', $failures[0]->key);
+        self::assertSame('10.0.0.7', $failures[0]->key);
     }
 }

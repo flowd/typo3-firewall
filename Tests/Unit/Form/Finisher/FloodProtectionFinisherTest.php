@@ -58,7 +58,7 @@ final class FloodProtectionFinisherTest extends TestCase
         $failures = $requestContext->getRecordedFailures();
         self::assertCount(1, $failures);
         self::assertSame(FloodProtectionFinisher::DEFAULT_RULE_IDENTIFIER, $failures[0]->ruleName);
-        self::assertSame('203.0.113.7', $failures[0]->key);
+        self::assertSame('10.0.0.7', $failures[0]->key);
     }
 
     #[Test]
@@ -146,7 +146,7 @@ final class FloodProtectionFinisherTest extends TestCase
         if ($withNormalizedParams) {
             $request = $request->withAttribute(
                 'normalizedParams',
-                NormalizedParams::createFromServerParams(['REMOTE_ADDR' => '203.0.113.7']),
+                NormalizedParams::createFromServerParams(['REMOTE_ADDR' => '10.0.0.7']),
             );
         }
 
