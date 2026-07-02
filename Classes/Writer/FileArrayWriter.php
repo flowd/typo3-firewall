@@ -97,7 +97,7 @@ final class FileArrayWriter
         }
 
         $trimmed = trim($content);
-        if ($trimmed === '' || $trimmed === '[]' || $trimmed === '{}') {
+        if (in_array($trimmed, ['', '[]', '{}'], true)) {
             return null;
         }
 

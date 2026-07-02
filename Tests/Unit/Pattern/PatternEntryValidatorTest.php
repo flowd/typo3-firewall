@@ -101,7 +101,7 @@ final class PatternEntryValidatorTest extends TestCase
     #[Test]
     public function validateIgnoresTargetForNonHeaderKinds(): void
     {
-        $this->patternEntryValidator->validate(new PatternEntry(kind: PatternKind::IP, value: '1.1.1.1', target: null));
+        $this->patternEntryValidator->validate(new PatternEntry(kind: PatternKind::IP, value: '1.1.1.1'));
         $this->patternEntryValidator->validate(new PatternEntry(kind: PatternKind::PATH_EXACT, value: '/admin', target: ''));
         $this->expectNotToPerformAssertions();
     }
