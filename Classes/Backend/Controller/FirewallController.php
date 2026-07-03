@@ -42,7 +42,7 @@ class FirewallController extends ActionController
         if ($editId !== null) {
             $editPattern = $this->findPatternById($editId);
             if ($editPattern === null) {
-                $this->addFlashMessage('Pattern not found.', 'Error', ContextualFeedbackSeverity::ERROR);
+                $this->addFlashMessage($this->translate('flash.pattern.notFound'), $this->translate('flash.title.error'), ContextualFeedbackSeverity::ERROR);
             }
         }
 
@@ -62,9 +62,9 @@ class FirewallController extends ActionController
     {
         try {
             $this->getBackend()->append($patternEntryDto->toPatternEntry());
-            $this->addFlashMessage('Pattern created successfully.');
+            $this->addFlashMessage($this->translate('flash.pattern.created'));
         } catch (\InvalidArgumentException $invalidArgumentException) {
-            $this->addFlashMessage($invalidArgumentException->getMessage(), 'Validation Error', ContextualFeedbackSeverity::ERROR);
+            $this->addFlashMessage($invalidArgumentException->getMessage(), $this->translate('flash.title.validationError'), ContextualFeedbackSeverity::ERROR);
         }
 
         return $this->redirect('overview');
@@ -82,9 +82,9 @@ class FirewallController extends ActionController
                 metadata: ['id' => $id],
             ));
 
-            $this->addFlashMessage('Pattern updated successfully.');
+            $this->addFlashMessage($this->translate('flash.pattern.updated'));
         } catch (\InvalidArgumentException $invalidArgumentException) {
-            $this->addFlashMessage($invalidArgumentException->getMessage(), 'Validation Error', ContextualFeedbackSeverity::ERROR);
+            $this->addFlashMessage($invalidArgumentException->getMessage(), $this->translate('flash.title.validationError'), ContextualFeedbackSeverity::ERROR);
             return $this->redirect('overview', null, null, ['editId' => $id]);
         }
 
@@ -94,14 +94,14 @@ class FirewallController extends ActionController
     public function deleteAction(string $id): ResponseInterface
     {
         $this->getBackend()->removeById($id);
-        $this->addFlashMessage('Pattern deleted successfully.');
+        $this->addFlashMessage($this->translate('flash.pattern.deleted'));
         return $this->redirect('overview');
     }
 
     public function pruneAction(): ResponseInterface
     {
         $this->getBackend()->pruneExpired();
-        $this->addFlashMessage('Expired patterns pruned.');
+        $this->addFlashMessage($this->translate('flash.pattern.pruned'));
         return $this->redirect('overview');
     }
 
@@ -154,15 +154,15 @@ class FirewallController extends ActionController
     {
         $banType = BanType::tryFrom($type);
         if (!$banType instanceof BanType) {
-            $this->addFlashMessage('Unknown ban type: ' . $type, 'Error', ContextualFeedbackSeverity::ERROR);
+            $this->addFlashMessage(sprintf($this->translate('flash.ban.unknownType'), $type), $this->translate('flash.title.error'), ContextualFeedbackSeverity::ERROR);
             return $this->redirect('bans');
         }
 
         $unbanned = $this->config->banManager()->unban($rule, $key, $banType);
         if ($unbanned) {
-            $this->addFlashMessage('Ban removed for key "' . $key . '".');
+            $this->addFlashMessage(sprintf($this->translate('flash.ban.removed'), $key));
         } else {
-            $this->addFlashMessage('Ban not found or already expired.', 'Not Found', ContextualFeedbackSeverity::WARNING);
+            $this->addFlashMessage($this->translate('flash.ban.notFound'), $this->translate('flash.title.notFound'), ContextualFeedbackSeverity::WARNING);
         }
 
         return $this->redirect('bans');
@@ -173,7 +173,7 @@ class FirewallController extends ActionController
         $menuRegistry = $moduleTemplate->getDocHeaderComponent()->getMenuRegistry();
         $menu = $menuRegistry->makeMenu();
         $menu->setIdentifier('firewallModuleMenu');
-        $menu->setLabel($this->getLanguageService()->sL('LLL:EXT:firewall/Resources/Private/Language/locallang.xlf:nav.label'));
+        $menu->setLabel($this->translate('nav.label'));
 
         $items = [
             'overview' => 'nav.patterns',
@@ -183,13 +183,18 @@ class FirewallController extends ActionController
         foreach ($items as $action => $labelKey) {
             $menu->addMenuItem(
                 $menu->makeMenuItem()
-                    ->setTitle($this->getLanguageService()->sL('LLL:EXT:firewall/Resources/Private/Language/locallang.xlf:' . $labelKey))
+                    ->setTitle($this->translate($labelKey))
                     ->setHref($this->uriBuilder->reset()->uriFor($action))
                     ->setActive($currentAction === $action),
             );
         }
 
         $menuRegistry->addMenu($menu);
+    }
+
+    private function translate(string $key): string
+    {
+        return $this->getLanguageService()->sL('LLL:EXT:firewall/Resources/Private/Language/locallang.xlf:' . $key);
     }
 
     private function getLanguageService(): LanguageService

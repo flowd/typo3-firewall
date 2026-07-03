@@ -278,6 +278,39 @@
       <trans-unit id="bans.action.unban.confirm">
         <source>Are you sure you want to remove this ban? The key will be allowed again immediately.</source>
       </trans-unit>
+      <trans-unit id="flash.title.error">
+        <source>Error</source>
+      </trans-unit>
+      <trans-unit id="flash.title.validationError">
+        <source>Validation Error</source>
+      </trans-unit>
+      <trans-unit id="flash.title.notFound">
+        <source>Not Found</source>
+      </trans-unit>
+      <trans-unit id="flash.pattern.notFound">
+        <source>Pattern not found.</source>
+      </trans-unit>
+      <trans-unit id="flash.pattern.created">
+        <source>Pattern created successfully.</source>
+      </trans-unit>
+      <trans-unit id="flash.pattern.updated">
+        <source>Pattern updated successfully.</source>
+      </trans-unit>
+      <trans-unit id="flash.pattern.deleted">
+        <source>Pattern deleted successfully.</source>
+      </trans-unit>
+      <trans-unit id="flash.pattern.pruned">
+        <source>Expired patterns pruned.</source>
+      </trans-unit>
+      <trans-unit id="flash.ban.unknownType">
+        <source>Unknown ban type: %s</source>
+      </trans-unit>
+      <trans-unit id="flash.ban.removed">
+        <source>Ban removed for key "%s".</source>
+      </trans-unit>
+      <trans-unit id="flash.ban.notFound">
+        <source>Ban not found or already expired.</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>
