@@ -22,6 +22,11 @@ Usage Examples
 
 Below are practical examples of configuring the firewall in a TYPO3 context.
 
+All examples set the client IP resolver through ``GeneralUtility::getIndpEnv('REMOTE_ADDR')``.
+This way TYPO3's ``reverseProxyIP`` setting is applied and rules see the real client IP
+behind a reverse proxy or CDN. Rate limiting and Fail2Ban rules count per client IP
+by default, so no key extractor is needed.
+
 Blocking common scanner requests and known bot IPs
 --------------------------------------------------
 
@@ -34,9 +39,11 @@ This example blocks requests from known bad IP addresses and certain paths or qu
     use Flowd\Phirewall\Store\InMemoryCache;
     use Psr\EventDispatcher\EventDispatcherInterface;
     use Psr\Http\Message\ServerRequestInterface;
+    use TYPO3\CMS\Core\Utility\GeneralUtility;
 
     return function (EventDispatcherInterface $eventDispatcher): Config {
         $config = new Config(new InMemoryCache(), $eventDispatcher);
+        $config->setIpResolver(fn() => GeneralUtility::getIndpEnv('REMOTE_ADDR'));
         $config->blocklists->add(
             name: 'evil-bot-ips',
             callback: fn(ServerRequestInterface $request) => in_array($request->getServerParams()['REMOTE_ADDR'] ?? '', [
@@ -65,19 +72,19 @@ This example blocks users for 1 minute if they access `/search` more than 5 time
 
     <?php
     use Flowd\Phirewall\Config;
-    use Flowd\Phirewall\KeyExtractors;
     use Flowd\Phirewall\Store\ApcuCache;
     use Psr\EventDispatcher\EventDispatcherInterface;
+    use TYPO3\CMS\Core\Utility\GeneralUtility;
 
     return function (EventDispatcherInterface $eventDispatcher): Config {
         $config = new Config(new ApcuCache(), $eventDispatcher);
+        $config->setIpResolver(fn() => GeneralUtility::getIndpEnv('REMOTE_ADDR'));
         $config->fail2ban->add(
             name: 'search-page-scrapers',
             threshold: 5,
             period: 10,
             ban: 60,
-            filter: fn($request) => str_starts_with($request->getUri()->getPath(), '/search'),
-            key: KeyExtractors::ip()
+            filter: fn($request) => str_starts_with($request->getUri()->getPath(), '/search')
         );
         return $config;
     };
@@ -91,17 +98,17 @@ This example limits users to 10 requests every 10 seconds (per IP) and sends rat
 
     <?php
     use Flowd\Phirewall\Config;
-    use Flowd\Phirewall\KeyExtractors;
     use Flowd\Phirewall\Store\ApcuCache;
     use Psr\EventDispatcher\EventDispatcherInterface;
+    use TYPO3\CMS\Core\Utility\GeneralUtility;
 
     return function (EventDispatcherInterface $eventDispatcher): Config {
         $config = new Config(new ApcuCache(), $eventDispatcher);
+        $config->setIpResolver(fn() => GeneralUtility::getIndpEnv('REMOTE_ADDR'));
         $config->throttles->add(
             name: 'slow-down-to-10-requests-in-10-seconds',
             limit: 10,
-            period: 10,
-            key: KeyExtractors::ip()
+            period: 10
         );
         $config->enableRateLimitHeaders();
         return $config;
@@ -118,9 +125,11 @@ This example shows how to use APCu as a cache backend. Use this for single-serve
     use Flowd\Phirewall\Config;
     use Flowd\Phirewall\Store\ApcuCache;
     use Psr\EventDispatcher\EventDispatcherInterface;
+    use TYPO3\CMS\Core\Utility\GeneralUtility;
 
     return function (EventDispatcherInterface $eventDispatcher): Config {
         $config = new Config(new ApcuCache(), $eventDispatcher);
+        $config->setIpResolver(fn() => GeneralUtility::getIndpEnv('REMOTE_ADDR'));
         $config->blocklists->add(
             name: 'blocked-uri-paths',
             callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
@@ -140,9 +149,11 @@ This example uses Redis for the cache backend, which is recommended for producti
     use Flowd\Phirewall\Store\RedisCache;
     use Predis\Client;
     use Psr\EventDispatcher\EventDispatcherInterface;
+    use TYPO3\CMS\Core\Utility\GeneralUtility;
 
     return function (EventDispatcherInterface $eventDispatcher): Config {
         $config = new Config(new RedisCache(new Client('redis://localhost:6379')), $eventDispatcher);
+        $config->setIpResolver(fn() => GeneralUtility::getIndpEnv('REMOTE_ADDR'));
         $config->blocklists->add(
             name: 'blocked-uri-paths',
             callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
@@ -161,9 +172,11 @@ This example uses InMemoryCache, which is only suitable for testing or CLI envir
     use Flowd\Phirewall\Config;
     use Flowd\Phirewall\Store\InMemoryCache;
     use Psr\EventDispatcher\EventDispatcherInterface;
+    use TYPO3\CMS\Core\Utility\GeneralUtility;
 
     return function (EventDispatcherInterface $eventDispatcher): Config {
         $config = new Config(new InMemoryCache(), $eventDispatcher);
+        $config->setIpResolver(fn() => GeneralUtility::getIndpEnv('REMOTE_ADDR'));
         $config->blocklists->add(
             name: 'blocked-uri-paths',
             callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
@@ -191,9 +204,11 @@ This example shows how to return a custom message and status code when a request
     use Psr\EventDispatcher\EventDispatcherInterface;
     use TYPO3\CMS\Core\Http\ResponseFactory;
     use TYPO3\CMS\Core\Http\StreamFactory;
+    use TYPO3\CMS\Core\Utility\GeneralUtility;
 
     return function (EventDispatcherInterface $eventDispatcher): Config {
         $config = new Config(new ApcuCache(), $eventDispatcher);
+        $config->setIpResolver(fn() => GeneralUtility::getIndpEnv('REMOTE_ADDR'));
         $config->blocklists->add(
             name: 'blocked-uri-paths',
             callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')

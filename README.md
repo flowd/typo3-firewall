@@ -2,7 +2,7 @@
 
 This extension adds a simple but powerful firewall to your TYPO3 site. It helps protect your website from unwanted traffic, bots, and attacks. You can block or limit requests based on IP, path, or other patterns.
 
-It is built on top of the [phirewall](https://phirewall.de/) package — see the upstream documentation for the full configuration reference.
+It is built on top of the [phirewall](https://phirewall.de/) package. See the upstream documentation for the full configuration reference.
 
 ## Key Features
 - Block requests from specific IPs or patterns
@@ -21,14 +21,18 @@ composer require flowd/typo3-firewall
 ## Quick Start Example
 Add a file at `config/system/phirewall.php` in your TYPO3 project. This example blocks requests to `/wp_admin` using APCu as the cache backend.
 
+All examples set the client IP resolver through `GeneralUtility::getIndpEnv('REMOTE_ADDR')`. This way TYPO3's `reverseProxyIP` setting is applied and rules see the real client IP behind a reverse proxy or CDN.
+
 ```php
 <?php
 use Flowd\Phirewall\Config;
 use Flowd\Phirewall\Store\ApcuCache;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 return function (EventDispatcherInterface $eventDispatcher): Config {
     $config = new Config(new ApcuCache(), $eventDispatcher);
+    $config->setIpResolver(fn() => GeneralUtility::getIndpEnv('REMOTE_ADDR'));
     $config->blocklists->add(
         name: 'block-wp-admin',
         callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
@@ -47,9 +51,11 @@ This example blocks requests from known bad IP addresses using InMemory as the c
 use Flowd\Phirewall\Config;
 use Flowd\Phirewall\Store\InMemoryCache;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 return function (EventDispatcherInterface $eventDispatcher): Config {
     $config = new Config(new InMemoryCache(), $eventDispatcher);
+    $config->setIpResolver(fn() => GeneralUtility::getIndpEnv('REMOTE_ADDR'));
     $config->blocklists->add(
         name: 'block-bad-ips',
         callback: fn($request) => in_array($request->getServerParams()['REMOTE_ADDR'] ?? '', [
@@ -68,17 +74,17 @@ This requires a cache backend that persists between requests, like APCu or Redis
 ```php
 <?php
 use Flowd\Phirewall\Config;
-use Flowd\Phirewall\KeyExtractors;
 use Flowd\Phirewall\Store\ApcuCache;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 return function (EventDispatcherInterface $eventDispatcher): Config {
     $config = new Config(new ApcuCache(), $eventDispatcher);
+    $config->setIpResolver(fn() => GeneralUtility::getIndpEnv('REMOTE_ADDR'));
     $config->throttles->add(
         name: 'limit-requests',
         limit: 10,
-        period: 10,
-        key: KeyExtractors::ip()
+        period: 10
     );
     $config->enableRateLimitHeaders();
     return $config;
@@ -91,19 +97,19 @@ This example blocks users for 1 minute if they access `/search` more than 5 time
 ```php
 <?php
 use Flowd\Phirewall\Config;
-use Flowd\Phirewall\KeyExtractors;
 use Flowd\Phirewall\Store\ApcuCache;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 return function (EventDispatcherInterface $eventDispatcher): Config {
     $config = new Config(new ApcuCache(), $eventDispatcher);
+    $config->setIpResolver(fn() => GeneralUtility::getIndpEnv('REMOTE_ADDR'));
     $config->fail2ban->add(
         name: 'block-search-abuse',
         threshold: 5,
         period: 10,
         ban: 60,
-        filter: fn($request) => str_starts_with($request->getUri()->getPath(), '/search'),
-        key: KeyExtractors::ip()
+        filter: fn($request) => str_starts_with($request->getUri()->getPath(), '/search')
     );
     return $config;
 };
@@ -118,9 +124,11 @@ use Flowd\Phirewall\Config;
 use Flowd\Phirewall\Store\RedisCache;
 use Predis\Client;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 return function (EventDispatcherInterface $eventDispatcher): Config {
     $config = new Config(new RedisCache(new Client('redis://localhost:6379')), $eventDispatcher);
+    $config->setIpResolver(fn() => GeneralUtility::getIndpEnv('REMOTE_ADDR'));
     $config->blocklists->add(
         name: 'block-wp-admin',
         callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
@@ -137,16 +145,18 @@ This example uses InMemoryCache, which is only suitable for testing or CLI envir
 use Flowd\Phirewall\Config;
 use Flowd\Phirewall\Store\InMemoryCache;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 return function (EventDispatcherInterface $eventDispatcher): Config {
     $config = new Config(new InMemoryCache(), $eventDispatcher);
+    $config->setIpResolver(fn() => GeneralUtility::getIndpEnv('REMOTE_ADDR'));
     $config->blocklists->add(
         name: 'block-wp-admin',
         callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
     );
     return $config;
 };
-// ⚠️ With InMemoryCache, only block rules work. Rate limiting and Fail2Ban do not work between requests.
+// Note: With InMemoryCache, only block rules work. Rate limiting and Fail2Ban do not work between requests.
 ```
 
 ### 6. Custom Response for Blocked Requests
@@ -160,9 +170,11 @@ use Flowd\Phirewall\Store\ApcuCache;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use TYPO3\CMS\Core\Http\ResponseFactory;
 use TYPO3\CMS\Core\Http\StreamFactory;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 return function (EventDispatcherInterface $eventDispatcher): Config {
     $config = new Config(new ApcuCache(), $eventDispatcher);
+    $config->setIpResolver(fn() => GeneralUtility::getIndpEnv('REMOTE_ADDR'));
     $config->blocklists->add(
         name: 'block-wp-admin',
         callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
