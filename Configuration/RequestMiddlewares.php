@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Flowd\Phirewall\Middleware;
 
 return [

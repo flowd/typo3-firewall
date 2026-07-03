@@ -27,7 +27,7 @@ $EM_CONF[$_EXTKEY] = [
     'author' => 'Sascha Egerer',
     'author_email' => 'sascha.egerer@flowd.de',
     'state' => 'stable',
-    'version' => '0.3.0',
+    'version' => '0.4.0',
     'constraints' => [
         'depends' => [
             'typo3' => '12.0.0-14.4.99',
@@ -38,6 +38,9 @@ $EM_CONF[$_EXTKEY] = [
         'psr-4' => [
             'Flowd\\Typo3Firewall\\' => 'Classes',
             'Flowd\\Phirewall\\' => 'Resources/Private/Php/ComposerLibraries/vendor/flowd/phirewall/src/',
+            'Flowd\\PhirewallPresetOwaspCrs\\' => 'Resources/Private/Php/ComposerLibraries/vendor/flowd/phirewall-preset-owasp-crs/src/',
+            'Flowd\\PhirewallPresetBots\\' => 'Resources/Private/Php/ComposerLibraries/vendor/flowd/phirewall-preset-bots/src/',
+            'Flowd\\PhirewallPresetBadIps\\' => 'Resources/Private/Php/ComposerLibraries/vendor/flowd/phirewall-preset-bad-ips/src/',
             'Psr\\SimpleCache\\' => 'Resources/Private/Php/ComposerLibraries/vendor/psr/simple-cache/src/',
         ],
     ]

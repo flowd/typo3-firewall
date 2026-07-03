@@ -9,7 +9,10 @@
 	},
 	"require": {
 		"php": "^8.2",
-		"flowd/phirewall": "^0.3.0"
+		"flowd/phirewall": "^0.7.0",
+		"flowd/phirewall-preset-owasp-crs": "^0.1",
+		"flowd/phirewall-preset-bots": "^0.1",
+		"flowd/phirewall-preset-bad-ips": "^0.1"
 	},
 	"replace": {
 		"psr/http-message": "^1.1 || ^2.0",

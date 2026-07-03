@@ -193,8 +193,7 @@ final class PatternEntryDtoTest extends TestCase
     {
         $patternEntryDto = new PatternEntryDto(
             kind: 'ip',
-            value: '192.168.1.1',
-            target: null
+            value: '192.168.1.1'
         );
 
         $patternEntry = $patternEntryDto->toPatternEntry();
