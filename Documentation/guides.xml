@@ -14,6 +14,7 @@
                edit-on-github="flowd/typo3-firewall"
                typo3-core-preferred="main"
     />
-    <project title="Firwall" release="0.1.4" copyright="since 20250 by Sascha Egerer"/>
+    <!-- Keep release in sync with the version in ext_emconf.php -->
+    <project title="Firewall" release="0.4.0" copyright="since 2025 by Sascha Egerer"/>
     <inventory id="t3coreapi" url="https://docs.typo3.org/m/typo3/reference-coreapi/main/en-us/"/>
 </guides>
