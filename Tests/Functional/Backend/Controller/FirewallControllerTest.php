@@ -186,6 +186,28 @@ final class FirewallControllerTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function statisticsActionRendersSeededEvents(): void
+    {
+        $this->getConnectionPool()->getConnectionForTable('tx_firewall_event')->insert('tx_firewall_event', [
+            'event_type' => 'blocklist_matched',
+            'rule' => 'scanner-paths',
+            'key_hash' => hash('sha256', '203.0.113.10'),
+            'request_path' => '/wp-admin',
+            'created_at' => time() - 60,
+        ]);
+
+        $response = $this->dispatchModuleRequest('statistics');
+
+        $body = (string)$response->getBody();
+        self::assertSame(200, $response->getStatusCode());
+        self::assertStringContainsString('Attackers blocked today', $body);
+        self::assertStringContainsString('scanner-paths', $body);
+        self::assertStringContainsString('/wp-admin', $body);
+        self::assertStringContainsString('<svg', $body);
+        self::assertStringContainsString('#2a78d6', $body);
+    }
+
+    #[Test]
     public function unbanActionRemovesTheBan(): void
     {
         $config = $this->setUpConfigWithFail2BanRule();

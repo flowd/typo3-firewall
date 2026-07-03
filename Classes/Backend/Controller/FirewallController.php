@@ -10,8 +10,11 @@ use Flowd\Phirewall\Pattern\PatternEntry;
 use Flowd\Phirewall\Pattern\PatternKind;
 use Flowd\Typo3Firewall\ConfigFactory;
 use Flowd\Typo3Firewall\Dto\PatternEntryDto;
+use Flowd\Typo3Firewall\EventLog\EventLogSettings;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
 use Flowd\Typo3Firewall\Pattern\PatternValidationException;
+use Flowd\Typo3Firewall\Statistics\BarChartBuilder;
+use Flowd\Typo3Firewall\Statistics\EventStatisticsRepository;
 use Flowd\Typo3Firewall\Writer\FileArrayWriter;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
@@ -40,11 +43,23 @@ class FirewallController extends ActionController
         1770244720 => 'flash.validation.invalidRegex',
     ];
 
+    /**
+     * @var array<string, array{window: int, bucket: int, labelFormat: string}>
+     */
+    private const array STATISTICS_RANGES = [
+        '24h' => ['window' => 86400, 'bucket' => 3600, 'labelFormat' => 'H:00'],
+        '7d' => ['window' => 604800, 'bucket' => 86400, 'labelFormat' => 'd.m.'],
+        '30d' => ['window' => 2592000, 'bucket' => 86400, 'labelFormat' => 'd.m.'],
+    ];
+
     private ?FileArrayPatternBackend $fileArrayPatternBackend = null;
 
     public function __construct(
         private readonly ModuleTemplateFactory $moduleTemplateFactory,
         private readonly Config $config,
+        private readonly EventStatisticsRepository $eventStatisticsRepository,
+        private readonly BarChartBuilder $barChartBuilder,
+        private readonly EventLogSettings $eventLogSettings,
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
@@ -166,6 +181,48 @@ class FirewallController extends ActionController
         return $moduleTemplate->renderResponse('Backend/Firewall/Bans');
     }
 
+    public function statisticsAction(string $range = '24h'): ResponseInterface
+    {
+        $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
+        $this->addModuleMenu($moduleTemplate, 'statistics');
+
+        if (!isset(self::STATISTICS_RANGES[$range])) {
+            $range = '24h';
+        }
+
+        $rangeConfiguration = self::STATISTICS_RANGES[$range];
+        $now = time();
+        $since = $now - $rangeConfiguration['window'];
+        $startOfToday = (new \DateTimeImmutable('today'))->getTimestamp();
+
+        $chart = $this->barChartBuilder->build(
+            $this->eventStatisticsRepository->countBlockingEventsPerBucketAndType($since, $rangeConfiguration['bucket']),
+            $since,
+            $now,
+            $rangeConfiguration['bucket'],
+            $rangeConfiguration['labelFormat']
+        );
+
+        $eventCounts = $this->eventStatisticsRepository->countEventsByTypeSince($since);
+        $typeCounts = [];
+        foreach ($eventCounts as $eventType => $count) {
+            $typeCounts[] = ['type' => $eventType, 'count' => $count];
+        }
+
+        $moduleTemplate->assignMultiple([
+            'blockedToday' => $this->eventStatisticsRepository->countDistinctBlockedKeysSince($startOfToday),
+            'chart' => $chart,
+            'typeCounts' => $typeCounts,
+            'topRules' => $this->eventStatisticsRepository->findTopRulesSince($since),
+            'topPaths' => $this->eventStatisticsRepository->findTopPathsSince($since),
+            'range' => $range,
+            'ranges' => array_keys(self::STATISTICS_RANGES),
+            'loggingEnabled' => $this->eventLogSettings->isEnabled(),
+        ]);
+
+        return $moduleTemplate->renderResponse('Backend/Firewall/Statistics');
+    }
+
     public function unbanAction(string $rule, string $key, string $type): ResponseInterface
     {
         $banType = BanType::tryFrom($type);
@@ -194,6 +251,7 @@ class FirewallController extends ActionController
         $items = [
             'overview' => 'nav.patterns',
             'bans' => 'nav.bans',
+            'statistics' => 'nav.statistics',
         ];
 
         foreach ($items as $action => $labelKey) {
