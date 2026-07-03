@@ -21,3 +21,28 @@ services:
 
     Flowd\Phirewall\Config:
         factory: ['@Flowd\Typo3Firewall\ConfigFactory', 'fromConfigurationFile']
+
+    # Tag based registration because the AsEventListener attribute needs TYPO3 13.
+    Flowd\Typo3Firewall\EventLog\FirewallEventLogListener:
+        tags:
+            - name: event.listener
+              identifier: 'firewall-event-log/blocklist-matched'
+              method: 'onBlocklistMatched'
+            - name: event.listener
+              identifier: 'firewall-event-log/throttle-exceeded'
+              method: 'onThrottleExceeded'
+            - name: event.listener
+              identifier: 'firewall-event-log/fail2ban-banned'
+              method: 'onFail2BanBanned'
+            - name: event.listener
+              identifier: 'firewall-event-log/allow2ban-banned'
+              method: 'onAllow2BanBanned'
+            - name: event.listener
+              identifier: 'firewall-event-log/safelist-matched'
+              method: 'onSafelistMatched'
+            - name: event.listener
+              identifier: 'firewall-event-log/track-hit'
+              method: 'onTrackHit'
+            - name: event.listener
+              identifier: 'firewall-event-log/firewall-error'
+              method: 'onFirewallError'
