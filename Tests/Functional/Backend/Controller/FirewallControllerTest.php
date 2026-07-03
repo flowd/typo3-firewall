@@ -208,6 +208,50 @@ final class FirewallControllerTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function bansActionShowsTheRemainingBanTime(): void
+    {
+        $config = $this->setUpConfigWithFail2BanRule();
+        // 150 seconds keep the label at "2 min" even when rendering takes a few seconds.
+        $config->banManager()->ban('login-protection', '203.0.113.10', 150, BanType::Fail2Ban);
+
+        $response = $this->dispatchModuleRequest('bans');
+
+        $body = (string)$response->getBody();
+        self::assertStringContainsString('2 min', $body);
+    }
+
+    #[Test]
+    public function bansActionFiltersByTheSearchTerm(): void
+    {
+        $config = $this->setUpConfigWithFail2BanRule();
+        $config->banManager()->ban('login-protection', '203.0.113.10', 3600, BanType::Fail2Ban);
+        $config->banManager()->ban('login-protection', '198.51.100.7', 3600, BanType::Fail2Ban);
+
+        $response = $this->dispatchModuleRequest('bans', ['search' => '203.0'], 'POST');
+
+        $body = (string)$response->getBody();
+        self::assertStringContainsString('203.0.113.10', $body);
+        self::assertStringNotContainsString('198.51.100.7', $body);
+    }
+
+    #[Test]
+    public function bansActionSortsBansBySoonestExpiry(): void
+    {
+        $config = $this->setUpConfigWithFail2BanRule();
+        $config->banManager()->ban('login-protection', '203.0.113.10', 3600, BanType::Fail2Ban);
+        $config->banManager()->ban('login-protection', '198.51.100.7', 60, BanType::Fail2Ban);
+
+        $response = $this->dispatchModuleRequest('bans');
+
+        $body = (string)$response->getBody();
+        $positionSoonest = strpos($body, '198.51.100.7');
+        $positionLater = strpos($body, '203.0.113.10');
+        self::assertNotFalse($positionSoonest);
+        self::assertNotFalse($positionLater);
+        self::assertLessThan($positionLater, $positionSoonest);
+    }
+
+    #[Test]
     public function unbanActionRemovesTheBan(): void
     {
         $config = $this->setUpConfigWithFail2BanRule();

@@ -15,10 +15,25 @@
             </span>
         </div>
         <div class="card-body">
-            <p class="text-muted mb-0">
+            <p class="text-muted">
                 <core:icon identifier="actions-info" size="small" />
                 <f:translate key="bans.intro" />
             </p>
+            <f:form action="bans" method="post" class="row row-cols-lg-auto g-2 align-items-center m-0">
+                <div class="col-12">
+                    <label class="visually-hidden" for="bans-search"><f:translate key="bans.search.label" /></label>
+                    <f:form.textfield id="bans-search" name="search" value="{search}" class="form-control form-control-sm" placeholder="{f:translate(key: 'bans.search.placeholder')}" />
+                </div>
+                <div class="col-12">
+                    <f:form.button class="btn btn-sm btn-default" type="submit">
+                        <core:icon identifier="actions-search" size="small" />
+                        <f:translate key="bans.search.submit" />
+                    </f:form.button>
+                    <f:if condition="{search}">
+                        <a class="btn btn-sm btn-link" href="{f:uri.action(action: 'bans')}"><f:translate key="bans.search.reset" /></a>
+                    </f:if>
+                </div>
+            </f:form>
         </div>
     </div>
 
@@ -41,8 +56,9 @@
                         <table class="table table-striped table-hover mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th style="width: 55%"><f:translate key="bans.field.key" /></th>
-                                    <th style="width: 30%"><f:translate key="bans.field.expiresAt" /></th>
+                                    <th style="width: 45%"><f:translate key="bans.field.key" /></th>
+                                    <th style="width: 18%"><f:translate key="bans.field.expiresIn" /></th>
+                                    <th style="width: 22%"><f:translate key="bans.field.expiresAt" /></th>
                                     <th style="width: 15%" class="text-end"><f:translate key="bans.field.actions" /></th>
                                 </tr>
                             </thead>
@@ -51,7 +67,10 @@
                                     <f:variable name="modalId" value="unbanModal-{group.type}-{group.rule}-{iteration.index}" />
                                     <tr>
                                         <td>
-                                            <code class="text-break"><f:format.htmlspecialchars>{ban.key}</f:format.htmlspecialchars></code>
+                                            <code class="text-break">{ban.key}</code>
+                                        </td>
+                                        <td>
+                                            <strong>{ban.expiresInLabel}</strong>
                                         </td>
                                         <td>
                                             <small class="text-muted">
@@ -114,7 +133,12 @@
             <div class="card mb-4">
                 <div class="card-body text-center py-5">
                     <core:icon identifier="actions-ban" size="large" />
-                    <p class="text-muted mt-3 mb-0"><f:translate key="bans.empty" /></p>
+                    <p class="text-muted mt-3 mb-0">
+                        <f:if condition="{search}">
+                            <f:then><f:translate key="bans.search.noResults" /></f:then>
+                            <f:else><f:translate key="bans.empty" /></f:else>
+                        </f:if>
+                    </p>
                 </div>
             </div>
         </f:else>

@@ -123,38 +123,23 @@ class FirewallController extends ActionController
         return $this->redirect('overview');
     }
 
-    public function bansAction(): ResponseInterface
+    public function bansAction(string $search = ''): ResponseInterface
     {
+        $search = trim($search);
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
         $this->addModuleMenu($moduleTemplate, 'bans');
-        $banManager = $this->config->banManager();
 
         $banGroups = [];
         $totalBans = 0;
-
-        foreach ($this->config->allow2ban->rules() as $allow2BanRule) {
-            $bans = $banManager->listBans($allow2BanRule->name(), BanType::Allow2Ban);
+        foreach ($this->collectRulesByBanType() as [$banType, $ruleName]) {
+            $bans = $this->filterBans($this->config->banManager()->listBans($ruleName, $banType), $search);
             if ($bans === []) {
                 continue;
             }
 
             $banGroups[] = [
-                'rule' => $allow2BanRule->name(),
-                'type' => BanType::Allow2Ban->value,
-                'bans' => $this->formatBans($bans),
-            ];
-            $totalBans += count($bans);
-        }
-
-        foreach ($this->config->fail2ban->rules() as $fail2BanRule) {
-            $bans = $banManager->listBans($fail2BanRule->name(), BanType::Fail2Ban);
-            if ($bans === []) {
-                continue;
-            }
-
-            $banGroups[] = [
-                'rule' => $fail2BanRule->name(),
-                'type' => BanType::Fail2Ban->value,
+                'rule' => $ruleName,
+                'type' => $banType->value,
                 'bans' => $this->formatBans($bans),
             ];
             $totalBans += count($bans);
@@ -163,6 +148,7 @@ class FirewallController extends ActionController
         $moduleTemplate->assignMultiple([
             'banGroups' => $banGroups,
             'totalBans' => $totalBans,
+            'search' => $search,
         ]);
 
         return $moduleTemplate->renderResponse('Backend/Firewall/Bans');
@@ -175,6 +161,39 @@ class FirewallController extends ActionController
         $moduleTemplate->assignMultiple($this->statisticsViewDataProvider->getViewData($range));
 
         return $moduleTemplate->renderResponse('Backend/Firewall/Statistics');
+    }
+
+    /**
+     * @return list<array{0: BanType, 1: string}>
+     */
+    private function collectRulesByBanType(): array
+    {
+        $rulesByBanType = [];
+        foreach ($this->config->allow2ban->rules() as $allow2BanRule) {
+            $rulesByBanType[] = [BanType::Allow2Ban, $allow2BanRule->name()];
+        }
+
+        foreach ($this->config->fail2ban->rules() as $fail2BanRule) {
+            $rulesByBanType[] = [BanType::Fail2Ban, $fail2BanRule->name()];
+        }
+
+        return $rulesByBanType;
+    }
+
+    /**
+     * @param list<array{key: string, expiresAt: float}> $bans
+     * @return list<array{key: string, expiresAt: float}>
+     */
+    private function filterBans(array $bans, string $search): array
+    {
+        if ($search === '') {
+            return $bans;
+        }
+
+        return array_values(array_filter(
+            $bans,
+            static fn(array $ban): bool => stripos((string)$ban['key'], $search) !== false
+        ));
     }
 
     public function unbanAction(string $rule, string $key, string $type): ResponseInterface
@@ -247,17 +266,42 @@ class FirewallController extends ActionController
 
     /**
      * @param list<array{key: string, expiresAt: float}> $bans
-     * @return list<array{key: string, expiresAt: int}>
+     * @return list<array{key: string, expiresAt: int, expiresInLabel: string}>
      */
     private function formatBans(array $bans): array
     {
+        usort($bans, static fn(array $left, array $right): int => $left['expiresAt'] <=> $right['expiresAt']);
+        $now = time();
+
         return array_map(
-            static fn(array $ban): array => [
+            fn(array $ban): array => [
                 'key' => $ban['key'],
                 'expiresAt' => (int)$ban['expiresAt'],
+                'expiresInLabel' => $this->formatRemainingTime((int)$ban['expiresAt'] - $now),
             ],
             $bans,
         );
+    }
+
+    private function formatRemainingTime(int $seconds): string
+    {
+        if ($seconds <= 0) {
+            return $this->translateLabel('bans.remaining.expired');
+        }
+
+        if ($seconds < 60) {
+            return sprintf($this->translateLabel('bans.remaining.seconds'), $seconds);
+        }
+
+        if ($seconds < 3600) {
+            return sprintf($this->translateLabel('bans.remaining.minutes'), intdiv($seconds, 60));
+        }
+
+        if ($seconds < 86400) {
+            return sprintf($this->translateLabel('bans.remaining.hoursMinutes'), intdiv($seconds, 3600), intdiv($seconds % 3600, 60));
+        }
+
+        return sprintf($this->translateLabel('bans.remaining.daysHours'), intdiv($seconds, 86400), intdiv($seconds % 86400, 3600));
     }
 
     private function getBackend(): FileArrayPatternBackend
