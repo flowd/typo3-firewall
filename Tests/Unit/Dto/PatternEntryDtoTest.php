@@ -6,6 +6,7 @@ namespace Flowd\Typo3Firewall\Tests\Unit\Dto;
 
 use Flowd\Phirewall\Pattern\PatternKind;
 use Flowd\Typo3Firewall\Dto\PatternEntryDto;
+use Flowd\Typo3Firewall\Pattern\PatternValidationException;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -272,5 +273,18 @@ final class PatternEntryDtoTest extends TestCase
         self::assertSame('10.0.0.0/8', $patternEntryDto->value);
         self::assertSame('X-Custom-Header', $patternEntryDto->target);
         self::assertSame('+1 week', $patternEntryDto->expiresAt);
+    }
+
+    #[Test]
+    public function invalidKindExceptionCarriesTheRejectedValue(): void
+    {
+        $patternEntryDto = new PatternEntryDto(kind: 'not_a_kind', value: '/wp-admin');
+
+        try {
+            $patternEntryDto->toPatternEntry();
+            self::fail('Expected a PatternValidationException');
+        } catch (PatternValidationException $patternValidationException) {
+            self::assertSame('not_a_kind', $patternValidationException->getInvalidValue());
+        }
     }
 }

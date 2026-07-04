@@ -27,7 +27,7 @@ final class PatternEntryValidator
     private function validateNotEmpty(PatternEntry $patternEntry): void
     {
         if ($patternEntry->value === '') {
-            throw new \InvalidArgumentException(
+            throw new PatternValidationException(
                 'Pattern value must not be empty',
                 1770244701
             );
@@ -41,9 +41,10 @@ final class PatternEntryValidator
         }
 
         if ($patternEntry->target === null || trim($patternEntry->target) === '') {
-            throw new \InvalidArgumentException(
+            throw new PatternValidationException(
                 sprintf('Pattern kind "%s" requires the target field to contain the header name', $patternEntry->kind->value),
-                1779136101
+                1779136101,
+                $patternEntry->kind->value
             );
         }
     }
@@ -61,9 +62,10 @@ final class PatternEntryValidator
     private function validateIpAddress(string $value): void
     {
         if (filter_var($value, FILTER_VALIDATE_IP) === false) {
-            throw new \InvalidArgumentException(
+            throw new PatternValidationException(
                 sprintf('Invalid IP address: %s', $value),
-                1770244710
+                1770244710,
+                $value
             );
         }
     }
@@ -71,9 +73,10 @@ final class PatternEntryValidator
     private function validateCidr(string $value): void
     {
         if (!$this->isValidCidr($value)) {
-            throw new \InvalidArgumentException(
+            throw new PatternValidationException(
                 sprintf('Invalid CIDR notation: %s', $value),
-                1770244715
+                1770244715,
+                $value
             );
         }
     }
@@ -81,9 +84,10 @@ final class PatternEntryValidator
     private function validateRegex(string $value): void
     {
         if (@preg_match($value, '') === false) {
-            throw new \InvalidArgumentException(
+            throw new PatternValidationException(
                 sprintf('Invalid regex pattern: %s', $value),
-                1770244720
+                1770244720,
+                $value
             );
         }
     }
