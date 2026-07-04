@@ -12,7 +12,7 @@ Install the extension with Composer:
 
 The extension supports TYPO3 12.4, 13.4, and 14 on PHP 8.3 or later.
 
-A classic (non Composer) installation from the TYPO3 Extension Repository is
+A classic (non-Composer) installation from the TYPO3 Extension Repository is
 also supported. The TER package bundles the phirewall library and the preset
 packages, so no additional installation step is needed.
 

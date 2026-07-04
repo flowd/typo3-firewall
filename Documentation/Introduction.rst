@@ -28,7 +28,7 @@ it into TYPO3: it registers the request middleware, loads your configuration
 file, resolves the client IP through TYPO3, and adds the backend module
 and the event log.
 
-This documentation covers everything TYPO3 specific. All engine features
+This documentation covers everything TYPO3-specific. All engine features
 (rule types, stores, advanced options) are documented at
 https://phirewall.de/ and are used exactly the same way inside TYPO3.
 

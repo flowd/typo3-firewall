@@ -4,7 +4,7 @@
 Quick start
 ===========
 
-Follow these steps to get a working firewall in a Composer based TYPO3
+Follow these steps to get a working firewall in a Composer-based TYPO3
 project.
 
 1. Install the extension
