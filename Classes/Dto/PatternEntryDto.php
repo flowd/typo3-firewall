@@ -26,12 +26,13 @@ final class PatternEntryDto
 
     public function toPatternEntry(): PatternEntry
     {
-        $kind = PatternKind::tryFrom(trim($this->kind));
+        $kindValue = trim($this->kind);
+        $kind = PatternKind::tryFrom($kindValue);
         if (!$kind instanceof PatternKind) {
             throw new PatternValidationException(
-                sprintf('Invalid pattern kind: %s', $this->kind),
+                sprintf('Invalid pattern kind: %s', $kindValue),
                 1779107801,
-                $this->kind
+                $kindValue
             );
         }
 
