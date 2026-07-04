@@ -19,6 +19,20 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+// The bundled libraries only exist in the TER release artifact. Register their
+// autoload mappings only when present so a source checkout (development,
+// functional tests) keeps loading the libraries through Composer.
+$firewallBundledPsr4Prefixes = [];
+if (is_dir(__DIR__ . '/Resources/Private/Php/ComposerLibraries/vendor')) {
+    $firewallBundledPsr4Prefixes = [
+        'Flowd\\Phirewall\\' => 'Resources/Private/Php/ComposerLibraries/vendor/flowd/phirewall/src/',
+        'Flowd\\PhirewallPresetOwaspCrs\\' => 'Resources/Private/Php/ComposerLibraries/vendor/flowd/phirewall-preset-owasp-crs/src/',
+        'Flowd\\PhirewallPresetBots\\' => 'Resources/Private/Php/ComposerLibraries/vendor/flowd/phirewall-preset-bots/src/',
+        'Flowd\\PhirewallPresetBadIps\\' => 'Resources/Private/Php/ComposerLibraries/vendor/flowd/phirewall-preset-bad-ips/src/',
+        'Psr\\SimpleCache\\' => 'Resources/Private/Php/ComposerLibraries/vendor/psr/simple-cache/src/',
+    ];
+}
+
 /** @noinspection PhpUndefinedVariableInspection */
 $EM_CONF[$_EXTKEY] = [
     'title' => 'Firewall for TYPO3',
@@ -37,11 +51,7 @@ $EM_CONF[$_EXTKEY] = [
     'autoload' => [
         'psr-4' => [
             'Flowd\\Typo3Firewall\\' => 'Classes',
-            'Flowd\\Phirewall\\' => 'Resources/Private/Php/ComposerLibraries/vendor/flowd/phirewall/src/',
-            'Flowd\\PhirewallPresetOwaspCrs\\' => 'Resources/Private/Php/ComposerLibraries/vendor/flowd/phirewall-preset-owasp-crs/src/',
-            'Flowd\\PhirewallPresetBots\\' => 'Resources/Private/Php/ComposerLibraries/vendor/flowd/phirewall-preset-bots/src/',
-            'Flowd\\PhirewallPresetBadIps\\' => 'Resources/Private/Php/ComposerLibraries/vendor/flowd/phirewall-preset-bad-ips/src/',
-            'Psr\\SimpleCache\\' => 'Resources/Private/Php/ComposerLibraries/vendor/psr/simple-cache/src/',
+            ...$firewallBundledPsr4Prefixes,
         ],
     ]
 ];
