@@ -6,6 +6,7 @@ namespace Flowd\Typo3Firewall\Dto;
 
 use Flowd\Phirewall\Pattern\PatternEntry;
 use Flowd\Phirewall\Pattern\PatternKind;
+use Flowd\Typo3Firewall\Pattern\PatternValidationException;
 
 /**
  * Data transfer object for pattern entry form submissions.
@@ -27,9 +28,10 @@ final class PatternEntryDto
     {
         $kind = PatternKind::tryFrom(trim($this->kind));
         if (!$kind instanceof PatternKind) {
-            throw new \InvalidArgumentException(
+            throw new PatternValidationException(
                 sprintf('Invalid pattern kind: %s', $this->kind),
-                1779107801
+                1779107801,
+                $this->kind
             );
         }
 
@@ -50,16 +52,18 @@ final class PatternEntryDto
         $value = trim($this->expiresAt);
         $timestamp = strtotime($value);
         if ($timestamp === false) {
-            throw new \InvalidArgumentException(
+            throw new PatternValidationException(
                 sprintf('Invalid expiration date: %s', $value),
-                1779107802
+                1779107802,
+                $value
             );
         }
 
         if ($timestamp <= time()) {
-            throw new \InvalidArgumentException(
+            throw new PatternValidationException(
                 sprintf('Expiration date must be in the future: %s', $value),
-                1779107803
+                1779107803,
+                $value
             );
         }
 

@@ -312,28 +312,28 @@
         <source>Ban not found or already expired.</source>
       </trans-unit>
       <trans-unit id="flash.validation.invalidKind">
-        <source>Invalid pattern kind.</source>
+        <source>Invalid pattern kind: %1$s</source>
       </trans-unit>
       <trans-unit id="flash.validation.invalidExpiresAt">
-        <source>Invalid expiration date.</source>
+        <source>Invalid expiration date: %1$s</source>
       </trans-unit>
       <trans-unit id="flash.validation.expiresAtNotInFuture">
-        <source>The expiration date must be in the future.</source>
+        <source>The expiration date must be in the future: %1$s</source>
       </trans-unit>
       <trans-unit id="flash.validation.emptyValue">
         <source>The pattern value must not be empty.</source>
       </trans-unit>
       <trans-unit id="flash.validation.targetRequired">
-        <source>This pattern kind requires the target field to contain the header name.</source>
+        <source>The pattern kind "%1$s" requires the target field to contain the header name.</source>
       </trans-unit>
       <trans-unit id="flash.validation.invalidIp">
-        <source>Invalid IP address.</source>
+        <source>Invalid IP address: %1$s</source>
       </trans-unit>
       <trans-unit id="flash.validation.invalidCidr">
-        <source>Invalid CIDR notation.</source>
+        <source>Invalid CIDR notation: %1$s</source>
       </trans-unit>
       <trans-unit id="flash.validation.invalidRegex">
-        <source>Invalid regular expression.</source>
+        <source>Invalid regular expression: %1$s</source>
       </trans-unit>
     </body>
   </file>

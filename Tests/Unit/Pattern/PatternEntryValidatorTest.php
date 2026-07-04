@@ -7,6 +7,7 @@ namespace Flowd\Typo3Firewall\Tests\Unit\Pattern;
 use Flowd\Phirewall\Pattern\PatternEntry;
 use Flowd\Phirewall\Pattern\PatternKind;
 use Flowd\Typo3Firewall\Pattern\PatternEntryValidator;
+use Flowd\Typo3Firewall\Pattern\PatternValidationException;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -256,5 +257,18 @@ final class PatternEntryValidatorTest extends TestCase
         $this->patternEntryValidator->validate(new PatternEntry(kind: PatternKind::PATH_EXACT, value: '/[admin'));
         $this->patternEntryValidator->validate(new PatternEntry(kind: PatternKind::PATH_PREFIX, value: '/admin'));
         $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function invalidIpExceptionCarriesTheRejectedValue(): void
+    {
+        $patternEntry = new PatternEntry(kind: PatternKind::IP, value: 'not-an-ip');
+
+        try {
+            (new PatternEntryValidator())->validate($patternEntry);
+            self::fail('Expected a PatternValidationException');
+        } catch (PatternValidationException $patternValidationException) {
+            self::assertSame('not-an-ip', $patternValidationException->getInvalidValue());
+        }
     }
 }

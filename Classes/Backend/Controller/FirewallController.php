@@ -11,6 +11,7 @@ use Flowd\Phirewall\Pattern\PatternKind;
 use Flowd\Typo3Firewall\ConfigFactory;
 use Flowd\Typo3Firewall\Dto\PatternEntryDto;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
+use Flowd\Typo3Firewall\Pattern\PatternValidationException;
 use Flowd\Typo3Firewall\Writer\FileArrayWriter;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
@@ -218,11 +219,11 @@ class FirewallController extends ActionController
     private function translateValidationError(\InvalidArgumentException $invalidArgumentException): string
     {
         $translationKey = self::VALIDATION_MESSAGE_KEYS[$invalidArgumentException->getCode()] ?? null;
-        if ($translationKey === null) {
+        if ($translationKey === null || !$invalidArgumentException instanceof PatternValidationException) {
             return $invalidArgumentException->getMessage();
         }
 
-        return $this->translateLabel($translationKey);
+        return sprintf($this->translateLabel($translationKey), $invalidArgumentException->getInvalidValue());
     }
 
     private function getLanguageService(): LanguageService
