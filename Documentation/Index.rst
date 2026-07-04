@@ -4,40 +4,32 @@
 Firewall Extension
 ====================
 
-The TYPO3 Firewall extension provides two main possibilities:
+The Firewall extension protects your TYPO3 website against unwanted traffic,
+bots, and attacks. It blocks or limits requests based on IP address, path,
+headers, or other patterns, and bans clients after repeated abuse.
 
-1. Use all features of the Phirewall package
---------------------------------------------
+The extension is built on the `phirewall <https://phirewall.de/>`__ package
+and adds everything you need in TYPO3: the request middleware, a backend
+module for block patterns, bans and statistics, ready-made rule presets,
+and dashboard widgets.
 
-This extension integrates the powerful open-source package `phirewall` and makes its features available in the TYPO3 context. This includes:
-
-- Protection against brute-force and other attacks
-- Flexible pattern and rule definitions (IP, CIDR, path, header, etc.)
-- Support for blocklists, safelists, rate limiting, and more
-- Central configuration via PHP array files
-
-**Configuration of Phirewall**
-Phirewall itself is configured in the core configuration file::
-
-   config/system/phirewall.php
-
-All details and advanced features can be found in the official Phirewall documentation: https://phirewall.de/
-
-2. Manage static block patterns in the TYPO3 backend
-----------------------------------------------------
-
-Via the TYPO3 backend, editors and administrators can create, edit, and delete custom block patterns. These patterns become active immediately and extend the Phirewall configuration.
-
-- Easy management of IPs, paths, headers, etc. via the backend module
-- Overview and management of all active patterns
-- Support for expiration date (expiresAt) and various pattern types
-- Immediate enforcement of rules without deployment
-- Patterns are stored in the file ``config/system/phirewall.patterns.json``.
+Start with :doc:`QuickStart` if you want a working firewall in five minutes.
+Read :doc:`Introduction` to understand what the extension does and how it
+relates to phirewall.
 
 ..  menu::
     :maxdepth: 1
     :titlesonly:
 
+    Introduction <Introduction>
+    Quick start <QuickStart>
+    Installation <Installation>
+    Configuration <Configuration>
+    Middleware <Middleware>
+    Trusted proxies <TrustedProxies>
+    Storage <Storage>
+    Presets <Presets>
+    Backend module <BackendModule>
+    Statistics <Statistics>
     Examples <Examples>
-    Backend <Backend>
-    Phirewall <Phirewall>
+    FAQ <Faq>

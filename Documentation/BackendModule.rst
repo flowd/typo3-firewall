@@ -33,6 +33,6 @@ through ``fail2ban`` or ``allow2ban`` rules.
 - Remove a single ban to immediately allow the key again
 
 Bans are read from and written to the cache store configured for the
-firewall (see :doc:`Phirewall`). Removing a ban here only clears the entry
+firewall (see :doc:`Introduction`). Removing a ban here only clears the entry
 for the selected rule; if the underlying condition that triggered the ban
 still applies, the key may be banned again on the next matching request.

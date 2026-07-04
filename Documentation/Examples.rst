@@ -6,7 +6,7 @@ Examples
 
 Key features of the Firewall extension:
 
-- Integration of the Phirewall package (see :doc:`Phirewall`)
+- Integration of the Phirewall package (see :doc:`Introduction`)
 - Management of static block patterns in the backend
 - Support for various pattern types (IP, CIDR, path, header, regex)
 - Expiration date for patterns (expiresAt)
