@@ -97,6 +97,8 @@ final class EventStatisticsRepository
                 $queryBuilder->expr()->gte('created_at', $queryBuilder->createNamedParameter($since, Connection::PARAM_INT))
             )
             ->groupBy('event_type')
+            ->orderBy('event_count', 'DESC')
+            ->addOrderBy('event_type')
             ->executeQuery()
             ->fetchAllAssociative();
 

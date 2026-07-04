@@ -32,6 +32,8 @@ final class BarChartBuilder
 
     private const int SEGMENT_GAP = 2;
 
+    private const int TICK_LABEL_Y = 214;
+
     private const int TICK_TARGET_COUNT = 6;
 
     /**
@@ -51,6 +53,9 @@ final class BarChartBuilder
      *     width: int,
      *     height: int,
      *     baselineY: int,
+     *     plotLeft: int,
+     *     plotRight: int,
+     *     tickLabelY: int,
      *     maxCount: int,
      *     totalCount: int,
      *     bars: list<array{x: float, width: float, count: int, label: string, showValue: bool, valueX: float, valueY: float, segments: list<array{y: float, height: float, count: int, type: string, color: string, rx: int}>}>,
@@ -92,6 +97,9 @@ final class BarChartBuilder
             'width' => self::WIDTH,
             'height' => self::HEIGHT,
             'baselineY' => self::PLOT_BOTTOM,
+            'plotLeft' => self::PLOT_LEFT,
+            'plotRight' => self::PLOT_RIGHT,
+            'tickLabelY' => self::TICK_LABEL_Y,
             'maxCount' => $maxCount,
             'totalCount' => array_sum($totals),
             'bars' => $bars,

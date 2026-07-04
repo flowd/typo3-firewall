@@ -168,7 +168,7 @@ class FirewallController extends ActionController
         return $moduleTemplate->renderResponse('Backend/Firewall/Bans');
     }
 
-    public function statisticsAction(string $range = '24h'): ResponseInterface
+    public function statisticsAction(string $range = ''): ResponseInterface
     {
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
         $this->addModuleMenu($moduleTemplate, 'statistics');
