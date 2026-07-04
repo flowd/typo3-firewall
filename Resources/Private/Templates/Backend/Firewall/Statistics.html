@@ -1,0 +1,155 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+
+<f:section name="Content">
+    <f:flashMessages />
+
+    <f:if condition="!{loggingEnabled}">
+        <div class="alert alert-warning">
+            <core:icon identifier="actions-exclamation" size="small" />
+            <f:translate key="statistics.disabled" />
+        </div>
+    </f:if>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div style="font-size: 3.5rem; font-weight: 700; line-height: 1;">{blockedToday}</div>
+                    <div class="text-muted mt-2"><f:translate key="statistics.hero" /></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div style="font-size: 3.5rem; font-weight: 700; line-height: 1;">{chart.totalCount}</div>
+                    <div class="text-muted mt-2"><f:translate key="statistics.totalBlocked" /> (<f:translate key="statistics.range.{range}" />)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>
+                <core:icon identifier="module-firewall" size="small" />
+                <strong><f:translate key="statistics.chart.title" /></strong>
+            </span>
+            <span class="btn-group btn-group-sm" role="group">
+                <f:for each="{ranges}" as="rangeOption">
+                    <f:if condition="{rangeOption} == {range}">
+                        <f:then>
+                            <a class="btn btn-primary btn-sm" href="{f:uri.action(action: 'statistics', arguments: {range: rangeOption})}"><f:translate key="statistics.range.{rangeOption}" /></a>
+                        </f:then>
+                        <f:else>
+                            <a class="btn btn-default btn-sm" href="{f:uri.action(action: 'statistics', arguments: {range: rangeOption})}"><f:translate key="statistics.range.{rangeOption}" /></a>
+                        </f:else>
+                    </f:if>
+                </f:for>
+            </span>
+        </div>
+        <div class="card-body">
+            <f:if condition="{chart.totalCount} > 0">
+                <f:then>
+                    <svg viewBox="0 0 {chart.width} {chart.height}" role="img" aria-label="{f:translate(key: 'statistics.chart.title')}" style="width: 100%; max-width: 960px; height: auto; display: block;">
+                        <line x1="{chart.plotLeft}" y1="{chart.baselineY}" x2="{chart.plotRight}" y2="{chart.baselineY}" stroke="currentColor" opacity="0.25" stroke-width="1" />
+                        <f:for each="{chart.bars}" as="bar">
+                            <f:for each="{bar.segments}" as="segment">
+                                <rect x="{bar.x}" y="{segment.y}" width="{bar.width}" height="{segment.height}" rx="{segment.rx}" fill="{segment.color}">
+                                    <title>{bar.label} - <f:translate key="statistics.type.{segment.type}" default="{segment.type}" />: {segment.count}</title>
+                                </rect>
+                            </f:for>
+                            <f:if condition="{bar.showValue}">
+                                <text x="{bar.valueX}" y="{bar.valueY}" text-anchor="middle" font-size="11" fill="currentColor">{bar.count}</text>
+                            </f:if>
+                        </f:for>
+                        <f:for each="{chart.ticks}" as="tick">
+                            <text x="{tick.x}" y="{chart.tickLabelY}" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.6">{tick.label}</text>
+                        </f:for>
+                    </svg>
+                    <div class="mt-2 d-flex flex-wrap gap-3">
+                        <f:for each="{chart.legend}" as="legendEntry">
+                            <span class="d-inline-flex align-items-center">
+                                <span class="me-1" style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: {legendEntry.color};"></span>
+                                <f:translate key="statistics.type.{legendEntry.type}" default="{legendEntry.type}" /> ({legendEntry.count})
+                            </span>
+                        </f:for>
+                    </div>
+                </f:then>
+                <f:else>
+                    <p class="text-muted mb-0">
+                        <core:icon identifier="actions-info" size="small" />
+                        <f:translate key="statistics.empty" />
+                    </p>
+                </f:else>
+            </f:if>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header"><strong><f:translate key="statistics.types.title" /></strong></div>
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <tbody>
+                            <f:for each="{typeCounts}" as="typeCount">
+                                <tr>
+                                    <td><f:translate key="statistics.type.{typeCount.type}" default="{typeCount.type}" /></td>
+                                    <td class="text-end">{typeCount.count}</td>
+                                </tr>
+                            </f:for>
+                            <f:if condition="!{typeCounts}">
+                                <tr><td class="text-muted" colspan="2"><f:translate key="statistics.empty" /></td></tr>
+                            </f:if>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header"><strong><f:translate key="statistics.topRules.title" /></strong></div>
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <tbody>
+                            <f:for each="{topRules}" as="topRule">
+                                <tr>
+                                    <td><code class="text-break">{topRule.label}</code></td>
+                                    <td class="text-end">{topRule.count}</td>
+                                </tr>
+                            </f:for>
+                            <f:if condition="!{topRules}">
+                                <tr><td class="text-muted" colspan="2"><f:translate key="statistics.empty" /></td></tr>
+                            </f:if>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header"><strong><f:translate key="statistics.topPaths.title" /></strong></div>
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <tbody>
+                            <f:for each="{topPaths}" as="topPath">
+                                <tr>
+                                    <td><code class="text-break"><f:format.htmlspecialchars>{topPath.label}</f:format.htmlspecialchars></code></td>
+                                    <td class="text-end">{topPath.count}</td>
+                                </tr>
+                            </f:for>
+                            <f:if condition="!{topPaths}">
+                                <tr><td class="text-muted" colspan="2"><f:translate key="statistics.empty" /></td></tr>
+                            </f:if>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</f:section>
+</html>

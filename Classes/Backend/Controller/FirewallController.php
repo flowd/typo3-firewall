@@ -12,6 +12,7 @@ use Flowd\Typo3Firewall\ConfigFactory;
 use Flowd\Typo3Firewall\Dto\PatternEntryDto;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
 use Flowd\Typo3Firewall\Pattern\PatternValidationException;
+use Flowd\Typo3Firewall\Statistics\StatisticsViewDataProvider;
 use Flowd\Typo3Firewall\Writer\FileArrayWriter;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
@@ -45,6 +46,7 @@ class FirewallController extends ActionController
     public function __construct(
         private readonly ModuleTemplateFactory $moduleTemplateFactory,
         private readonly Config $config,
+        private readonly StatisticsViewDataProvider $statisticsViewDataProvider,
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
@@ -166,6 +168,15 @@ class FirewallController extends ActionController
         return $moduleTemplate->renderResponse('Backend/Firewall/Bans');
     }
 
+    public function statisticsAction(string $range = ''): ResponseInterface
+    {
+        $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
+        $this->addModuleMenu($moduleTemplate, 'statistics');
+        $moduleTemplate->assignMultiple($this->statisticsViewDataProvider->getViewData($range));
+
+        return $moduleTemplate->renderResponse('Backend/Firewall/Statistics');
+    }
+
     public function unbanAction(string $rule, string $key, string $type): ResponseInterface
     {
         $banType = BanType::tryFrom($type);
@@ -194,6 +205,7 @@ class FirewallController extends ActionController
         $items = [
             'overview' => 'nav.patterns',
             'bans' => 'nav.bans',
+            'statistics' => 'nav.statistics',
         ];
 
         foreach ($items as $action => $labelKey) {

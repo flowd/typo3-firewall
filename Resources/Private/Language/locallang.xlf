@@ -335,6 +335,63 @@
       <trans-unit id="flash.validation.invalidRegex">
         <source>Invalid regular expression: %1$s</source>
       </trans-unit>
+      <trans-unit id="nav.statistics">
+        <source>Statistics</source>
+      </trans-unit>
+      <trans-unit id="statistics.hero">
+        <source>Attackers blocked today</source>
+      </trans-unit>
+      <trans-unit id="statistics.totalBlocked">
+        <source>Blocked requests</source>
+      </trans-unit>
+      <trans-unit id="statistics.chart.title">
+        <source>Blocked requests over time</source>
+      </trans-unit>
+      <trans-unit id="statistics.range.24h">
+        <source>24 hours</source>
+      </trans-unit>
+      <trans-unit id="statistics.range.7d">
+        <source>7 days</source>
+      </trans-unit>
+      <trans-unit id="statistics.range.30d">
+        <source>30 days</source>
+      </trans-unit>
+      <trans-unit id="statistics.types.title">
+        <source>Events by type</source>
+      </trans-unit>
+      <trans-unit id="statistics.topRules.title">
+        <source>Top rules</source>
+      </trans-unit>
+      <trans-unit id="statistics.topPaths.title">
+        <source>Top blocked paths</source>
+      </trans-unit>
+      <trans-unit id="statistics.empty">
+        <source>No firewall events recorded in this period.</source>
+      </trans-unit>
+      <trans-unit id="statistics.disabled">
+        <source>Event logging is disabled. Enable it in the extension configuration to collect statistics.</source>
+      </trans-unit>
+      <trans-unit id="statistics.type.blocklist_matched">
+        <source>Blocklist matches</source>
+      </trans-unit>
+      <trans-unit id="statistics.type.throttle_exceeded">
+        <source>Rate limit exceeded</source>
+      </trans-unit>
+      <trans-unit id="statistics.type.fail2ban_banned">
+        <source>Fail2Ban bans</source>
+      </trans-unit>
+      <trans-unit id="statistics.type.allow2ban_banned">
+        <source>Allow2Ban bans</source>
+      </trans-unit>
+      <trans-unit id="statistics.type.safelist_matched">
+        <source>Safelist matches</source>
+      </trans-unit>
+      <trans-unit id="statistics.type.track_hit">
+        <source>Track hits</source>
+      </trans-unit>
+      <trans-unit id="statistics.type.firewall_error">
+        <source>Firewall errors</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>
