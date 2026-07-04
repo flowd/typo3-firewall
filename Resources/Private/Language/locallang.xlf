@@ -311,6 +311,30 @@
       <trans-unit id="flash.ban.notFound">
         <source>Ban not found or already expired.</source>
       </trans-unit>
+      <trans-unit id="flash.validation.invalidKind">
+        <source>Invalid pattern kind.</source>
+      </trans-unit>
+      <trans-unit id="flash.validation.invalidExpiresAt">
+        <source>Invalid expiration date.</source>
+      </trans-unit>
+      <trans-unit id="flash.validation.expiresAtNotInFuture">
+        <source>The expiration date must be in the future.</source>
+      </trans-unit>
+      <trans-unit id="flash.validation.emptyValue">
+        <source>The pattern value must not be empty.</source>
+      </trans-unit>
+      <trans-unit id="flash.validation.targetRequired">
+        <source>This pattern kind requires the target field to contain the header name.</source>
+      </trans-unit>
+      <trans-unit id="flash.validation.invalidIp">
+        <source>Invalid IP address.</source>
+      </trans-unit>
+      <trans-unit id="flash.validation.invalidCidr">
+        <source>Invalid CIDR notation.</source>
+      </trans-unit>
+      <trans-unit id="flash.validation.invalidRegex">
+        <source>Invalid regular expression.</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>

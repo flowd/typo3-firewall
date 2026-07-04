@@ -24,6 +24,21 @@ use TYPO3\CMS\Extbase\Mvc\Controller\ActionController;
 #[AsController]
 class FirewallController extends ActionController
 {
+    /**
+     * Maps the validation exception codes of PatternEntryDto and
+     * PatternEntryValidator to translation keys.
+     */
+    private const array VALIDATION_MESSAGE_KEYS = [
+        1779107801 => 'flash.validation.invalidKind',
+        1779107802 => 'flash.validation.invalidExpiresAt',
+        1779107803 => 'flash.validation.expiresAtNotInFuture',
+        1770244701 => 'flash.validation.emptyValue',
+        1779136101 => 'flash.validation.targetRequired',
+        1770244710 => 'flash.validation.invalidIp',
+        1770244715 => 'flash.validation.invalidCidr',
+        1770244720 => 'flash.validation.invalidRegex',
+    ];
+
     private ?FileArrayPatternBackend $fileArrayPatternBackend = null;
 
     public function __construct(
@@ -42,7 +57,7 @@ class FirewallController extends ActionController
         if ($editId !== null) {
             $editPattern = $this->findPatternById($editId);
             if ($editPattern === null) {
-                $this->addFlashMessage($this->translate('flash.pattern.notFound'), $this->translate('flash.title.error'), ContextualFeedbackSeverity::ERROR);
+                $this->addFlashMessage($this->translateLabel('flash.pattern.notFound'), $this->translateLabel('flash.title.error'), ContextualFeedbackSeverity::ERROR);
             }
         }
 
@@ -62,9 +77,9 @@ class FirewallController extends ActionController
     {
         try {
             $this->getBackend()->append($patternEntryDto->toPatternEntry());
-            $this->addFlashMessage($this->translate('flash.pattern.created'));
+            $this->addFlashMessage($this->translateLabel('flash.pattern.created'));
         } catch (\InvalidArgumentException $invalidArgumentException) {
-            $this->addFlashMessage($invalidArgumentException->getMessage(), $this->translate('flash.title.validationError'), ContextualFeedbackSeverity::ERROR);
+            $this->addFlashMessage($this->translateValidationError($invalidArgumentException), $this->translateLabel('flash.title.validationError'), ContextualFeedbackSeverity::ERROR);
         }
 
         return $this->redirect('overview');
@@ -82,9 +97,9 @@ class FirewallController extends ActionController
                 metadata: ['id' => $id],
             ));
 
-            $this->addFlashMessage($this->translate('flash.pattern.updated'));
+            $this->addFlashMessage($this->translateLabel('flash.pattern.updated'));
         } catch (\InvalidArgumentException $invalidArgumentException) {
-            $this->addFlashMessage($invalidArgumentException->getMessage(), $this->translate('flash.title.validationError'), ContextualFeedbackSeverity::ERROR);
+            $this->addFlashMessage($this->translateValidationError($invalidArgumentException), $this->translateLabel('flash.title.validationError'), ContextualFeedbackSeverity::ERROR);
             return $this->redirect('overview', null, null, ['editId' => $id]);
         }
 
@@ -94,14 +109,14 @@ class FirewallController extends ActionController
     public function deleteAction(string $id): ResponseInterface
     {
         $this->getBackend()->removeById($id);
-        $this->addFlashMessage($this->translate('flash.pattern.deleted'));
+        $this->addFlashMessage($this->translateLabel('flash.pattern.deleted'));
         return $this->redirect('overview');
     }
 
     public function pruneAction(): ResponseInterface
     {
         $this->getBackend()->pruneExpired();
-        $this->addFlashMessage($this->translate('flash.pattern.pruned'));
+        $this->addFlashMessage($this->translateLabel('flash.pattern.pruned'));
         return $this->redirect('overview');
     }
 
@@ -154,15 +169,15 @@ class FirewallController extends ActionController
     {
         $banType = BanType::tryFrom($type);
         if (!$banType instanceof BanType) {
-            $this->addFlashMessage(sprintf($this->translate('flash.ban.unknownType'), $type), $this->translate('flash.title.error'), ContextualFeedbackSeverity::ERROR);
+            $this->addFlashMessage(sprintf($this->translateLabel('flash.ban.unknownType'), $type), $this->translateLabel('flash.title.error'), ContextualFeedbackSeverity::ERROR);
             return $this->redirect('bans');
         }
 
         $unbanned = $this->config->banManager()->unban($rule, $key, $banType);
         if ($unbanned) {
-            $this->addFlashMessage(sprintf($this->translate('flash.ban.removed'), $key));
+            $this->addFlashMessage(sprintf($this->translateLabel('flash.ban.removed'), $key));
         } else {
-            $this->addFlashMessage($this->translate('flash.ban.notFound'), $this->translate('flash.title.notFound'), ContextualFeedbackSeverity::WARNING);
+            $this->addFlashMessage($this->translateLabel('flash.ban.notFound'), $this->translateLabel('flash.title.notFound'), ContextualFeedbackSeverity::WARNING);
         }
 
         return $this->redirect('bans');
@@ -173,7 +188,7 @@ class FirewallController extends ActionController
         $menuRegistry = $moduleTemplate->getDocHeaderComponent()->getMenuRegistry();
         $menu = $menuRegistry->makeMenu();
         $menu->setIdentifier('firewallModuleMenu');
-        $menu->setLabel($this->translate('nav.label'));
+        $menu->setLabel($this->translateLabel('nav.label'));
 
         $items = [
             'overview' => 'nav.patterns',
@@ -183,7 +198,7 @@ class FirewallController extends ActionController
         foreach ($items as $action => $labelKey) {
             $menu->addMenuItem(
                 $menu->makeMenuItem()
-                    ->setTitle($this->translate($labelKey))
+                    ->setTitle($this->translateLabel($labelKey))
                     ->setHref($this->uriBuilder->reset()->uriFor($action))
                     ->setActive($currentAction === $action),
             );
@@ -192,9 +207,22 @@ class FirewallController extends ActionController
         $menuRegistry->addMenu($menu);
     }
 
-    private function translate(string $key): string
+    private function translateLabel(string $key): string
     {
         return $this->getLanguageService()->sL('LLL:EXT:firewall/Resources/Private/Language/locallang.xlf:' . $key);
+    }
+
+    /**
+     * Unknown codes keep the raw exception message as fallback.
+     */
+    private function translateValidationError(\InvalidArgumentException $invalidArgumentException): string
+    {
+        $translationKey = self::VALIDATION_MESSAGE_KEYS[$invalidArgumentException->getCode()] ?? null;
+        if ($translationKey === null) {
+            return $invalidArgumentException->getMessage();
+        }
+
+        return $this->translateLabel($translationKey);
     }
 
     private function getLanguageService(): LanguageService
