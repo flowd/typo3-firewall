@@ -144,8 +144,10 @@ jobs:
         run: |
           ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -t ${{matrix.typo3-version}} -s composerUpdate${{matrix.composer-dependencies}}
       - name: Run functional tests
+        # Container name resolution does not work with the podman setup of the
+        # GitHub runners, so the database driven tests run with docker.
         run: |
-          ./Build/Scripts/runTests.sh -p ${{ matrix.php-version }} -d ${{ matrix.dbms }} -s functional
+          ./Build/Scripts/runTests.sh -b docker -p ${{ matrix.php-version }} -d ${{ matrix.dbms }} ${{ matrix.extra-args }} -s functional
     strategy:
       fail-fast: false
       matrix:
@@ -174,6 +176,7 @@ jobs:
             php-version: "8.4"
             composer-dependencies: Max
             dbms: mariadb
+            extra-args: "-i 10.11"
   shellcheck:
     name: Check shell scripts
     runs-on: ubuntu-24.04
