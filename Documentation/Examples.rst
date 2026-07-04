@@ -22,6 +22,14 @@ Usage Examples
 
 Below are practical examples of configuring the firewall in a TYPO3 context.
 
+The extension sets the client IP resolver for you: ``ConfigFactory`` defaults it to
+``GeneralUtility::getIndpEnv('REMOTE_ADDR')``, which applies TYPO3's ``reverseProxyIP``
+setting. Rules see the real client IP behind a reverse proxy or CDN, and rate limiting
+and Fail2Ban count per client IP without a key extractor. When no client IP can be
+resolved, the resolver returns ``null`` and rules that key on the client IP skip the
+request. Only call ``$config->setIpResolver()`` yourself if you need a different
+resolution.
+
 Blocking common scanner requests and known bot IPs
 --------------------------------------------------
 
@@ -37,13 +45,10 @@ This example blocks requests from known bad IP addresses and certain paths or qu
 
     return function (EventDispatcherInterface $eventDispatcher): Config {
         $config = new Config(new InMemoryCache(), $eventDispatcher);
-        $config->blocklists->add(
-            name: 'evil-bot-ips',
-            callback: fn(ServerRequestInterface $request) => in_array($request->getServerParams()['REMOTE_ADDR'] ?? '', [
-                '176.65.149.61',
-                '45.13.214.201',
-            ], true)
-        );
+        $config->blocklists->ip('evil-bot-ips', [
+            '176.65.149.61',
+            '45.13.214.201',
+        ]);
         $config->blocklists->add(
             name: 'blocked-uri-paths',
             callback: fn(ServerRequestInterface $request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
@@ -65,7 +70,6 @@ This example blocks users for 1 minute if they access `/search` more than 5 time
 
     <?php
     use Flowd\Phirewall\Config;
-    use Flowd\Phirewall\KeyExtractors;
     use Flowd\Phirewall\Store\ApcuCache;
     use Psr\EventDispatcher\EventDispatcherInterface;
 
@@ -76,8 +80,7 @@ This example blocks users for 1 minute if they access `/search` more than 5 time
             threshold: 5,
             period: 10,
             ban: 60,
-            filter: fn($request) => str_starts_with($request->getUri()->getPath(), '/search'),
-            key: KeyExtractors::ip()
+            filter: fn($request) => str_starts_with($request->getUri()->getPath(), '/search')
         );
         return $config;
     };
@@ -91,7 +94,6 @@ This example limits users to 10 requests every 10 seconds (per IP) and sends rat
 
     <?php
     use Flowd\Phirewall\Config;
-    use Flowd\Phirewall\KeyExtractors;
     use Flowd\Phirewall\Store\ApcuCache;
     use Psr\EventDispatcher\EventDispatcherInterface;
 
@@ -100,8 +102,7 @@ This example limits users to 10 requests every 10 seconds (per IP) and sends rat
         $config->throttles->add(
             name: 'slow-down-to-10-requests-in-10-seconds',
             limit: 10,
-            period: 10,
-            key: KeyExtractors::ip()
+            period: 10
         );
         $config->enableRateLimitHeaders();
         return $config;
