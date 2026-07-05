@@ -30,21 +30,45 @@ class ConfigFactory
     public function fromFile(string $configPath): Config
     {
         if (is_file($configPath)) {
-            $configClosure = require $configPath;
-            $config = null;
+            try {
+                $configClosure = require $configPath;
+                $config = null;
 
-            if ($configClosure instanceof \Closure) {
-                $config = $configClosure($this->eventDispatcher);
+                if ($configClosure instanceof \Closure) {
+                    $config = $configClosure($this->eventDispatcher);
+                }
+
+                if ($config instanceof Config) {
+                    return $this->prepareConfig($config);
+                }
+
+                $this->logger?->warning('Invalid phirewall.php configuration file', ['path' => $configPath]);
+            } catch (\Throwable $throwable) {
+                $this->logger?->error($this->describeConfigurationError($throwable), [
+                    'path' => $configPath,
+                    'exception' => $throwable,
+                ]);
             }
-
-            if ($config instanceof Config) {
-                return $this->prepareConfig($config);
-            }
-
-            $this->logger?->warning('Invalid phirewall.php configuration file', ['path' => $configPath]);
         }
 
         return $this->getDefaultConfig();
+    }
+
+    /**
+     * A targeted hint for the common mistake of handing the mysqli based
+     * TYPO3 connection to the PDO based store.
+     */
+    private function describeConfigurationError(\Throwable $throwable): string
+    {
+        if ($throwable instanceof \TypeError
+            && str_contains($throwable->getMessage(), 'PDO')
+            && str_contains($throwable->getMessage(), 'mysqli')
+        ) {
+            return 'Loading phirewall.php failed: the TYPO3 database connection uses the mysqli driver, '
+                . 'but PdoCache needs a PDO driver such as pdo_mysql. Using the fallback configuration.';
+        }
+
+        return 'Loading phirewall.php failed, using the fallback configuration: ' . $throwable->getMessage();
     }
 
     private function getDefaultConfig(): Config

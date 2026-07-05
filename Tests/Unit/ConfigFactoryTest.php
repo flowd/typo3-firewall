@@ -10,6 +10,8 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\EventDispatcher\ListenerProviderInterface;
+use Psr\Log\AbstractLogger;
+use Psr\Log\LoggerInterface;
 use TYPO3\CMS\Core\EventDispatcher\EventDispatcher;
 use TYPO3\CMS\Core\Http\ServerRequest;
 
@@ -105,7 +107,65 @@ final class ConfigFactoryTest extends TestCase
         self::assertInstanceOf(\Closure::class, $config->getIpResolver());
     }
 
-    private function createFactory(): ConfigFactory
+    #[Test]
+    public function fromFileFallsBackAndLogsAnErrorWhenTheConfigurationThrows(): void
+    {
+        $configPath = $this->writeConfigurationFile('<?php return function () { throw new \RuntimeException(\'boom\'); };');
+        $spyLogger = $this->createSpyLogger();
+
+        $config = $this->createFactory($spyLogger)->fromFile($configPath);
+
+        self::assertInstanceOf(\Closure::class, $config->getIpResolver());
+        self::assertCount(1, $spyLogger->records);
+        self::assertSame('error', $spyLogger->records[0]['level']);
+        self::assertStringContainsString('boom', $spyLogger->records[0]['message']);
+    }
+
+    #[Test]
+    public function fromFileFallsBackAndLogsAnErrorOnASyntaxError(): void
+    {
+        $configPath = $this->writeConfigurationFile('<?php return function ( { broken');
+        $spyLogger = $this->createSpyLogger();
+
+        $config = $this->createFactory($spyLogger)->fromFile($configPath);
+
+        self::assertInstanceOf(\Closure::class, $config->getIpResolver());
+        self::assertCount(1, $spyLogger->records);
+        self::assertSame('error', $spyLogger->records[0]['level']);
+    }
+
+    #[Test]
+    public function fromFileLogsAPdoDriverHintForTheMysqliTypeError(): void
+    {
+        $configPath = $this->writeConfigurationFile(
+            '<?php return function () { throw new \TypeError(\'PdoCache::__construct(): Argument #1 ($pdo) must be of type PDO, mysqli given\'); };'
+        );
+        $spyLogger = $this->createSpyLogger();
+
+        $this->createFactory($spyLogger)->fromFile($configPath);
+
+        self::assertCount(1, $spyLogger->records);
+        self::assertStringContainsString('pdo_mysql', $spyLogger->records[0]['message']);
+        self::assertStringContainsString('mysqli driver', $spyLogger->records[0]['message']);
+    }
+
+    /**
+     * @return AbstractLogger&object{records: list<array{level: string, message: string}>}
+     */
+    private function createSpyLogger(): AbstractLogger
+    {
+        return new class () extends AbstractLogger {
+            /** @var list<array{level: string, message: string}> */
+            public array $records = [];
+
+            public function log($level, \Stringable|string $message, array $context = []): void
+            {
+                $this->records[] = ['level' => is_string($level) ? $level : 'unknown', 'message' => (string)$message];
+            }
+        };
+    }
+
+    private function createFactory(?LoggerInterface $logger = null): ConfigFactory
     {
         $listenerProvider = new class () implements ListenerProviderInterface {
             /**
@@ -117,7 +177,7 @@ final class ConfigFactoryTest extends TestCase
             }
         };
 
-        return new ConfigFactory(new EventDispatcher($listenerProvider));
+        return new ConfigFactory(new EventDispatcher($listenerProvider), $logger);
     }
 
     private function writeConfigurationFile(string $content): string
