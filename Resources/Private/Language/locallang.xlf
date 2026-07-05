@@ -410,6 +410,39 @@
       <trans-unit id="widgets.events.dataset">
         <source>Blocked requests</source>
       </trans-unit>
+      <trans-unit id="bans.field.expiresIn">
+        <source>Expires in</source>
+      </trans-unit>
+      <trans-unit id="bans.remaining.expired">
+        <source>expired</source>
+      </trans-unit>
+      <trans-unit id="bans.remaining.seconds">
+        <source>%d s</source>
+      </trans-unit>
+      <trans-unit id="bans.remaining.minutes">
+        <source>%d min</source>
+      </trans-unit>
+      <trans-unit id="bans.remaining.hoursMinutes">
+        <source>%1$d h %2$d min</source>
+      </trans-unit>
+      <trans-unit id="bans.remaining.daysHours">
+        <source>%1$d d %2$d h</source>
+      </trans-unit>
+      <trans-unit id="bans.search.label">
+        <source>Search blocked keys</source>
+      </trans-unit>
+      <trans-unit id="bans.search.placeholder">
+        <source>Search by IP or key</source>
+      </trans-unit>
+      <trans-unit id="bans.search.submit">
+        <source>Search</source>
+      </trans-unit>
+      <trans-unit id="bans.search.reset">
+        <source>Reset</source>
+      </trans-unit>
+      <trans-unit id="bans.search.noResults">
+        <source>No blocked keys match your search.</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>
