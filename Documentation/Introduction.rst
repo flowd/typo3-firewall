@@ -16,7 +16,7 @@ It inspects every frontend request before TYPO3 processes it and can:
 - Ban clients temporarily after repeated abuse (like Fail2Ban)
 - Record firewall events and show statistics in the backend
 
-Editors and administrators manage static block patterns directly in the
+Administrators manage static block patterns directly in the
 TYPO3 backend module. Changes take effect immediately, without a deployment.
 
 Relation to phirewall
