@@ -13,6 +13,8 @@ final class StatisticsViewDataProvider
 {
     private const string DEFAULT_RANGE = '24h';
 
+    private const int RECENT_EVENTS_LIMIT = 20;
+
     /**
      * @var array<string, array{window: int, bucket: int, labelFormat: string}>
      */
@@ -63,9 +65,23 @@ final class StatisticsViewDataProvider
             'typeCounts' => $typeCounts,
             'topRules' => $this->eventStatisticsRepository->findTopRulesSince($since),
             'topPaths' => $this->eventStatisticsRepository->findTopPathsSince($since),
+            'recentEvents' => $this->buildRecentEvents($since),
             'range' => $range,
             'ranges' => array_keys(self::RANGES),
             'loggingEnabled' => $this->eventLogSettings->isEnabled(),
         ];
+    }
+
+    /**
+     * The latest blocking events with the color of their type in the chart.
+     *
+     * @return list<array{createdAt: int, eventType: string, rule: string, requestMethod: string, requestPath: string, keyDisplay: string, color: ?string}>
+     */
+    private function buildRecentEvents(int $since): array
+    {
+        return array_map(
+            fn(array $recentEvent): array => $recentEvent + ['color' => $this->barChartBuilder->colorForType($recentEvent['eventType'])],
+            $this->eventStatisticsRepository->findRecentBlockingEvents($since, self::RECENT_EVENTS_LIMIT)
+        );
     }
 }

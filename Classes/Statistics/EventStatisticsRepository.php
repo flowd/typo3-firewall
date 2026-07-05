@@ -113,6 +113,66 @@ final class EventStatisticsRepository
     }
 
     /**
+     * The latest blocking events, newest first, with the rule that fired.
+     *
+     * @return list<array{createdAt: int, eventType: string, rule: string, requestMethod: string, requestPath: string, keyDisplay: string}>
+     */
+    public function findRecentBlockingEvents(int $since, int $limit): array
+    {
+        $queryBuilder = $this->createQueryBuilder();
+        $rows = $queryBuilder
+            ->select('created_at', 'event_type', 'rule', 'request_method', 'request_path', 'key_display')
+            ->from(EventLogger::TABLE_NAME)
+            ->where(
+                $queryBuilder->expr()->in('event_type', $this->quotedBlockingTypes($queryBuilder)),
+                $queryBuilder->expr()->gte('created_at', $queryBuilder->createNamedParameter($since, Connection::PARAM_INT))
+            )
+            ->orderBy('created_at', 'DESC')
+            ->addOrderBy('uid', 'DESC')
+            ->setMaxResults($limit)
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        $recentEvents = [];
+        foreach ($rows as $row) {
+            if (!is_numeric($row['created_at'])) {
+                continue;
+            }
+
+            if (!is_string($row['event_type'])) {
+                continue;
+            }
+
+            if (!is_string($row['rule'])) {
+                continue;
+            }
+
+            if (!is_string($row['request_method'])) {
+                continue;
+            }
+
+            if (!is_string($row['request_path'])) {
+                continue;
+            }
+
+            if (!is_string($row['key_display'])) {
+                continue;
+            }
+
+            $recentEvents[] = [
+                'createdAt' => (int)$row['created_at'],
+                'eventType' => $row['event_type'],
+                'rule' => $row['rule'],
+                'requestMethod' => $row['request_method'],
+                'requestPath' => $row['request_path'],
+                'keyDisplay' => $row['key_display'],
+            ];
+        }
+
+        return $recentEvents;
+    }
+
+    /**
      * @return list<array{label: string, count: int}>
      */
     public function findTopRulesSince(int $since): array

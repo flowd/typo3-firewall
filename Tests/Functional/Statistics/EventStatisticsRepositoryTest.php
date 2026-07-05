@@ -85,13 +85,42 @@ final class EventStatisticsRepositoryTest extends FunctionalTestCase
         );
     }
 
-    private function insertEvent(string $eventType, string $rule, string $keyHash, int $createdAt, string $requestPath = '/'): void
+    #[Test]
+    public function recentBlockingEventsAreReturnedNewestFirstWithLimit(): void
+    {
+        $this->insertEvent('blocklist_matched', 'scanner-paths', 'hash-a', 1000, '/wp-admin');
+        $this->insertEvent('fail2ban_banned', 'login-protection', 'hash-b', 2000, '/login');
+        $this->insertEvent('safelist_matched', 'office-ips', 'hash-c', 3000);
+        $this->insertEvent('throttle_exceeded', 'search-throttle', 'hash-d', 4000, '/search', 'POST', '198.51.100.0/24');
+
+        $repository = $this->get(EventStatisticsRepository::class);
+        $recentEvents = $repository->findRecentBlockingEvents(0, 2);
+
+        self::assertSame(['search-throttle', 'login-protection'], array_column($recentEvents, 'rule'));
+        self::assertSame([4000, 2000], array_column($recentEvents, 'createdAt'));
+        self::assertSame(
+            [
+                'createdAt' => 4000,
+                'eventType' => 'throttle_exceeded',
+                'rule' => 'search-throttle',
+                'requestMethod' => 'POST',
+                'requestPath' => '/search',
+                'keyDisplay' => '198.51.100.0/24',
+            ],
+            $recentEvents[0]
+        );
+        self::assertSame([], $repository->findRecentBlockingEvents(5000, 2));
+    }
+
+    private function insertEvent(string $eventType, string $rule, string $keyHash, int $createdAt, string $requestPath = '/', string $requestMethod = 'GET', string $keyDisplay = ''): void
     {
         $this->getConnectionPool()->getConnectionForTable(EventLogger::TABLE_NAME)->insert(EventLogger::TABLE_NAME, [
             'event_type' => $eventType,
             'rule' => $rule,
             'key_hash' => $keyHash,
+            'key_display' => $keyDisplay,
             'request_path' => $requestPath,
+            'request_method' => $requestMethod,
             'created_at' => $createdAt,
         ]);
     }

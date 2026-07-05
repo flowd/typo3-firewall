@@ -109,6 +109,14 @@ final class BarChartBuilder
     }
 
     /**
+     * The fixed color of an event type, shared by the chart and other views.
+     */
+    public function colorForType(string $eventType): ?string
+    {
+        return self::TYPE_COLORS[$eventType] ?? null;
+    }
+
+    /**
      * @return list<int>
      */
     private function computeBucketStarts(int $since, int $until, int $bucketSeconds): array

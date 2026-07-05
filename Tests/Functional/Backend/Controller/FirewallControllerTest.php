@@ -192,7 +192,9 @@ final class FirewallControllerTest extends FunctionalTestCase
             'event_type' => 'blocklist_matched',
             'rule' => 'scanner-paths',
             'key_hash' => hash('sha256', '203.0.113.10'),
+            'key_display' => '203.0.113.0/24',
             'request_path' => '/wp-admin',
+            'request_method' => 'GET',
             'created_at' => time() - 60,
         ]);
 
@@ -205,6 +207,9 @@ final class FirewallControllerTest extends FunctionalTestCase
         self::assertStringContainsString('/wp-admin', $body);
         self::assertStringContainsString('<svg', $body);
         self::assertStringContainsString('#2a78d6', $body);
+        self::assertStringContainsString('Recent blocked requests', $body);
+        self::assertStringContainsString('GET /wp-admin', $body);
+        self::assertStringContainsString('203.0.113.0/24', $body);
     }
 
     #[Test]
