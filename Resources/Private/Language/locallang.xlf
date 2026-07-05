@@ -392,6 +392,24 @@
       <trans-unit id="statistics.type.firewall_error">
         <source>Firewall errors</source>
       </trans-unit>
+      <trans-unit id="widgets.blockedToday.title">
+        <source>Firewall: Blocked today</source>
+      </trans-unit>
+      <trans-unit id="widgets.blockedToday.subtitle">
+        <source>Attackers blocked since midnight</source>
+      </trans-unit>
+      <trans-unit id="widgets.blockedToday.description">
+        <source>Shows how many distinct clients the firewall blocked today.</source>
+      </trans-unit>
+      <trans-unit id="widgets.events.title">
+        <source>Firewall: Blocked requests</source>
+      </trans-unit>
+      <trans-unit id="widgets.events.description">
+        <source>Shows the blocked requests of the last seven days as a chart.</source>
+      </trans-unit>
+      <trans-unit id="widgets.events.dataset">
+        <source>Blocked requests</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>

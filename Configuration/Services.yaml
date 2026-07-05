@@ -6,6 +6,9 @@ services:
 
     Flowd\Typo3Firewall\:
         resource: '../Classes/*'
+        # Everything under Widgets depends on the optional typo3/cms-dashboard
+        # package and is registered conditionally in Services.php instead.
+        exclude: '../Classes/Widgets/*'
 
     Flowd\Phirewall\Middleware:
         autowire: true
