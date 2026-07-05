@@ -45,6 +45,18 @@ requests for paths that only scanners ask for:
         return $config;
     };
 
+The ``PdoCache`` store creates its ``phirewall_cache`` table on its own the
+first time it runs. You must also declare the table in the
+``ext_tables.sql`` of your site package, otherwise TYPO3 treats it as
+unused; :doc:`Storage` shows the definition and other store options.
+
+..  important::
+
+    ``PdoCache`` needs a database connection with a PDO driver such as
+    ``pdo_mysql``. With the ``mysqli`` driver it does not work. Check the
+    ``driver`` entry in ``config/system/settings.php``; :doc:`Storage`
+    explains the options.
+
 The extension resolves the client IP for you through TYPO3, so the firewall
 sees the real visitor address behind a reverse proxy or CDN
 (see :doc:`TrustedProxies`).

@@ -14,8 +14,8 @@ and returns a configured ``Flowd\Phirewall\Config`` object. See
 `phirewall documentation <https://phirewall.de/>`__ for all rule types and
 options.
 
-When the file is missing or invalid, the firewall falls back to a safe
-default configuration and logs a warning. The block patterns managed in the
-:doc:`backend module <BackendModule>` are always active.
+When the file is missing, the firewall falls back to a safe default
+configuration. A broken file logs the problem on top. The block patterns
+managed in the :doc:`backend module <BackendModule>` are always active.
 
 This page will be extended with the full configuration reference.
