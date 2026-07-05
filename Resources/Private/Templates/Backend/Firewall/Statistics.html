@@ -89,6 +89,42 @@
         </div>
     </div>
 
+    <div class="card mb-4">
+        <div class="card-header"><strong><f:translate key="statistics.recent.title" /></strong></div>
+        <div class="table-responsive">
+            <table class="table table-striped mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 15%"><f:translate key="statistics.recent.time" /></th>
+                        <th style="width: 20%"><f:translate key="statistics.recent.type" /></th>
+                        <th style="width: 20%"><f:translate key="statistics.recent.rule" /></th>
+                        <th style="width: 30%"><f:translate key="statistics.recent.request" /></th>
+                        <th style="width: 15%"><f:translate key="statistics.recent.client" /></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <f:for each="{recentEvents}" as="recentEvent">
+                        <tr>
+                            <td><small>{recentEvent.createdAt -> f:format.date(format:'d.m.Y H:i:s')}</small></td>
+                            <td>
+                                <f:if condition="{recentEvent.color}">
+                                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: {recentEvent.color};" class="me-1"></span>
+                                </f:if>
+                                <f:translate key="statistics.type.{recentEvent.eventType}" default="{recentEvent.eventType}" />
+                            </td>
+                            <td><code class="text-break">{recentEvent.rule}</code></td>
+                            <td><code class="text-break">{recentEvent.requestMethod} <f:format.htmlspecialchars>{recentEvent.requestPath}</f:format.htmlspecialchars></code></td>
+                            <td><code class="text-break"><f:format.htmlspecialchars>{recentEvent.keyDisplay}</f:format.htmlspecialchars></code></td>
+                        </tr>
+                    </f:for>
+                    <f:if condition="!{recentEvents}">
+                        <tr><td class="text-muted" colspan="5"><f:translate key="statistics.empty" /></td></tr>
+                    </f:if>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-md-4">
             <div class="card mb-4">

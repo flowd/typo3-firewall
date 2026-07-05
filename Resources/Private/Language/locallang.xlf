@@ -356,6 +356,24 @@
       <trans-unit id="statistics.range.30d">
         <source>30 days</source>
       </trans-unit>
+      <trans-unit id="statistics.recent.title">
+        <source>Recent blocked requests</source>
+      </trans-unit>
+      <trans-unit id="statistics.recent.time">
+        <source>Time</source>
+      </trans-unit>
+      <trans-unit id="statistics.recent.type">
+        <source>Blocked by</source>
+      </trans-unit>
+      <trans-unit id="statistics.recent.rule">
+        <source>Rule</source>
+      </trans-unit>
+      <trans-unit id="statistics.recent.request">
+        <source>Request</source>
+      </trans-unit>
+      <trans-unit id="statistics.recent.client">
+        <source>Client</source>
+      </trans-unit>
       <trans-unit id="statistics.types.title">
         <source>Events by type</source>
       </trans-unit>
