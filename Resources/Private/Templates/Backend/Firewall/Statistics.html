@@ -113,8 +113,8 @@
                                 <f:translate key="statistics.type.{recentEvent.eventType}" default="{recentEvent.eventType}" />
                             </td>
                             <td><code class="text-break">{recentEvent.rule}</code></td>
-                            <td><code class="text-break">{recentEvent.requestMethod} <f:format.htmlspecialchars>{recentEvent.requestPath}</f:format.htmlspecialchars></code></td>
-                            <td><code class="text-break"><f:format.htmlspecialchars>{recentEvent.keyDisplay}</f:format.htmlspecialchars></code></td>
+                            <td><code class="text-break">{recentEvent.requestMethod} {recentEvent.requestPath}</code></td>
+                            <td><code class="text-break">{recentEvent.keyDisplay}</code></td>
                         </tr>
                     </f:for>
                     <f:if condition="!{recentEvents}">
@@ -174,7 +174,7 @@
                         <tbody>
                             <f:for each="{topPaths}" as="topPath">
                                 <tr>
-                                    <td><code class="text-break"><f:format.htmlspecialchars>{topPath.label}</f:format.htmlspecialchars></code></td>
+                                    <td><code class="text-break">{topPath.label}</code></td>
                                     <td class="text-end">{topPath.count}</td>
                                 </tr>
                             </f:for>

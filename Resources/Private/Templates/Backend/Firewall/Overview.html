@@ -66,11 +66,11 @@
                                             </f:switch>
                                         </td>
                                         <td>
-                                            <code class="text-break"><f:format.htmlspecialchars>{row.value}</f:format.htmlspecialchars></code>
+                                            <code class="text-break">{row.value}</code>
                                         </td>
                                         <td>
                                             <f:if condition="{row.target}">
-                                                <f:then><code><f:format.htmlspecialchars>{row.target}</f:format.htmlspecialchars></code></f:then>
+                                                <f:then><code>{row.target}</code></f:then>
                                                 <f:else><span class="text-muted">-</span></f:else>
                                             </f:if>
                                         </td>
