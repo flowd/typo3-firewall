@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowd\Typo3Firewall\Tests\Unit;
 
+use Flowd\Phirewall\Store\PdoCache;
 use Flowd\Typo3Firewall\ConfigFactory;
 use org\bovigo\vfs\vfsStream;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -95,6 +96,61 @@ final class ConfigFactoryTest extends TestCase
 
         self::assertInstanceOf(\Closure::class, $ipResolver);
         self::assertSame('198.51.100.9', $ipResolver(new ServerRequest()));
+    }
+
+    #[Test]
+    public function fromFileKeepsTheCacheOfTheConfigurationFile(): void
+    {
+        $configPath = $this->writeConfigurationFile(<<<'PHP'
+            <?php
+            use Flowd\Phirewall\Config;
+            use Flowd\Phirewall\Store\PdoCache;
+            use Psr\EventDispatcher\EventDispatcherInterface;
+
+            return function (EventDispatcherInterface $eventDispatcher): Config {
+                return new Config(new PdoCache(new \PDO('sqlite::memory:')), $eventDispatcher);
+            };
+            PHP);
+
+        $config = $this->createFactory()->fromFile($configPath);
+
+        self::assertInstanceOf(PdoCache::class, $config->cache);
+    }
+
+    #[Test]
+    public function fromFileAddsTheBackendPatternsBlocklistFirst(): void
+    {
+        $configPath = $this->writeConfigurationFile(self::CONFIG_WITHOUT_IP_RESOLVER);
+
+        $config = $this->createFactory()->fromFile($configPath);
+
+        self::assertSame('typo3-blocklist', array_key_first($config->blocklists->rules()));
+    }
+
+    #[Test]
+    public function fromFileLetsTheConfigurationOverrideTheBackendPatternsBlocklist(): void
+    {
+        $configPath = $this->writeConfigurationFile(<<<'PHP'
+            <?php
+            use Flowd\Phirewall\Config;
+            use Flowd\Phirewall\Store\InMemoryCache;
+            use Psr\EventDispatcher\EventDispatcherInterface;
+
+            return function (EventDispatcherInterface $eventDispatcher): Config {
+                $config = new Config(new InMemoryCache(), $eventDispatcher);
+                $config->blocklists->add(
+                    name: 'typo3-blocklist',
+                    callback: fn($request): bool => $request->getUri()->getPath() === '/overridden'
+                );
+                return $config;
+            };
+            PHP);
+
+        $config = $this->createFactory()->fromFile($configPath);
+        $rules = $config->blocklists->rules();
+
+        self::assertArrayHasKey('typo3-blocklist', $rules);
+        self::assertTrue($rules['typo3-blocklist']->matcher()->match(new ServerRequest('https://example.com/overridden'))->isMatch());
     }
 
     #[Test]
