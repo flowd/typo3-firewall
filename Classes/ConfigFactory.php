@@ -9,6 +9,7 @@ use Flowd\Phirewall\Store\InMemoryCache;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
 use Flowd\Typo3Firewall\Writer\FileArrayWriter;
 use Psr\Log\LoggerInterface;
+use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\EventDispatcher\EventDispatcher;
@@ -39,7 +40,9 @@ class ConfigFactory
                 }
 
                 if ($config instanceof Config) {
-                    return $this->prepareConfig($config);
+                    // The extension defaults form the base layer; the configuration
+                    // file is merged on top and wins on every name clash.
+                    return $this->createBaseConfig($config->cache)->with($config);
                 }
 
                 $this->logger?->warning('Invalid phirewall.php configuration file', ['path' => $configPath]);
@@ -73,34 +76,28 @@ class ConfigFactory
 
     private function getDefaultConfig(): Config
     {
-        return $this->prepareConfig(new Config(new InMemoryCache(), $this->eventDispatcher));
+        return $this->createBaseConfig(new InMemoryCache());
     }
 
-    private function prepareConfig(Config $config): Config
+    /**
+     * The defaults every installation gets: the TYPO3 client IP resolver and
+     * the blocklist fed from the backend managed patterns. The configuration
+     * file is layered on top, so it can override both by name.
+     */
+    private function createBaseConfig(CacheInterface $cache): Config
     {
-        $this->applyDefaultIpResolver($config);
-        return $this->addTypo3ManagedPatternsBlocklist($config);
-    }
-
-    private function applyDefaultIpResolver(Config $config): void
-    {
-        if ($config->getIpResolver() instanceof \Closure) {
-            return;
-        }
+        $config = new Config($cache, $this->eventDispatcher);
 
         // getIndpEnv() applies TYPO3's reverseProxyIP settings, so rules key on the real client IP.
         $config->setIpResolver(static function (): ?string {
             $remoteAddress = GeneralUtility::getIndpEnv('REMOTE_ADDR');
             return is_string($remoteAddress) && $remoteAddress !== '' ? $remoteAddress : null;
         });
-    }
 
-    private function addTypo3ManagedPatternsBlocklist(Config $config): Config
-    {
         $patternPath = self::getPatternsFilePath();
         $fileArrayPatternBackend = new FileArrayPatternBackend($patternPath, new FileArrayWriter($patternPath, $this->logger), $this->logger);
-
         $config->blocklists->addPatternBackend('typo3-managed-patterns', $fileArrayPatternBackend)->fromBackend('typo3-blocklist', 'typo3-managed-patterns');
+
         return $config;
     }
 
