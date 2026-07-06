@@ -213,6 +213,16 @@ final class FirewallControllerTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function bansActionWarnsAboutTheInMemoryStore(): void
+    {
+        $this->setUpConfigWithFail2BanRule();
+
+        $response = $this->dispatchModuleRequest('bans');
+
+        self::assertStringContainsString('InMemoryCache', (string)$response->getBody());
+    }
+
+    #[Test]
     public function bansActionShowsTheRemainingBanTime(): void
     {
         $config = $this->setUpConfigWithFail2BanRule();

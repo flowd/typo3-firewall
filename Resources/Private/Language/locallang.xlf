@@ -428,6 +428,9 @@
       <trans-unit id="widgets.events.dataset">
         <source>Blocked requests</source>
       </trans-unit>
+      <trans-unit id="bans.storeWarning">
+        <source>The firewall uses the InMemoryCache store. Counters and bans do not persist between requests, so rate limiting and bans do not work and this view stays empty. Configure a persistent store such as ApcuCache or RedisCache.</source>
+      </trans-unit>
       <trans-unit id="bans.field.expiresIn">
         <source>Expires in</source>
       </trans-unit>

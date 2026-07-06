@@ -6,6 +6,13 @@
 <f:section name="Content">
     <f:flashMessages />
 
+    <f:if condition="{usesInMemoryStore}">
+        <div class="alert alert-warning">
+            <core:icon identifier="actions-exclamation" size="small" />
+            <f:translate key="bans.storeWarning" />
+        </div>
+    </f:if>
+
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
             <span>

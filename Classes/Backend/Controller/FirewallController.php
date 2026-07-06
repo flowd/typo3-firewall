@@ -8,6 +8,7 @@ use Flowd\Phirewall\BanType;
 use Flowd\Phirewall\Config;
 use Flowd\Phirewall\Pattern\PatternEntry;
 use Flowd\Phirewall\Pattern\PatternKind;
+use Flowd\Phirewall\Store\InMemoryCache;
 use Flowd\Typo3Firewall\ConfigFactory;
 use Flowd\Typo3Firewall\Dto\PatternEntryDto;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
@@ -149,6 +150,7 @@ class FirewallController extends ActionController
             'banGroups' => $banGroups,
             'totalBans' => $totalBans,
             'search' => $search,
+            'usesInMemoryStore' => $this->config->cache instanceof InMemoryCache,
         ]);
 
         return $moduleTemplate->renderResponse('Backend/Firewall/Bans');
