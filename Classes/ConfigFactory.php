@@ -42,7 +42,7 @@ class ConfigFactory
                 if ($config instanceof Config) {
                     // The extension defaults form the base layer; the configuration
                     // file is merged on top and wins on every name clash.
-                    return $this->createBaseConfig($config->cache)->with($config);
+                    return $this->warnAboutNonPersistentStore($this->createBaseConfig($config->cache)->with($config));
                 }
 
                 $this->logger?->warning('Invalid phirewall.php configuration file', ['path' => $configPath]);
@@ -72,6 +72,35 @@ class ConfigFactory
         }
 
         return 'Loading phirewall.php failed, using the fallback configuration: ' . $throwable->getMessage();
+    }
+
+    /**
+     * Throttle and ban counters need a store that persists between requests.
+     * With InMemoryCache every HTTP request starts at zero, so such rules
+     * silently never trigger; make that failure loud.
+     */
+    private function warnAboutNonPersistentStore(Config $config): Config
+    {
+        if ($this->isCliRequest() || !$config->cache instanceof InMemoryCache) {
+            return $config;
+        }
+
+        if ($config->throttles->rules() === [] && $config->fail2ban->rules() === [] && $config->allow2ban->rules() === []) {
+            return $config;
+        }
+
+        $this->logger?->warning(
+            'Throttle, fail2ban, or allow2ban rules are registered on the InMemoryCache store. '
+            . 'Counters do not persist between requests under PHP-FPM, so these rules never trigger. '
+            . 'Use ApcuCache or RedisCache instead, see the Storage chapter of the manual.'
+        );
+
+        return $config;
+    }
+
+    protected function isCliRequest(): bool
+    {
+        return PHP_SAPI === 'cli';
     }
 
     private function getDefaultConfig(): Config

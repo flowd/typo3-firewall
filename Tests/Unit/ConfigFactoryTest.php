@@ -205,6 +205,55 @@ final class ConfigFactoryTest extends TestCase
         self::assertStringContainsString('mysqli driver', $spyLogger->records[0]['message']);
     }
 
+    #[Test]
+    public function fromFileWarnsWhenThrottleRulesRunOnTheInMemoryStore(): void
+    {
+        $configPath = $this->writeConfigurationFile(<<<'PHP'
+            <?php
+            use Flowd\Phirewall\Config;
+            use Flowd\Phirewall\Store\InMemoryCache;
+            use Psr\EventDispatcher\EventDispatcherInterface;
+
+            return function (EventDispatcherInterface $eventDispatcher): Config {
+                $config = new Config(new InMemoryCache(), $eventDispatcher);
+                $config->throttles->add(name: 'api-throttle', limit: 10, period: 60);
+                return $config;
+            };
+            PHP);
+        $spyLogger = $this->createSpyLogger();
+
+        $this->createFactory($spyLogger, cli: false)->fromFile($configPath);
+
+        self::assertCount(1, $spyLogger->records);
+        self::assertSame('warning', $spyLogger->records[0]['level']);
+        self::assertStringContainsString('InMemoryCache', $spyLogger->records[0]['message']);
+    }
+
+    #[Test]
+    public function fromFileDoesNotWarnOnCliOrWithoutCounterRules(): void
+    {
+        $throttleConfig = <<<'PHP'
+            <?php
+            use Flowd\Phirewall\Config;
+            use Flowd\Phirewall\Store\InMemoryCache;
+            use Psr\EventDispatcher\EventDispatcherInterface;
+
+            return function (EventDispatcherInterface $eventDispatcher): Config {
+                $config = new Config(new InMemoryCache(), $eventDispatcher);
+                $config->throttles->add(name: 'api-throttle', limit: 10, period: 60);
+                return $config;
+            };
+            PHP;
+
+        $cliLogger = $this->createSpyLogger();
+        $this->createFactory($cliLogger, cli: true)->fromFile($this->writeConfigurationFile($throttleConfig));
+        self::assertSame([], $cliLogger->records);
+
+        $blocklistOnlyLogger = $this->createSpyLogger();
+        $this->createFactory($blocklistOnlyLogger, cli: false)->fromFile($this->writeConfigurationFile(self::CONFIG_WITHOUT_IP_RESOLVER));
+        self::assertSame([], $blocklistOnlyLogger->records);
+    }
+
     /**
      * @return AbstractLogger&object{records: list<array{level: string, message: string}>}
      */
@@ -221,7 +270,7 @@ final class ConfigFactoryTest extends TestCase
         };
     }
 
-    private function createFactory(?LoggerInterface $logger = null): ConfigFactory
+    private function createFactory(?LoggerInterface $logger = null, bool $cli = true): ConfigFactory
     {
         $listenerProvider = new class () implements ListenerProviderInterface {
             /**
@@ -233,7 +282,17 @@ final class ConfigFactoryTest extends TestCase
             }
         };
 
-        return new ConfigFactory(new EventDispatcher($listenerProvider), $logger);
+        return new class (new EventDispatcher($listenerProvider), $logger, $cli) extends ConfigFactory {
+            public function __construct(EventDispatcher $eventDispatcher, ?LoggerInterface $logger, private readonly bool $cli)
+            {
+                parent::__construct($eventDispatcher, $logger);
+            }
+
+            protected function isCliRequest(): bool
+            {
+                return $this->cli;
+            }
+        };
     }
 
     private function writeConfigurationFile(string $content): string
