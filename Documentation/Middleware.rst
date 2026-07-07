@@ -51,3 +51,62 @@ Return a configuration without rules, or rename the configuration file. The
 extension then falls back to the default configuration, and only the block
 patterns from the :doc:`backend module <BackendModule>` stay active. To
 disable those too, remove the patterns in the backend module.
+
+Read the firewall decision from PHP code
+========================================
+
+A second middleware ``flowd/typo3-firewall-aspect`` exposes the firewall
+decision through the TYPO3 Context API as the ``firewall`` aspect. Like the
+firewall itself it runs in the frontend stack only, so the aspect is
+available in frontend requests and not in the backend. Application code can
+read the decision through the aspect:
+
+..  code-block:: php
+
+    use TYPO3\CMS\Core\Context\Context;
+    use TYPO3\CMS\Core\Utility\GeneralUtility;
+
+    $firewallAspect = GeneralUtility::makeInstance(Context::class)->getAspect('firewall');
+
+    // The FirewallResult of the current request:
+    $firewallResult = $firewallAspect->get('result');
+
+    // Report an application-level failure, for example a failed login,
+    // to a fail2ban rule defined in phirewall.php:
+    $firewallAspect->recordFailure('login-failures');
+
+    // Report a hit to an allow2ban rule, for example an expensive
+    // operation the firewall cannot see from the request alone:
+    $firewallAspect->recordHit('expensive-operation');
+
+``recordFailure()`` and ``recordHit()`` count against the client IP by
+default; the firewall resolves it with your trusted-proxy settings after
+the handler has finished. Pass a key as second argument only when the rule
+should count something the firewall cannot derive from the request itself.
+Signals reported to a rule name that is not configured are ignored, so
+calling code does not need to check the configuration first.
+
+The extension ships a `phpstan <https://phpstan.org/>`__ configuration that
+maps ``getAspect('firewall')`` to the :php:`FirewallAspect` class. Projects
+using ``phpstan/extension-installer`` pick it up automatically.
+
+..  note::
+
+    The aspect is only registered when the firewall middleware has run for
+    the current request. Otherwise ``getAspect('firewall')`` throws an
+    ``AspectNotFoundException``.
+
+If you do not want the aspect registered at all, disable the middleware in
+the :file:`Configuration/RequestMiddlewares.php` of your site package:
+
+..  code-block:: php
+
+    <?php
+
+    return [
+        'frontend' => [
+            'flowd/typo3-firewall-aspect' => [
+                'disabled' => true,
+            ],
+        ],
+    ];

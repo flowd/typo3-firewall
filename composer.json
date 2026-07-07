@@ -88,6 +88,11 @@
 		"branch-alias": {
 			"dev-main": "0.4.x-dev"
 		},
+		"phpstan": {
+			"includes": [
+				"phpstan-extension.neon"
+			]
+		},
 		"typo3/cms": {
 			"extension-key": "firewall",
 			"web-dir": ".Build/public"
