@@ -65,7 +65,7 @@ final class BarChartBuilderTest extends TestCase
     public function segmentsStackBottomUpInFixedTypeOrder(): void
     {
         $chart = (new BarChartBuilder())->build(
-            [0 => ['fail2ban_banned' => 25, 'blocklist_matched' => 50, 'throttle_exceeded' => 25]],
+            [0 => ['fail2ban_banned' => 25, 'blocklist_matched' => 50, 'throttle_exceeded' => 25, 'fail2ban_matched' => 25]],
             0,
             0,
             3600,
@@ -74,11 +74,12 @@ final class BarChartBuilderTest extends TestCase
 
         $segments = $chart['bars'][0]['segments'];
         self::assertSame(
-            ['blocklist_matched', 'throttle_exceeded', 'fail2ban_banned'],
+            ['blocklist_matched', 'throttle_exceeded', 'fail2ban_matched', 'fail2ban_banned'],
             array_column($segments, 'type')
         );
         self::assertGreaterThan($segments[1]['y'], $segments[0]['y']);
         self::assertGreaterThan($segments[2]['y'], $segments[1]['y']);
+        self::assertGreaterThan($segments[3]['y'], $segments[2]['y']);
         self::assertEqualsWithDelta($chart['baselineY'], $segments[0]['y'] + $segments[0]['height'], 0.11);
     }
 
@@ -87,7 +88,7 @@ final class BarChartBuilderTest extends TestCase
     {
         $barChartBuilder = new BarChartBuilder();
         $allTypes = $barChartBuilder->build(
-            [0 => ['blocklist_matched' => 1, 'throttle_exceeded' => 1, 'fail2ban_banned' => 1, 'allow2ban_banned' => 1]],
+            [0 => ['blocklist_matched' => 1, 'throttle_exceeded' => 1, 'fail2ban_matched' => 1, 'fail2ban_banned' => 1, 'allow2ban_banned' => 1]],
             0,
             0,
             3600,
@@ -96,7 +97,7 @@ final class BarChartBuilderTest extends TestCase
         $onlyFail2Ban = $barChartBuilder->build([0 => ['fail2ban_banned' => 3]], 0, 0, 3600, 'H:00');
 
         $colorsByType = array_column($allTypes['bars'][0]['segments'], 'color', 'type');
-        self::assertCount(4, array_unique($colorsByType));
+        self::assertCount(5, array_unique($colorsByType));
         self::assertSame($colorsByType['fail2ban_banned'], $onlyFail2Ban['bars'][0]['segments'][0]['color']);
     }
 

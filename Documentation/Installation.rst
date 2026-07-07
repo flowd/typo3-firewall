@@ -11,7 +11,7 @@ Requirements
 Extension version    0.4
 TYPO3                12.4 LTS, 13.4 LTS, 14
 PHP                  8.3, 8.4, 8.5
-Firewall engine      flowd/phirewall 0.7
+Firewall engine      flowd/phirewall 0.8
 ===================  ===============================
 
 The firewall works with every database supported by TYPO3. Rate limiting and
@@ -66,7 +66,7 @@ available without further setup.
 Upgrade from 0.3
 ================
 
-Version 0.4 updates the firewall engine from phirewall 0.3 to 0.7. Review
+Version 0.4 updates the firewall engine from phirewall 0.3 to 0.8. Review
 these points when upgrading:
 
 New database table
@@ -84,6 +84,23 @@ Bans trigger at the threshold
     one request later. With ``threshold: 5`` the ban starts at the fifth
     matching request. Lower your thresholds by one if you relied on the old
     behavior.
+
+Fail2Ban blocks every matching request
+    A fail2ban rule answers **every** request its filter matches with a
+    ``403``, not only the request that reaches the threshold; the threshold
+    controls when the client is banned outright. If a rule in your
+    ``phirewall.php`` filters on something a legitimate request can carry
+    (for example every POST to a login path), move it to an allow2ban rule
+    with the same filter, which counts the matches but lets them pass until
+    the threshold. Rules that match only clearly malicious traffic (scanner
+    paths) block the probe on sight. Rules driven by
+    ``RequestContext::recordFailure()`` (an empty filter) are unaffected.
+
+New event type ``fail2ban_matched``
+    A blocked-but-not-yet-banned fail2ban match is recorded as the new event
+    type ``fail2ban_matched`` and counts towards the blocking statistics. It
+    is enabled by default; adjust the logged types in the extension
+    configuration if you do not want it.
 
 ``$config->blocklists->owasp()`` was removed
     The OWASP rule engine moved into the package

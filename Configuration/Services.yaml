@@ -35,6 +35,9 @@ services:
               identifier: 'firewall-event-log/throttle-exceeded'
               method: 'onThrottleExceeded'
             - name: event.listener
+              identifier: 'firewall-event-log/fail2ban-matched'
+              method: 'onFail2BanMatched'
+            - name: event.listener
               identifier: 'firewall-event-log/fail2ban-banned'
               method: 'onFail2BanBanned'
             - name: event.listener

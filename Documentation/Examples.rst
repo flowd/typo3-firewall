@@ -39,13 +39,15 @@ ends the check at once, so these clients are never rate limited or banned.
         return $config;
     };
 
-Ban brute-force logins with fail2ban
-====================================
+Ban brute-force logins with allow2ban
+=====================================
 
-Ban a client that posts to the frontend login again and again. A fail2ban
-rule counts the requests that match its filter and bans the client once the
-threshold is reached. Replace ``/login`` with the path of the page that holds
-your felogin form.
+Ban a client that posts to the frontend login again and again. An allow2ban
+rule with a filter counts the requests that match the filter and lets them
+through, then bans the client once it crosses the threshold within the period.
+A fail2ban rule is the wrong tool here: it treats every match as malicious and
+answers each login post with a 403, which locks out real users. Replace
+``/login`` with the path of the page that holds your felogin form.
 
 ..  code-block:: php
 
@@ -58,11 +60,11 @@ your felogin form.
         $cache = new ApcuCache();
         $config = new Config($cache, $eventDispatcher);
 
-        $config->fail2ban->add(
+        $config->allow2ban->add(
             name: 'felogin-brute-force',
             threshold: 5,
             period: 300,
-            ban: 900,
+            banSeconds: 900,
             filter: fn($request) => $request->getMethod() === 'POST'
                 && str_starts_with($request->getUri()->getPath(), '/login'),
         );

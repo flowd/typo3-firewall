@@ -26,6 +26,10 @@ types are:
 ``throttle_exceeded``
     A client sent more requests than a rate limit allows.
 
+``fail2ban_matched``
+    A fail2ban rule blocked a request that matched its filter, before the
+    ban threshold was reached.
+
 ``fail2ban_banned``
     A fail2ban rule banned a client after repeated abuse.
 
@@ -42,8 +46,12 @@ types are:
     The firewall hit an internal error, for example when the store was
     unreachable.
 
-The first four types count as a blocked attacker. They feed the numbers, the
-chart, and the top lists in the statistics view. The ``safelist_matched`` and
+The ``blocklist_matched``, ``throttle_exceeded``, ``fail2ban_matched``,
+``fail2ban_banned``, and ``allow2ban_banned`` types count as a blocked
+attacker: each one rejected a request. They feed the numbers, the chart, and
+the top lists in the statistics view. The ``firewall_error`` type is recorded
+but not counted, because an internal error makes the firewall fail open by
+default, so the request was not blocked. The ``safelist_matched`` and
 ``track_hit`` types are high volume and switched off by default, because they
 fire on normal traffic and would fill the table quickly.
 
@@ -58,7 +66,7 @@ it under **Admin Tools** > **Settings** >
     Turns the event log on or off. When off, nothing is recorded and the
     statistics view stays empty.
 
-``eventLogTypes`` (default: ``blocklist_matched``, ``throttle_exceeded``, ``fail2ban_banned``, ``allow2ban_banned``, ``firewall_error``)
+``eventLogTypes`` (default: ``blocklist_matched``, ``throttle_exceeded``, ``fail2ban_matched``, ``fail2ban_banned``, ``allow2ban_banned``, ``firewall_error``)
     A comma-separated list of the event types to record. Add
     ``safelist_matched`` or ``track_hit`` only when you need them, and expect
     many more rows.

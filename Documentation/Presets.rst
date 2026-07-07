@@ -28,8 +28,9 @@ based on the `OWASP Core Rule Set <https://coreruleset.org/>`__:
     $config = $config->with(OwaspPresets::blocklist(ParanoiaLevel::Level1));
 
 Start with paranoia level 1. Higher levels detect more, but also produce
-more false positives. Instead of blocking directly, you can ban repeat
-offenders with the fail2ban variant:
+more false positives. The fail2ban variant blocks each matching request just
+like the blocklist, but additionally bans a client key that keeps matching,
+so a repeat offender is locked out for the whole ban period:
 
 ..  code-block:: php
 

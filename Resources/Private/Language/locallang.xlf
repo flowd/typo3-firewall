@@ -395,6 +395,9 @@
       <trans-unit id="statistics.type.throttle_exceeded">
         <source>Rate limit exceeded</source>
       </trans-unit>
+      <trans-unit id="statistics.type.fail2ban_matched">
+        <source>Fail2Ban matches</source>
+      </trans-unit>
       <trans-unit id="statistics.type.fail2ban_banned">
         <source>Fail2Ban bans</source>
       </trans-unit>
