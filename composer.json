@@ -47,6 +47,7 @@
 		"tomasvotruba/cognitive-complexity": "^1.2.0",
 		"tomasvotruba/type-coverage": "^2.2.1",
 		"typo3/cms-dashboard": "^12.4 || ^13.4 || ^14.0",
+		"typo3/cms-form": "^12.4 || ^13.4 || ^14.0",
 		"typo3/coding-standards": "^0.8.0",
 		"typo3/testing-framework": "^8.3.1 || ^9.5.0"
 	},
@@ -57,7 +58,8 @@
 		"flowd/phirewall-preset-bad-ips": "Block requests from known-bad IPs using a bundled public-domain threat-intelligence feed snapshot",
 		"flowd/phirewall-preset-bots": "Block AI crawlers and rate-limit aggressive SEO bots with curated user-agent presets",
 		"flowd/phirewall-preset-owasp-crs": "OWASP CRS detection (SQL injection, XSS, ...): the SecRule engine plus per-paranoia-level presets",
-		"typo3/cms-dashboard": "Adds firewall dashboard widgets (blocked attackers, events chart)"
+		"typo3/cms-dashboard": "Adds firewall dashboard widgets (blocked attackers, events chart)",
+		"typo3/cms-form": "Adds the flood-protection form finisher that bans clients hammering a form"
 	},
 	"autoload": {
 		"psr-4": {

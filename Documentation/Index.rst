@@ -29,6 +29,7 @@ relates to phirewall.
     Trusted proxies <TrustedProxies>
     Storage <Storage>
     Presets <Presets>
+    Form protection <FormProtection>
     Backend module <BackendModule>
     Statistics <Statistics>
     Examples <Examples>
