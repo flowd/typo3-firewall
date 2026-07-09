@@ -43,6 +43,7 @@ final class BarChartBuilder
     private const array TYPE_COLORS = [
         FirewallEventType::BlocklistMatched->value => '#2a78d6',
         FirewallEventType::ThrottleExceeded->value => '#1baf7a',
+        FirewallEventType::Fail2BanMatched->value => '#d55e00',
         FirewallEventType::Fail2BanBanned->value => '#eda100',
         FirewallEventType::Allow2BanBanned->value => '#008300',
     ];

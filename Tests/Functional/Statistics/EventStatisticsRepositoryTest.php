@@ -23,12 +23,13 @@ final class EventStatisticsRepositoryTest extends FunctionalTestCase
         $this->insertEvent('blocklist_matched', 'scanner-paths', 'hash-a', 1000);
         $this->insertEvent('fail2ban_banned', 'login-protection', 'hash-a', 1100);
         $this->insertEvent('throttle_exceeded', 'search-throttle', 'hash-b', 1200);
+        $this->insertEvent('fail2ban_matched', 'login-protection', 'hash-d', 1250);
         $this->insertEvent('safelist_matched', 'office-ips', 'hash-c', 1300);
         $this->insertEvent('blocklist_matched', 'scanner-paths', 'hash-old', 10);
 
         $repository = $this->get(EventStatisticsRepository::class);
 
-        self::assertSame(2, $repository->countDistinctBlockedKeysSince(1000));
+        self::assertSame(3, $repository->countDistinctBlockedKeysSince(1000));
     }
 
     #[Test]
@@ -37,6 +38,7 @@ final class EventStatisticsRepositoryTest extends FunctionalTestCase
         $this->insertEvent('blocklist_matched', 'scanner-paths', 'hash-a', 3600);
         $this->insertEvent('blocklist_matched', 'scanner-paths', 'hash-b', 3700);
         $this->insertEvent('fail2ban_banned', 'login-protection', 'hash-b', 3800);
+        $this->insertEvent('fail2ban_matched', 'login-protection', 'hash-e', 3900);
         $this->insertEvent('throttle_exceeded', 'search-throttle', 'hash-c', 7300);
         $this->insertEvent('safelist_matched', 'office-ips', 'hash-d', 7400);
 
@@ -44,7 +46,7 @@ final class EventStatisticsRepositoryTest extends FunctionalTestCase
 
         self::assertSame(
             [
-                3600 => ['blocklist_matched' => 2, 'fail2ban_banned' => 1],
+                3600 => ['blocklist_matched' => 2, 'fail2ban_banned' => 1, 'fail2ban_matched' => 1],
                 7200 => ['throttle_exceeded' => 1],
             ],
             $repository->countBlockingEventsPerBucketAndType(0, 3600)

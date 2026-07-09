@@ -83,15 +83,16 @@ final class WidgetDataProviderTest extends FunctionalTestCase
         $this->insertEvent('hash-a', $startOfToday + 60);
         $this->insertEvent('hash-a', $startOfToday + 120);
         $this->insertEvent('hash-b', $startOfToday + 180);
+        $this->insertEvent('hash-c', $startOfToday + 240, 'fail2ban_matched');
         $this->insertEvent('hash-yesterday', $startOfToday - 3600);
 
-        self::assertSame(2, $this->get(BlockedTodayDataProvider::class)->getNumber());
+        self::assertSame(3, $this->get(BlockedTodayDataProvider::class)->getNumber());
     }
 
-    private function insertEvent(string $keyHash, int $createdAt): void
+    private function insertEvent(string $keyHash, int $createdAt, string $eventType = 'blocklist_matched'): void
     {
         $this->getConnectionPool()->getConnectionForTable(EventLogger::TABLE_NAME)->insert(EventLogger::TABLE_NAME, [
-            'event_type' => 'blocklist_matched',
+            'event_type' => $eventType,
             'rule' => 'scanner-paths',
             'key_hash' => $keyHash,
             'created_at' => $createdAt,

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Flowd\Typo3Firewall\Tests\Functional\EventLog;
 
 use Flowd\Phirewall\Events\BlocklistMatched;
+use Flowd\Phirewall\Events\Fail2BanMatched;
 use Flowd\Phirewall\Events\FirewallError;
 use Flowd\Phirewall\Events\SafelistMatched;
 use Flowd\Phirewall\Events\ThrottleExceeded;
@@ -74,6 +75,25 @@ final class EventLogTest extends FunctionalTestCase
         self::assertSame(hash('sha256', 'secret-api-key'), $rows[0]['key_hash']);
         self::assertSame('', $rows[0]['key_display']);
         self::assertStringNotContainsString('secret-api-key', json_encode($rows[0], JSON_THROW_ON_ERROR));
+    }
+
+    #[Test]
+    public function fail2BanMatchedEventStoresTheCounterMetaWithoutABanType(): void
+    {
+        $serverRequest = new ServerRequest('https://example.com/login', 'POST');
+
+        $this->dispatch(new Fail2BanMatched('login-brute-force', '203.0.113.10', 5, 300, 3, $serverRequest));
+
+        $rows = $this->fetchAllEventRows();
+        self::assertCount(1, $rows);
+        self::assertSame('fail2ban_matched', $rows[0]['event_type']);
+        self::assertSame('login-brute-force', $rows[0]['rule']);
+        self::assertSame(hash('sha256', '203.0.113.10'), $rows[0]['key_hash']);
+        self::assertSame('203.0.113.0', $rows[0]['key_display']);
+        self::assertSame('', $rows[0]['ban_type']);
+        self::assertIsString($rows[0]['meta']);
+        $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame(['threshold' => 5, 'period' => 300, 'count' => 3], $meta);
     }
 
     #[Test]

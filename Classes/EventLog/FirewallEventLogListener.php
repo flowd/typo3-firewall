@@ -8,6 +8,7 @@ use Flowd\Phirewall\BanType;
 use Flowd\Phirewall\Events\Allow2BanBanned;
 use Flowd\Phirewall\Events\BlocklistMatched;
 use Flowd\Phirewall\Events\Fail2BanBanned;
+use Flowd\Phirewall\Events\Fail2BanMatched;
 use Flowd\Phirewall\Events\FirewallError;
 use Flowd\Phirewall\Events\SafelistMatched;
 use Flowd\Phirewall\Events\ThrottleExceeded;
@@ -40,6 +41,15 @@ final class FirewallEventLogListener
             'period' => $throttleExceeded->period,
             'count' => $throttleExceeded->count,
             'retryAfter' => $throttleExceeded->retryAfter,
+        ]);
+    }
+
+    public function onFail2BanMatched(Fail2BanMatched $fail2BanMatched): void
+    {
+        $this->eventLogger->log(FirewallEventType::Fail2BanMatched, $fail2BanMatched->serverRequest, rule: $fail2BanMatched->rule, key: $fail2BanMatched->key, meta: [
+            'threshold' => $fail2BanMatched->threshold,
+            'period' => $fail2BanMatched->period,
+            'count' => $fail2BanMatched->count,
         ]);
     }
 

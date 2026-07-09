@@ -1,8 +1,8 @@
 # cat=event log; type=boolean; label=Enable event logging: Store firewall events (blocked requests, bans, throttling, errors) in the database table tx_firewall_event.
 eventLogEnabled = 1
 
-# cat=event log; type=string; label=Logged event types: Comma separated list of event types to log. Available: blocklist_matched, throttle_exceeded, fail2ban_banned, allow2ban_banned, safelist_matched, track_hit, firewall_error. Safelist and track events are high volume and disabled by default.
-eventLogTypes = blocklist_matched,throttle_exceeded,fail2ban_banned,allow2ban_banned,firewall_error
+# cat=event log; type=string; label=Logged event types: Comma-separated list of event types to log. Available: blocklist_matched, throttle_exceeded, fail2ban_matched, fail2ban_banned, allow2ban_banned, safelist_matched, track_hit, firewall_error. Safelist and track events are high volume and disabled by default.
+eventLogTypes = blocklist_matched,throttle_exceeded,fail2ban_matched,fail2ban_banned,allow2ban_banned,firewall_error
 
 # cat=event log; type=int+; label=Retention in days: The console command firewall:eventlog:prune deletes entries older than this many days.
 eventLogRetentionDays = 30
