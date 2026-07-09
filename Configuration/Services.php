@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Flowd\Typo3Firewall\Form\Finisher\FloodProtectionFinisher;
 use Flowd\Typo3Firewall\Widgets\Provider\BlockedTodayDataProvider;
 use Flowd\Typo3Firewall\Widgets\Provider\FirewallEventsChartDataProvider;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -9,22 +10,32 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigura
 use TYPO3\CMS\Dashboard\Widgets\BarChartWidget;
 use TYPO3\CMS\Dashboard\Widgets\NumberWithIconWidget;
 use TYPO3\CMS\Dashboard\Widgets\WidgetInterface;
+use TYPO3\CMS\Form\Domain\Finishers\FinisherInterface;
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 
 return static function (ContainerConfigurator $containerConfigurator, ContainerBuilder $containerBuilder): void {
-    // The dashboard widgets are only registered when the optional
-    // typo3/cms-dashboard package is installed. A package check is not
-    // possible here (the package manager is not available during container
-    // compilation) and not needed: when the classes are merely autoloadable
-    // but the extension is inactive, nothing consumes the dashboard.widget
-    // tag and the unused widget services are dropped during compilation.
+    $services = $containerConfigurator->services();
+    $services->defaults()->autowire()->autoconfigure();
+
+    // Services below depend on optional packages and are only registered when
+    // those are installed. A package check is not possible here (the package
+    // manager is not available during container compilation) and not needed:
+    // when the classes are merely autoloadable but the extension is inactive,
+    // nothing consumes their tags and the unused services are dropped during
+    // compilation.
+
+    // typo3/cms-form: EXT:form's autoconfiguration tags the finisher as
+    // form.finisher, which makes it a public prototype service so the form
+    // framework can instantiate it with dependency injection.
+    if (interface_exists(FinisherInterface::class)) {
+        $services->set(FloodProtectionFinisher::class);
+    }
+
+    // typo3/cms-dashboard: the firewall dashboard widgets.
     if (!interface_exists(WidgetInterface::class)) {
         return;
     }
-
-    $services = $containerConfigurator->services();
-    $services->defaults()->autowire()->autoconfigure();
 
     $services->set(FirewallEventsChartDataProvider::class)->public();
     $services->set(BlockedTodayDataProvider::class)->public();

@@ -6,6 +6,7 @@ namespace Flowd\Typo3Firewall;
 
 use Flowd\Phirewall\Config;
 use Flowd\Phirewall\Store\InMemoryCache;
+use Flowd\Typo3Firewall\Form\FormFloodSettings;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
 use Flowd\Typo3Firewall\Writer\FileArrayWriter;
 use Psr\Log\LoggerInterface;
@@ -20,6 +21,7 @@ class ConfigFactory
 {
     public function __construct(
         private readonly EventDispatcher $eventDispatcher,
+        private readonly FormFloodSettings $formFloodSettings,
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
@@ -105,7 +107,7 @@ class ConfigFactory
 
     private function getDefaultConfig(): Config
     {
-        return $this->createBaseConfig(new InMemoryCache());
+        return $this->warnAboutNonPersistentStore($this->createBaseConfig(new InMemoryCache()));
     }
 
     /**
@@ -127,7 +129,30 @@ class ConfigFactory
         $fileArrayPatternBackend = new FileArrayPatternBackend($patternPath, new FileArrayWriter($patternPath, $this->logger), $this->logger);
         $config->blocklists->addPatternBackend('typo3-managed-patterns', $fileArrayPatternBackend)->fromBackend('typo3-blocklist', 'typo3-managed-patterns');
 
+        $this->addFormFloodRule($config);
+
         return $config;
+    }
+
+    /**
+     * The default "form-flood" allow2ban rule, fed by the FloodProtectionFinisher
+     * and enabled through the extension configuration. A rule of the same name
+     * in phirewall.php replaces it via the configuration overlay.
+     */
+    private function addFormFloodRule(Config $config): void
+    {
+        if (!$this->formFloodSettings->isEnabled()) {
+            return;
+        }
+
+        $config->allow2ban->add(
+            FormFloodSettings::DEFAULT_RULE_IDENTIFIER,
+            threshold: $this->formFloodSettings->getThreshold(),
+            period: $this->formFloodSettings->getPeriod(),
+            banSeconds: $this->formFloodSettings->getBanSeconds(),
+            // Fed by recorded hits only; the rule never matches a request on its own.
+            filter: static fn(): bool => false,
+        );
     }
 
     public static function getBaseConfigPath(): string

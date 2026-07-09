@@ -467,6 +467,15 @@
       <trans-unit id="bans.search.noResults">
         <source>No blocked keys match your search.</source>
       </trans-unit>
+      <trans-unit id="finisher.floodProtection.label">
+        <source>Firewall: flood protection</source>
+      </trans-unit>
+      <trans-unit id="finisher.floodProtection.ruleIdentifier.label">
+        <source>Allow2ban rule identifier</source>
+      </trans-unit>
+      <trans-unit id="finisher.floodProtection.ruleIdentifier.fieldExplanationText">
+        <source>Name of the allow2ban rule this form's submissions are counted against. Leave at "form-flood" to share the default rule, or enter a custom name to give this form its own counter. A custom rule must be defined in config/system/phirewall.php.</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>

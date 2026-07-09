@@ -1,0 +1,38 @@
+TYPO3:
+  CMS:
+    Form:
+      prototypes:
+        standard:
+          formEditor:
+            translationFiles:
+              1780300620: 'EXT:firewall/Resources/Private/Language/locallang.xlf'
+          finishersDefinition:
+            FlowdFirewallFloodProtection:
+              implementationClassName: Flowd\Typo3Firewall\Form\Finisher\FloodProtectionFinisher
+              options:
+                ruleIdentifier: 'form-flood'
+              formEditor:
+                iconIdentifier: form-finisher
+                label: 'finisher.floodProtection.label'
+                predefinedDefaults:
+                  options:
+                    ruleIdentifier: 'form-flood'
+                editors:
+                  100:
+                    identifier: header
+                    templateName: Inspector-FormElementHeaderEditor
+                  200:
+                    identifier: ruleIdentifier
+                    templateName: Inspector-TextEditor
+                    label: 'finisher.floodProtection.ruleIdentifier.label'
+                    fieldExplanationText: 'finisher.floodProtection.ruleIdentifier.fieldExplanationText'
+                    propertyPath: 'options.ruleIdentifier'
+          formElementsDefinition:
+            Form:
+              formEditor:
+                editors:
+                  900:
+                    selectOptions:
+                      1780296610:
+                        value: FlowdFirewallFloodProtection
+                        label: 'finisher.floodProtection.label'
