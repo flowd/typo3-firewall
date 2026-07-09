@@ -33,4 +33,5 @@ relates to phirewall.
     Backend module <BackendModule>
     Statistics <Statistics>
     Examples <Examples>
+    Common attacks <CommonAttacks>
     FAQ <Faq>
