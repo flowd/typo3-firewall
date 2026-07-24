@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowd\Typo3Firewall\Tests\Functional\EventLog;
 
+use Flowd\Phirewall\Config\MatchResult;
 use Flowd\Phirewall\Events\Allow2BanBlocked;
 use Flowd\Phirewall\Events\BlocklistMatched;
 use Flowd\Phirewall\Events\Fail2BanBlocked;
@@ -13,6 +14,8 @@ use Flowd\Phirewall\Events\SafelistMatched;
 use Flowd\Phirewall\Events\ThrottleExceeded;
 use Flowd\Typo3Firewall\Command\PruneEventLogCommand;
 use Flowd\Typo3Firewall\EventLog\EventLogger;
+use Flowd\Typo3Firewall\EventLog\EventLogSettings;
+use Flowd\Typo3Firewall\EventLog\FirewallEventType;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -35,7 +38,7 @@ final class EventLogTest extends FunctionalTestCase
         $serverRequest = (new ServerRequest('https://example.com/wp-admin/setup.php', 'GET'))
             ->withAddedHeader('User-Agent', 'sqlmap/1.0');
 
-        $this->dispatch(new BlocklistMatched('scanner-paths', $serverRequest));
+        $this->dispatch(new BlocklistMatched('scanner-paths', $serverRequest, MatchResult::matched('custom')));
 
         $rows = $this->fetchAllEventRows();
         self::assertCount(1, $rows);
@@ -53,7 +56,7 @@ final class EventLogTest extends FunctionalTestCase
     {
         $serverRequest = new ServerRequest('https://example.com/search', 'GET');
 
-        $this->dispatch(new ThrottleExceeded('search-throttle', '203.0.113.10', 10, 60, 11, 42, $serverRequest));
+        $this->dispatch(new ThrottleExceeded('search-throttle', '203.0.113.10', 10, 60, 11, 42, $serverRequest, null));
 
         $rows = $this->fetchAllEventRows();
         self::assertCount(1, $rows);
@@ -70,7 +73,7 @@ final class EventLogTest extends FunctionalTestCase
     {
         $serverRequest = new ServerRequest('https://example.com/api', 'GET');
 
-        $this->dispatch(new ThrottleExceeded('api-throttle', 'secret-api-key', 10, 60, 11, 42, $serverRequest));
+        $this->dispatch(new ThrottleExceeded('api-throttle', 'secret-api-key', 10, 60, 11, 42, $serverRequest, null));
 
         $rows = $this->fetchAllEventRows();
         self::assertCount(1, $rows);
@@ -84,7 +87,7 @@ final class EventLogTest extends FunctionalTestCase
     {
         $serverRequest = new ServerRequest('https://example.com/login', 'POST');
 
-        $this->dispatch(new Fail2BanMatched('login-brute-force', '203.0.113.10', 5, 300, 3, $serverRequest));
+        $this->dispatch(new Fail2BanMatched('login-brute-force', '203.0.113.10', 5, 300, 3, $serverRequest, MatchResult::matched('custom')));
 
         $rows = $this->fetchAllEventRows();
         self::assertCount(1, $rows);
@@ -137,6 +140,26 @@ final class EventLogTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function nestedDiagnosticHeadersMetaIsPersisted(): void
+    {
+        $serverRequest = new ServerRequest('https://example.com/probe', 'GET');
+        $eventLogger = new EventLogger(
+            $this->getConnectionPool(),
+            new EventLogSettings($this->get(ExtensionConfiguration::class)),
+        );
+
+        $eventLogger->log(FirewallEventType::BlocklistMatched, $serverRequest, rule: 'crs', meta: [
+            'diagnosticHeaders' => ['X-Phirewall-Owasp-Rule' => '942100'],
+        ]);
+
+        $rows = $this->fetchAllEventRows();
+        self::assertCount(1, $rows);
+        self::assertIsString($rows[0]['meta']);
+        $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame(['diagnosticHeaders' => ['X-Phirewall-Owasp-Rule' => '942100']], $meta);
+    }
+
+    #[Test]
     public function firewallErrorEventStoresTheExceptionSummary(): void
     {
         $serverRequest = new ServerRequest('https://example.com/', 'GET');
@@ -156,7 +179,7 @@ final class EventLogTest extends FunctionalTestCase
     #[Test]
     public function safelistEventsAreNotLoggedByDefault(): void
     {
-        $this->dispatch(new SafelistMatched('office-ips', new ServerRequest('https://example.com/', 'GET')));
+        $this->dispatch(new SafelistMatched('office-ips', new ServerRequest('https://example.com/', 'GET'), MatchResult::matched('custom')));
 
         self::assertSame([], $this->fetchAllEventRows());
     }
@@ -166,7 +189,7 @@ final class EventLogTest extends FunctionalTestCase
     {
         $this->get(ExtensionConfiguration::class)->set('firewall', ['eventLogEnabled' => '0']);
 
-        $this->dispatch(new BlocklistMatched('scanner-paths', new ServerRequest('https://example.com/', 'GET')));
+        $this->dispatch(new BlocklistMatched('scanner-paths', new ServerRequest('https://example.com/', 'GET'), MatchResult::matched('custom')));
 
         self::assertSame([], $this->fetchAllEventRows());
     }

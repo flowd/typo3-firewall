@@ -286,6 +286,54 @@ final class FirewallControllerTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function eventsActionListsEventsWithFlattenedMeta(): void
+    {
+        $this->setUpConfigWithFail2BanRule();
+        $this->getConnectionPool()->getConnectionForTable('tx_firewall_event')->insert('tx_firewall_event', [
+            'event_type' => 'blocklist_matched',
+            'rule' => 'preset.owasp-crs.blocklist',
+            'key_display' => '203.0.113.0',
+            'key_hash' => hash('sha256', '203.0.113.10'),
+            'request_host' => 'example.com',
+            'request_path' => '/probe',
+            'request_method' => 'GET',
+            'user_agent' => 'scanner/1.0',
+            'meta' => '{"diagnosticHeaders":{"X-Phirewall-Owasp-Rule":"942100"}}',
+            'created_at' => time(),
+        ]);
+
+        $response = $this->dispatchModuleRequest('events');
+        $body = (string)$response->getBody();
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertStringContainsString('preset.owasp-crs.blocklist', $body);
+        self::assertStringContainsString('diagnosticHeaders.X-Phirewall-Owasp-Rule: 942100', $body);
+        self::assertStringContainsString('scanner/1.0', $body);
+    }
+
+    #[Test]
+    public function eventsActionFiltersByEventType(): void
+    {
+        $this->setUpConfigWithFail2BanRule();
+        $connection = $this->getConnectionPool()->getConnectionForTable('tx_firewall_event');
+        $connection->insert('tx_firewall_event', [
+            'event_type' => 'blocklist_matched',
+            'rule' => 'scanner-paths',
+            'created_at' => time(),
+        ]);
+        $connection->insert('tx_firewall_event', [
+            'event_type' => 'track_hit',
+            'rule' => 'observed-endpoint',
+            'created_at' => time(),
+        ]);
+
+        $body = (string)$this->dispatchModuleRequest('events', ['type' => 'track_hit'])->getBody();
+
+        self::assertStringContainsString('observed-endpoint', $body);
+        self::assertStringNotContainsString('scanner-paths', $body);
+    }
+
+    #[Test]
     public function unbanActionRemovesTheBan(): void
     {
         $config = $this->setUpConfigWithFail2BanRule();

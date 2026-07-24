@@ -1,0 +1,120 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+
+<f:section name="Content">
+    <f:flashMessages />
+
+    <f:if condition="!{loggingEnabled}">
+        <div class="alert alert-warning">
+            <core:icon identifier="actions-exclamation" size="small" />
+            <f:translate key="events.disabled" />
+        </div>
+    </f:if>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>
+                <core:icon identifier="actions-list" size="small" />
+                <strong><f:translate key="events.title" /></strong>
+            </span>
+        </div>
+        <div class="card-body">
+            <f:form action="events" method="post" class="row row-cols-lg-auto g-2 align-items-center m-0">
+                <div class="col-12">
+                    <label class="visually-hidden" for="events-type"><f:translate key="events.filter.type" /></label>
+                    <select id="events-type" name="type" class="form-select form-select-sm">
+                        <option value=""><f:translate key="events.filter.allTypes" /></option>
+                        <f:for each="{eventTypes}" as="eventTypeOption">
+                            <option value="{eventTypeOption.value}" {f:if(condition: '{eventTypeOption.value} == {currentType}', then: 'selected="selected"')}><f:translate key="statistics.type.{eventTypeOption.value}" /></option>
+                        </f:for>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="visually-hidden" for="events-search"><f:translate key="events.search.label" /></label>
+                    <f:form.textfield id="events-search" name="search" value="{search}" class="form-control form-control-sm" placeholder="{f:translate(key: 'events.search.placeholder')}" />
+                </div>
+                <div class="col-12">
+                    <f:form.button class="btn btn-sm btn-default" type="submit">
+                        <core:icon identifier="actions-search" size="small" />
+                        <f:translate key="events.filter.submit" />
+                    </f:form.button>
+                    <f:if condition="{search} || {currentType}">
+                        <a class="btn btn-sm btn-link" href="{f:uri.action(action: 'events')}"><f:translate key="events.filter.reset" /></a>
+                    </f:if>
+                </div>
+            </f:form>
+        </div>
+
+        <f:if condition="{events}">
+            <f:then>
+                <div class="table-fit mb-0">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col"><f:translate key="events.table.time" /></th>
+                                <th scope="col"><f:translate key="events.table.type" /></th>
+                                <th scope="col"><f:translate key="events.table.rule" /></th>
+                                <th scope="col"><f:translate key="events.table.key" /></th>
+                                <th scope="col"><f:translate key="events.table.request" /></th>
+                                <th scope="col"><f:translate key="events.table.details" /></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <f:for each="{events}" as="event">
+                                <tr>
+                                    <td class="text-nowrap"><f:format.date format="Y-m-d H:i:s">@{event.created_at}</f:format.date></td>
+                                    <td>
+                                        <span class="badge bg-secondary"><f:translate key="statistics.type.{event.event_type}" /></span>
+                                        <f:if condition="{event.ban_type}">
+                                            <span class="badge bg-warning">{event.ban_type}</span>
+                                        </f:if>
+                                    </td>
+                                    <td><code class="text-break">{event.rule}</code></td>
+                                    <td>
+                                        <f:if condition="{event.key_display}">
+                                            <f:then><code class="text-break">{event.key_display}</code></f:then>
+                                            <f:else>
+                                                <f:if condition="{event.key_hash}">
+                                                    <span class="text-muted font-monospace" title="{event.key_hash}"><f:format.crop maxCharacters="12" append="…">{event.key_hash}</f:format.crop></span>
+                                                </f:if>
+                                            </f:else>
+                                        </f:if>
+                                    </td>
+                                    <td>
+                                        <code class="text-break">{event.request_method} {event.request_host}{event.request_path}</code>
+                                        <f:if condition="{event.user_agent}">
+                                            <br /><small class="text-muted text-break">{event.user_agent}</small>
+                                        </f:if>
+                                    </td>
+                                    <td>
+                                        <f:if condition="{event.metaLines}">
+                                            <ul class="list-unstyled mb-0">
+                                                <f:for each="{event.metaLines}" as="metaLine">
+                                                    <li><small><code class="text-break">{metaLine}</code></small></li>
+                                                </f:for>
+                                            </ul>
+                                        </f:if>
+                                    </td>
+                                </tr>
+                            </f:for>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer text-muted">
+                    <small><f:translate key="events.limitNote" arguments="{0: limit}" /></small>
+                </div>
+            </f:then>
+            <f:else>
+                <div class="card-body pt-0">
+                    <p class="text-muted mb-0">
+                        <core:icon identifier="actions-info" size="small" />
+                        <f:translate key="events.empty" />
+                    </p>
+                </div>
+            </f:else>
+        </f:if>
+    </div>
+</f:section>
+</html>

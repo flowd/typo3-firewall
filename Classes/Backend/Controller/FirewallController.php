@@ -11,6 +11,7 @@ use Flowd\Phirewall\Pattern\PatternKind;
 use Flowd\Phirewall\Store\InMemoryCache;
 use Flowd\Typo3Firewall\ConfigFactory;
 use Flowd\Typo3Firewall\Dto\PatternEntryDto;
+use Flowd\Typo3Firewall\EventLog\EventLogViewDataProvider;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
 use Flowd\Typo3Firewall\Pattern\PatternValidationException;
 use Flowd\Typo3Firewall\Statistics\StatisticsViewDataProvider;
@@ -48,6 +49,7 @@ class FirewallController extends ActionController
         private readonly ModuleTemplateFactory $moduleTemplateFactory,
         private readonly Config $config,
         private readonly StatisticsViewDataProvider $statisticsViewDataProvider,
+        private readonly EventLogViewDataProvider $eventLogViewDataProvider,
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
@@ -156,6 +158,15 @@ class FirewallController extends ActionController
         return $moduleTemplate->renderResponse('Backend/Firewall/Bans');
     }
 
+    public function eventsAction(string $type = '', string $search = ''): ResponseInterface
+    {
+        $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
+        $this->addModuleMenu($moduleTemplate, 'events');
+        $moduleTemplate->assignMultiple($this->eventLogViewDataProvider->getViewData($type, trim($search)));
+
+        return $moduleTemplate->renderResponse('Backend/Firewall/Events');
+    }
+
     public function statisticsAction(string $range = ''): ResponseInterface
     {
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
@@ -226,6 +237,7 @@ class FirewallController extends ActionController
         $items = [
             'overview' => 'nav.patterns',
             'bans' => 'nav.bans',
+            'events' => 'nav.events',
             'statistics' => 'nav.statistics',
         ];
 
