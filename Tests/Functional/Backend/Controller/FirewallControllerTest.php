@@ -38,7 +38,7 @@ final class FirewallControllerTest extends FunctionalTestCase
         return function (EventDispatcherInterface $eventDispatcher): Config {
             $config = new Config(new InMemoryCache(), $eventDispatcher);
             $config->fail2ban->add(
-                name: 'login-protection',
+                name: '%s',
                 threshold: 5,
                 period: 60,
                 ban: 3600,
@@ -267,6 +267,25 @@ final class FirewallControllerTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function bansActionBuildsSelectorSafeModalTargetsForDottedRuleNames(): void
+    {
+        $config = $this->setUpConfigWithFail2BanRule('preset.owasp-crs.fail2ban');
+        $config->banManager()->ban('preset.owasp-crs.fail2ban', '203.0.113.10', 3600, BanType::Fail2Ban);
+
+        $response = $this->dispatchModuleRequest('bans');
+
+        $body = (string)$response->getBody();
+        self::assertSame(1, preg_match_all('/data-bs-target="#(?<targets>unbanModal[^"]*)"/', $body, $matches));
+        foreach ($matches['targets'] as $target) {
+            // A CSS metacharacter in the id selector (e.g. the dot of a rule name like
+            // "preset.owasp-crs.fail2ban") makes Bootstrap's querySelector() miss the
+            // modal, leaving the unban button dead.
+            self::assertMatchesRegularExpression('/^[A-Za-z][A-Za-z0-9_-]*$/', $target);
+            self::assertStringContainsString(sprintf('id="%s"', $target), $body);
+        }
+    }
+
+    #[Test]
     public function unbanActionRemovesTheBan(): void
     {
         $config = $this->setUpConfigWithFail2BanRule();
@@ -340,14 +359,14 @@ final class FirewallControllerTest extends FunctionalTestCase
             ->generateTrustedPropertiesToken($propertyNames);
     }
 
-    private function setUpConfigWithFail2BanRule(): Config
+    private function setUpConfigWithFail2BanRule(string $ruleName = 'login-protection'): Config
     {
         $configDirectory = dirname(ConfigFactory::getConfigurationPath());
         if (!is_dir($configDirectory)) {
             mkdir($configDirectory, 0o755, true);
         }
 
-        file_put_contents(ConfigFactory::getConfigurationPath(), self::CONFIG_WITH_FAIL2BAN_RULE);
+        file_put_contents(ConfigFactory::getConfigurationPath(), sprintf(self::CONFIG_WITH_FAIL2BAN_RULE, $ruleName));
 
         return $this->get(Config::class);
     }

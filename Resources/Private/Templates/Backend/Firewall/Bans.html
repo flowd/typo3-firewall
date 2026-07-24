@@ -46,7 +46,7 @@
 
     <f:if condition="{banGroups}">
         <f:then>
-            <f:for each="{banGroups}" as="group">
+            <f:for each="{banGroups}" as="group" iteration="groupIteration">
                 <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>
@@ -71,7 +71,7 @@
                             </thead>
                             <tbody>
                                 <f:for each="{group.bans}" as="ban" iteration="iteration">
-                                    <f:variable name="modalId" value="unbanModal-{group.type}-{group.rule}-{iteration.index}" />
+                                    <f:variable name="modalId" value="unbanModal-{groupIteration.index}-{iteration.index}" />
                                     <tr>
                                         <td>
                                             <code class="text-break">{ban.key}</code>
