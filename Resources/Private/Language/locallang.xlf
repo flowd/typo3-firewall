@@ -401,8 +401,14 @@
       <trans-unit id="statistics.type.fail2ban_banned">
         <source>Fail2Ban bans</source>
       </trans-unit>
+      <trans-unit id="statistics.type.fail2ban_blocked">
+        <source>Fail2Ban ban blocks</source>
+      </trans-unit>
       <trans-unit id="statistics.type.allow2ban_banned">
         <source>Allow2Ban bans</source>
+      </trans-unit>
+      <trans-unit id="statistics.type.allow2ban_blocked">
+        <source>Allow2Ban ban blocks</source>
       </trans-unit>
       <trans-unit id="statistics.type.safelist_matched">
         <source>Safelist matches</source>

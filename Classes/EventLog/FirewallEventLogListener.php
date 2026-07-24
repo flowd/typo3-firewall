@@ -6,8 +6,10 @@ namespace Flowd\Typo3Firewall\EventLog;
 
 use Flowd\Phirewall\BanType;
 use Flowd\Phirewall\Events\Allow2BanBanned;
+use Flowd\Phirewall\Events\Allow2BanBlocked;
 use Flowd\Phirewall\Events\BlocklistMatched;
 use Flowd\Phirewall\Events\Fail2BanBanned;
+use Flowd\Phirewall\Events\Fail2BanBlocked;
 use Flowd\Phirewall\Events\Fail2BanMatched;
 use Flowd\Phirewall\Events\FirewallError;
 use Flowd\Phirewall\Events\SafelistMatched;
@@ -22,6 +24,11 @@ use Flowd\Phirewall\Events\TrackHit;
  *
  * PerformanceMeasured is intentionally not logged: it fires on every
  * request and would turn the log into a request log.
+ *
+ * One public method per phirewall event; the method count grows with the
+ * event catalog, not with complexity.
+ *
+ * @SuppressWarnings(PHPMD.TooManyPublicMethods)
  */
 final class FirewallEventLogListener
 {
@@ -63,6 +70,11 @@ final class FirewallEventLogListener
         ]);
     }
 
+    public function onFail2BanBlocked(Fail2BanBlocked $fail2BanBlocked): void
+    {
+        $this->eventLogger->log(FirewallEventType::Fail2BanBlocked, $fail2BanBlocked->serverRequest, rule: $fail2BanBlocked->rule, key: $fail2BanBlocked->key, banType: BanType::Fail2Ban->value);
+    }
+
     public function onAllow2BanBanned(Allow2BanBanned $allow2BanBanned): void
     {
         $this->eventLogger->log(FirewallEventType::Allow2BanBanned, $allow2BanBanned->serverRequest, rule: $allow2BanBanned->rule, key: $allow2BanBanned->key, banType: BanType::Allow2Ban->value, meta: [
@@ -71,6 +83,11 @@ final class FirewallEventLogListener
             'banSeconds' => $allow2BanBanned->banSeconds,
             'count' => $allow2BanBanned->count,
         ]);
+    }
+
+    public function onAllow2BanBlocked(Allow2BanBlocked $allow2BanBlocked): void
+    {
+        $this->eventLogger->log(FirewallEventType::Allow2BanBlocked, $allow2BanBlocked->serverRequest, rule: $allow2BanBlocked->rule, key: $allow2BanBlocked->key, banType: BanType::Allow2Ban->value);
     }
 
     public function onSafelistMatched(SafelistMatched $safelistMatched): void

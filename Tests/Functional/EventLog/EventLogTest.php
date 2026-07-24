@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Flowd\Typo3Firewall\Tests\Functional\EventLog;
 
-use Flowd\Phirewall\Config\MatchResult;
+use Flowd\Phirewall\Events\Allow2BanBlocked;
 use Flowd\Phirewall\Events\BlocklistMatched;
+use Flowd\Phirewall\Events\Fail2BanBlocked;
 use Flowd\Phirewall\Events\Fail2BanMatched;
 use Flowd\Phirewall\Events\FirewallError;
 use Flowd\Phirewall\Events\SafelistMatched;
@@ -34,7 +35,7 @@ final class EventLogTest extends FunctionalTestCase
         $serverRequest = (new ServerRequest('https://example.com/wp-admin/setup.php', 'GET'))
             ->withAddedHeader('User-Agent', 'sqlmap/1.0');
 
-        $this->dispatch(new BlocklistMatched('scanner-paths', $serverRequest, MatchResult::matched('custom')));
+        $this->dispatch(new BlocklistMatched('scanner-paths', $serverRequest));
 
         $rows = $this->fetchAllEventRows();
         self::assertCount(1, $rows);
@@ -52,7 +53,7 @@ final class EventLogTest extends FunctionalTestCase
     {
         $serverRequest = new ServerRequest('https://example.com/search', 'GET');
 
-        $this->dispatch(new ThrottleExceeded('search-throttle', '203.0.113.10', 10, 60, 11, 42, $serverRequest, null));
+        $this->dispatch(new ThrottleExceeded('search-throttle', '203.0.113.10', 10, 60, 11, 42, $serverRequest));
 
         $rows = $this->fetchAllEventRows();
         self::assertCount(1, $rows);
@@ -69,7 +70,7 @@ final class EventLogTest extends FunctionalTestCase
     {
         $serverRequest = new ServerRequest('https://example.com/api', 'GET');
 
-        $this->dispatch(new ThrottleExceeded('api-throttle', 'secret-api-key', 10, 60, 11, 42, $serverRequest, null));
+        $this->dispatch(new ThrottleExceeded('api-throttle', 'secret-api-key', 10, 60, 11, 42, $serverRequest));
 
         $rows = $this->fetchAllEventRows();
         self::assertCount(1, $rows);
@@ -83,7 +84,7 @@ final class EventLogTest extends FunctionalTestCase
     {
         $serverRequest = new ServerRequest('https://example.com/login', 'POST');
 
-        $this->dispatch(new Fail2BanMatched('login-brute-force', '203.0.113.10', 5, 300, 3, $serverRequest, MatchResult::matched('custom')));
+        $this->dispatch(new Fail2BanMatched('login-brute-force', '203.0.113.10', 5, 300, 3, $serverRequest));
 
         $rows = $this->fetchAllEventRows();
         self::assertCount(1, $rows);
@@ -95,6 +96,44 @@ final class EventLogTest extends FunctionalTestCase
         self::assertIsString($rows[0]['meta']);
         $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
         self::assertSame(['threshold' => 5, 'period' => 300, 'count' => 3], $meta);
+    }
+
+    #[Test]
+    public function fail2BanBlockedEventStoresTheBanType(): void
+    {
+        if (!class_exists(Fail2BanBlocked::class)) {
+            self::markTestSkipped('Requires a phirewall version that ships Fail2BanBlocked.');
+        }
+
+        $serverRequest = new ServerRequest('https://example.com/login', 'POST');
+
+        $this->dispatch(new Fail2BanBlocked('login-brute-force', '203.0.113.10', $serverRequest));
+
+        $rows = $this->fetchAllEventRows();
+        self::assertCount(1, $rows);
+        self::assertSame('fail2ban_blocked', $rows[0]['event_type']);
+        self::assertSame('login-brute-force', $rows[0]['rule']);
+        self::assertSame(hash('sha256', '203.0.113.10'), $rows[0]['key_hash']);
+        self::assertSame('203.0.113.0', $rows[0]['key_display']);
+        self::assertSame('fail2ban', $rows[0]['ban_type']);
+    }
+
+    #[Test]
+    public function allow2BanBlockedEventStoresTheBanType(): void
+    {
+        if (!class_exists(Allow2BanBlocked::class)) {
+            self::markTestSkipped('Requires a phirewall version that ships Allow2BanBlocked.');
+        }
+
+        $serverRequest = new ServerRequest('https://example.com/form', 'POST');
+
+        $this->dispatch(new Allow2BanBlocked('form-flood', '203.0.113.10', $serverRequest));
+
+        $rows = $this->fetchAllEventRows();
+        self::assertCount(1, $rows);
+        self::assertSame('allow2ban_blocked', $rows[0]['event_type']);
+        self::assertSame('form-flood', $rows[0]['rule']);
+        self::assertSame('allow2ban', $rows[0]['ban_type']);
     }
 
     #[Test]
@@ -117,7 +156,7 @@ final class EventLogTest extends FunctionalTestCase
     #[Test]
     public function safelistEventsAreNotLoggedByDefault(): void
     {
-        $this->dispatch(new SafelistMatched('office-ips', new ServerRequest('https://example.com/', 'GET'), MatchResult::matched('custom')));
+        $this->dispatch(new SafelistMatched('office-ips', new ServerRequest('https://example.com/', 'GET')));
 
         self::assertSame([], $this->fetchAllEventRows());
     }
@@ -127,7 +166,7 @@ final class EventLogTest extends FunctionalTestCase
     {
         $this->get(ExtensionConfiguration::class)->set('firewall', ['eventLogEnabled' => '0']);
 
-        $this->dispatch(new BlocklistMatched('scanner-paths', new ServerRequest('https://example.com/', 'GET'), MatchResult::matched('custom')));
+        $this->dispatch(new BlocklistMatched('scanner-paths', new ServerRequest('https://example.com/', 'GET')));
 
         self::assertSame([], $this->fetchAllEventRows());
     }
