@@ -287,8 +287,26 @@
       <trans-unit id="events.table.details">
         <source>Details</source>
       </trans-unit>
-      <trans-unit id="events.limitNote">
-        <source>Showing the latest %1$s events.</source>
+      <trans-unit id="events.pagination.label">
+        <source>Event log pages</source>
+      </trans-unit>
+      <trans-unit id="events.pagination.total">
+        <source>%1$s events</source>
+      </trans-unit>
+      <trans-unit id="events.pagination.page">
+        <source>Page %1$s of %2$s</source>
+      </trans-unit>
+      <trans-unit id="events.pagination.first">
+        <source>First page</source>
+      </trans-unit>
+      <trans-unit id="events.pagination.previous">
+        <source>Previous page</source>
+      </trans-unit>
+      <trans-unit id="events.pagination.next">
+        <source>Next page</source>
+      </trans-unit>
+      <trans-unit id="events.pagination.last">
+        <source>Last page</source>
       </trans-unit>
       <trans-unit id="bans.title">
         <source>Currently blocked keys</source>

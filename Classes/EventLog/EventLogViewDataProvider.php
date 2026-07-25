@@ -9,7 +9,7 @@ namespace Flowd\Typo3Firewall\EventLog;
  */
 final class EventLogViewDataProvider
 {
-    private const int EVENT_LIST_LIMIT = 100;
+    private const int ITEMS_PER_PAGE = 50;
 
     public function __construct(
         private readonly EventLogRepository $eventLogRepository,
@@ -17,19 +17,24 @@ final class EventLogViewDataProvider
     ) {}
 
     /**
-     * View variables for the event log view; unknown types fall back to all types.
+     * View variables for the event log view; unknown types fall back to all
+     * types, out-of-range pages are clamped.
      *
      * @return array<string, mixed>
      */
-    public function getViewData(string $type, string $search): array
+    public function getViewData(string $type, string $search, int $page = 1): array
     {
         $eventType = FirewallEventType::tryFrom($type);
         $currentType = $eventType instanceof FirewallEventType ? $eventType->value : '';
 
+        $totalCount = $this->eventLogRepository->count($currentType, $search);
+        $pageCount = max(1, (int)ceil($totalCount / self::ITEMS_PER_PAGE));
+        $page = min(max(1, $page), $pageCount);
+
         $events = array_map(function (array $event): array {
             $event['metaLines'] = $this->flattenMeta(is_array($event['meta']) ? $event['meta'] : []);
             return $event;
-        }, $this->eventLogRepository->findLatest($currentType, $search, self::EVENT_LIST_LIMIT));
+        }, $this->eventLogRepository->findLatest($currentType, $search, self::ITEMS_PER_PAGE, ($page - 1) * self::ITEMS_PER_PAGE));
 
         return [
             'events' => $events,
@@ -37,7 +42,15 @@ final class EventLogViewDataProvider
             'currentType' => $currentType,
             'search' => $search,
             'loggingEnabled' => $this->eventLogSettings->isEnabled(),
-            'limit' => self::EVENT_LIST_LIMIT,
+            'pagination' => [
+                'currentPage' => $page,
+                'pageCount' => $pageCount,
+                'totalCount' => $totalCount,
+                'hasPrevious' => $page > 1,
+                'hasNext' => $page < $pageCount,
+                'previousPage' => max(1, $page - 1),
+                'nextPage' => min($pageCount, $page + 1),
+            ],
         ];
     }
 

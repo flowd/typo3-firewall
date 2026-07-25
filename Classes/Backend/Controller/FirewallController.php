@@ -158,11 +158,11 @@ class FirewallController extends ActionController
         return $moduleTemplate->renderResponse('Backend/Firewall/Bans');
     }
 
-    public function eventsAction(string $type = '', string $search = ''): ResponseInterface
+    public function eventsAction(string $type = '', string $search = '', int $page = 1): ResponseInterface
     {
         $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
         $this->addModuleMenu($moduleTemplate, 'events');
-        $moduleTemplate->assignMultiple($this->eventLogViewDataProvider->getViewData($type, trim($search)));
+        $moduleTemplate->assignMultiple($this->eventLogViewDataProvider->getViewData($type, trim($search), $page));
 
         return $moduleTemplate->renderResponse('Backend/Firewall/Events');
     }

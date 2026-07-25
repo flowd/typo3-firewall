@@ -334,6 +334,34 @@ final class FirewallControllerTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function eventsActionPaginatesOlderEventsOntoTheNextPage(): void
+    {
+        $this->setUpConfigWithFail2BanRule();
+        $connection = $this->getConnectionPool()->getConnectionForTable('tx_firewall_event');
+        $now = time();
+        $connection->insert('tx_firewall_event', [
+            'event_type' => 'blocklist_matched',
+            'rule' => 'oldest-entry',
+            'created_at' => $now - 1000,
+        ]);
+        for ($i = 0; $i < 50; ++$i) {
+            $connection->insert('tx_firewall_event', [
+                'event_type' => 'blocklist_matched',
+                'rule' => 'filler-' . $i,
+                'created_at' => $now,
+            ]);
+        }
+
+        $firstPage = (string)$this->dispatchModuleRequest('events')->getBody();
+        self::assertStringNotContainsString('oldest-entry', $firstPage);
+        self::assertStringContainsString('Page 1 of 2', $firstPage);
+
+        $secondPage = (string)$this->dispatchModuleRequest('events', ['page' => '2'])->getBody();
+        self::assertStringContainsString('oldest-entry', $secondPage);
+        self::assertStringNotContainsString('filler-0', $secondPage);
+    }
+
+    #[Test]
     public function unbanActionRemovesTheBan(): void
     {
         $config = $this->setUpConfigWithFail2BanRule();

@@ -146,8 +146,8 @@ The diagnostics land in the log independently of the
 without exposing that information to clients.
 
 Filter the list by event type with the dropdown, or search across rule
-names, keys, and request paths. The view shows the latest 100 entries;
-narrow the filter to find older events, and see :doc:`Statistics` for the
+names, keys, and request paths. The list is paginated with 50 entries per
+page; the pager keeps the active filter. See :doc:`Statistics` for the
 retention settings of the underlying log table.
 
 Statistics

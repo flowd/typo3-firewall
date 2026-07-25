@@ -102,8 +102,33 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="card-footer text-muted">
-                    <small><f:translate key="events.limitNote" arguments="{0: limit}" /></small>
+                <div class="card-footer d-flex justify-content-between align-items-center">
+                    <small class="text-muted"><f:translate key="events.pagination.total" arguments="{0: pagination.totalCount}" /></small>
+                    <f:if condition="{pagination.pageCount} > 1">
+                        <nav aria-label="{f:translate(key: 'events.pagination.label')}">
+                            <ul class="pagination pagination-sm mb-0">
+                                <f:if condition="{pagination.hasPrevious}">
+                                    <li class="page-item">
+                                        <a class="page-link" href="{f:uri.action(action: 'events', arguments: {type: currentType, search: search, page: 1})}" title="{f:translate(key: 'events.pagination.first')}">«</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="{f:uri.action(action: 'events', arguments: {type: currentType, search: search, page: pagination.previousPage})}" title="{f:translate(key: 'events.pagination.previous')}">‹</a>
+                                    </li>
+                                </f:if>
+                                <li class="page-item disabled">
+                                    <span class="page-link"><f:translate key="events.pagination.page" arguments="{0: pagination.currentPage, 1: pagination.pageCount}" /></span>
+                                </li>
+                                <f:if condition="{pagination.hasNext}">
+                                    <li class="page-item">
+                                        <a class="page-link" href="{f:uri.action(action: 'events', arguments: {type: currentType, search: search, page: pagination.nextPage})}" title="{f:translate(key: 'events.pagination.next')}">›</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="{f:uri.action(action: 'events', arguments: {type: currentType, search: search, page: pagination.pageCount})}" title="{f:translate(key: 'events.pagination.last')}">»</a>
+                                    </li>
+                                </f:if>
+                            </ul>
+                        </nav>
+                    </f:if>
                 </div>
             </f:then>
             <f:else>
