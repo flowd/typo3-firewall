@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Flowd\Typo3Firewall\Tests\Unit;
 
 use Flowd\Phirewall\Store\PdoCache;
+use Flowd\Typo3Firewall\CompiledCacheSettings;
 use Flowd\Typo3Firewall\ConfigFactory;
 use Flowd\Typo3Firewall\Form\FormFloodSettings;
 use org\bovigo\vfs\vfsStream;
@@ -373,11 +374,13 @@ final class ConfigFactoryTest extends TestCase
         };
 
         $formFloodSettings ??= $this->createFormFloodSettings([]);
+        // Disabled here so the unit tests never touch the real var/cache path.
+        $compiledCacheSettings = $this->createCompiledCacheSettings(['compiledCacheEnabled' => '0']);
 
-        return new class (new EventDispatcher($listenerProvider), $formFloodSettings, $logger, $cli) extends ConfigFactory {
-            public function __construct(EventDispatcher $eventDispatcher, FormFloodSettings $formFloodSettings, ?LoggerInterface $logger, private readonly bool $cli)
+        return new class (new EventDispatcher($listenerProvider), $formFloodSettings, $compiledCacheSettings, $logger, $cli) extends ConfigFactory {
+            public function __construct(EventDispatcher $eventDispatcher, FormFloodSettings $formFloodSettings, CompiledCacheSettings $compiledCacheSettings, ?LoggerInterface $logger, private readonly bool $cli)
             {
-                parent::__construct($eventDispatcher, $formFloodSettings, $logger);
+                parent::__construct($eventDispatcher, $formFloodSettings, $compiledCacheSettings, $logger);
             }
 
             protected function isCliRequest(): bool
@@ -385,6 +388,25 @@ final class ConfigFactoryTest extends TestCase
                 return $this->cli;
             }
         };
+    }
+
+    /**
+     * @param array<string, string> $settings
+     */
+    private function createCompiledCacheSettings(array $settings): CompiledCacheSettings
+    {
+        $extensionConfiguration = $this->createMock(ExtensionConfiguration::class);
+        $extensionConfiguration->method('get')->willReturnCallback(
+            static function (string $extension, string $path) use ($settings): string {
+                if (!isset($settings[$path])) {
+                    throw new \RuntimeException('Setting not configured: ' . $path, 1770000004);
+                }
+
+                return $settings[$path];
+            }
+        );
+
+        return new CompiledCacheSettings($extensionConfiguration);
     }
 
     /**

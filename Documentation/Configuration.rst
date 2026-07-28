@@ -73,6 +73,19 @@ Backend managed block patterns
     ``typo3-blocklist`` when you want to take over the backend managed
     patterns yourself.
 
+Compiled-data cache
+    Preset packages such as OWASP CRS and the bad-IP list parse large data
+    sources when a rule first evaluates. Under PHP-FPM that parsing would run
+    on every request. The extension gives the ``Config`` a compiled-data
+    cache so the parsed data is served from OPcache-backed artifacts and
+    re-parsed only when a source file changes. It is on by default and writes
+    to ``var/cache/code/firewall`` (outside the web root). Turn it off or point
+    it at another directory in the extension configuration
+    (``compiledCacheEnabled``, ``compiledCacheDirectory``). If the directory
+    cannot be created the extension logs a warning; a directory that exists
+    but is not writable degrades silently. Either way the presets fall back to
+    per-request parsing, so the firewall keeps working.
+
 Behavior without a configuration file
 =====================================
 

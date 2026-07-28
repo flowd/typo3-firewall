@@ -6,6 +6,7 @@ namespace Flowd\Typo3Firewall;
 
 use Flowd\Phirewall\Config;
 use Flowd\Phirewall\Store\InMemoryCache;
+use Flowd\Phirewall\Support\CompiledDataCache;
 use Flowd\Typo3Firewall\Form\FormFloodSettings;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
 use Flowd\Typo3Firewall\Writer\FileArrayWriter;
@@ -22,6 +23,7 @@ class ConfigFactory
     public function __construct(
         private readonly EventDispatcher $eventDispatcher,
         private readonly FormFloodSettings $formFloodSettings,
+        private readonly CompiledCacheSettings $compiledCacheSettings,
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
@@ -119,6 +121,8 @@ class ConfigFactory
     {
         $config = new Config($cache, $this->eventDispatcher);
 
+        $this->configureCompiledCache($config);
+
         // getIndpEnv() applies TYPO3's reverseProxyIP settings, so rules key on the real client IP.
         $config->setIpResolver(static function (): ?string {
             $remoteAddress = GeneralUtility::getIndpEnv('REMOTE_ADDR');
@@ -132,6 +136,32 @@ class ConfigFactory
         $this->addFormFloodRule($config);
 
         return $config;
+    }
+
+    /**
+     * Give the Config a compiled-data cache so preset packages (OWASP CRS,
+     * bad IPs) load their parsed data from OPcache-backed artifacts instead
+     * of re-parsing on every request. Enabled by default; the artifact
+     * directory lives in var/ outside the web root.
+     */
+    private function configureCompiledCache(Config $config): void
+    {
+        if (!$this->compiledCacheSettings->isEnabled()) {
+            return;
+        }
+
+        $directory = $this->compiledCacheSettings->getDirectory();
+        try {
+            GeneralUtility::mkdir_deep($directory);
+        } catch (\RuntimeException $runtimeException) {
+            $this->logger?->warning('Firewall compiled-data cache directory could not be created; presets fall back to per-request parsing.', [
+                'directory' => $directory,
+                'exception' => $runtimeException,
+            ]);
+            return;
+        }
+
+        $config->setCompiledDataCache(new CompiledDataCache($directory));
     }
 
     /**

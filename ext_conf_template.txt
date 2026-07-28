@@ -1,7 +1,7 @@
 # cat=event log; type=boolean; label=Enable event logging: Store firewall events (blocked requests, bans, throttling, errors) in the database table tx_firewall_event.
 eventLogEnabled = 1
 
-# cat=event log; type=string; label=Logged event types: Comma-separated list of event types to log. Available: blocklist_matched, throttle_exceeded, fail2ban_matched, fail2ban_banned, allow2ban_banned, safelist_matched, track_hit, firewall_error. Safelist and track events are high volume and disabled by default.
+# cat=event log; type=string; label=Logged event types: Comma-separated list of event types to log. Available: blocklist_matched, throttle_exceeded, fail2ban_matched, fail2ban_banned, fail2ban_blocked, allow2ban_banned, allow2ban_blocked, safelist_matched, track_hit, firewall_error. Safelist, track and the banned-key block events (fail2ban_blocked, allow2ban_blocked) are high volume and disabled by default.
 eventLogTypes = blocklist_matched,throttle_exceeded,fail2ban_matched,fail2ban_banned,allow2ban_banned,firewall_error
 
 # cat=event log; type=int+; label=Retention in days: The console command firewall:eventlog:prune deletes entries older than this many days.
@@ -21,3 +21,9 @@ formFloodPeriod = 60
 
 # cat=form flood protection; type=int+; label=Ban duration in seconds: How long the client stays banned once the threshold is exceeded.
 formFloodBan = 3600
+
+# cat=performance; type=boolean; label=Enable the compiled-data cache: Let preset packages (OWASP CRS, bad IPs) load their parsed rule data from OPcache-backed artifacts instead of re-parsing it on every request. Recommended.
+compiledCacheEnabled = 1
+
+# cat=performance; type=string; label=Compiled-data cache directory: Absolute path for the compiled artifacts. Leave empty to use the TYPO3 code cache directory (var/cache/code/firewall), which is outside the web root and writable by the runtime.
+compiledCacheDirectory =
