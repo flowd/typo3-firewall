@@ -19,6 +19,7 @@ use TYPO3\CMS\Backend\Module\ModuleProvider;
 use TYPO3\CMS\Backend\Routing\Route;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Core\SystemEnvironmentBuilder;
+use TYPO3\CMS\Core\Http\NormalizedParams;
 use TYPO3\CMS\Core\Http\ServerRequest;
 use TYPO3\CMS\Core\Localization\LanguageServiceFactory;
 use TYPO3\CMS\Extbase\Core\Bootstrap;
@@ -420,6 +421,12 @@ final class FirewallControllerTest extends FunctionalTestCase
         } else {
             $serverRequest = $serverRequest->withQueryParams($parameters);
         }
+
+        // TYPO3 v14 requires normalizedParams for backend module rendering and redirects.
+        $serverRequest = $serverRequest->withAttribute(
+            'normalizedParams',
+            NormalizedParams::createFromRequest($serverRequest)
+        );
 
         $GLOBALS['TYPO3_REQUEST'] = $serverRequest;
 
