@@ -27,7 +27,7 @@ final class EventLogger
     ) {}
 
     /**
-     * @param array<string, int|string|null> $meta
+     * @param array<string, int|string|array<string, string>|null> $meta
      */
     public function log(
         FirewallEventType $firewallEventType,
@@ -54,7 +54,7 @@ final class EventLogger
                 'request_path' => mb_substr($serverRequest->getUri()->getPath(), 0, 2048),
                 'request_method' => mb_substr($serverRequest->getMethod(), 0, 10),
                 'user_agent' => mb_substr($serverRequest->getHeaderLine('User-Agent'), 0, 255),
-                'meta' => json_encode(array_filter($meta, static fn(int|string|null $value): bool => $value !== null), JSON_THROW_ON_ERROR),
+                'meta' => json_encode(array_filter($meta, static fn(int|string|array|null $value): bool => $value !== null && $value !== []), JSON_THROW_ON_ERROR),
                 'created_at' => time(),
             ]);
         } catch (\Throwable $throwable) {

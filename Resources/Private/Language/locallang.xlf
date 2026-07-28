@@ -239,6 +239,75 @@
       <trans-unit id="nav.bans">
         <source>Blocked keys</source>
       </trans-unit>
+      <trans-unit id="nav.events">
+        <source>Event log</source>
+      </trans-unit>
+      <trans-unit id="events.title">
+        <source>Firewall events</source>
+      </trans-unit>
+      <trans-unit id="events.disabled">
+        <source>Event logging is disabled. Enable it in the extension configuration to record events.</source>
+      </trans-unit>
+      <trans-unit id="events.empty">
+        <source>No events recorded.</source>
+      </trans-unit>
+      <trans-unit id="events.filter.type">
+        <source>Event type</source>
+      </trans-unit>
+      <trans-unit id="events.filter.allTypes">
+        <source>All types</source>
+      </trans-unit>
+      <trans-unit id="events.filter.submit">
+        <source>Filter</source>
+      </trans-unit>
+      <trans-unit id="events.filter.reset">
+        <source>Reset</source>
+      </trans-unit>
+      <trans-unit id="events.search.label">
+        <source>Search</source>
+      </trans-unit>
+      <trans-unit id="events.search.placeholder">
+        <source>Rule, key or path …</source>
+      </trans-unit>
+      <trans-unit id="events.table.time">
+        <source>Time</source>
+      </trans-unit>
+      <trans-unit id="events.table.type">
+        <source>Type</source>
+      </trans-unit>
+      <trans-unit id="events.table.rule">
+        <source>Rule</source>
+      </trans-unit>
+      <trans-unit id="events.table.key">
+        <source>Key</source>
+      </trans-unit>
+      <trans-unit id="events.table.request">
+        <source>Request</source>
+      </trans-unit>
+      <trans-unit id="events.table.details">
+        <source>Details</source>
+      </trans-unit>
+      <trans-unit id="events.pagination.label">
+        <source>Event log pages</source>
+      </trans-unit>
+      <trans-unit id="events.pagination.total">
+        <source>%1$s events</source>
+      </trans-unit>
+      <trans-unit id="events.pagination.page">
+        <source>Page %1$s of %2$s</source>
+      </trans-unit>
+      <trans-unit id="events.pagination.first">
+        <source>First page</source>
+      </trans-unit>
+      <trans-unit id="events.pagination.previous">
+        <source>Previous page</source>
+      </trans-unit>
+      <trans-unit id="events.pagination.next">
+        <source>Next page</source>
+      </trans-unit>
+      <trans-unit id="events.pagination.last">
+        <source>Last page</source>
+      </trans-unit>
       <trans-unit id="bans.title">
         <source>Currently blocked keys</source>
       </trans-unit>
@@ -401,8 +470,14 @@
       <trans-unit id="statistics.type.fail2ban_banned">
         <source>Fail2Ban bans</source>
       </trans-unit>
+      <trans-unit id="statistics.type.fail2ban_blocked">
+        <source>Fail2Ban ban blocks</source>
+      </trans-unit>
       <trans-unit id="statistics.type.allow2ban_banned">
         <source>Allow2Ban bans</source>
+      </trans-unit>
+      <trans-unit id="statistics.type.allow2ban_blocked">
+        <source>Allow2Ban ban blocks</source>
       </trans-unit>
       <trans-unit id="statistics.type.safelist_matched">
         <source>Safelist matches</source>

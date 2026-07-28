@@ -46,6 +46,8 @@ final class BarChartBuilder
         FirewallEventType::Fail2BanMatched->value => '#d55e00',
         FirewallEventType::Fail2BanBanned->value => '#eda100',
         FirewallEventType::Allow2BanBanned->value => '#008300',
+        FirewallEventType::Fail2BanBlocked->value => '#cc79a7',
+        FirewallEventType::Allow2BanBlocked->value => '#56b4e9',
     ];
 
     /**

@@ -44,8 +44,14 @@ services:
               identifier: 'firewall-event-log/fail2ban-banned'
               method: 'onFail2BanBanned'
             - name: event.listener
+              identifier: 'firewall-event-log/fail2ban-blocked'
+              method: 'onFail2BanBlocked'
+            - name: event.listener
               identifier: 'firewall-event-log/allow2ban-banned'
               method: 'onAllow2BanBanned'
+            - name: event.listener
+              identifier: 'firewall-event-log/allow2ban-blocked'
+              method: 'onAllow2BanBlocked'
             - name: event.listener
               identifier: 'firewall-event-log/safelist-matched'
               method: 'onSafelistMatched'

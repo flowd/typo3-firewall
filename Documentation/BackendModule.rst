@@ -7,11 +7,12 @@ Backend module
 The extension adds a backend module under **System** >
 **Firewall**. It is available to administrators only.
 
-The module has three views. Switch between them with the **View**
+The module has four views. Switch between them with the **View**
 dropdown in the module's doc-header:
 
 - **Patterns** manages the static block patterns.
 - **Blocked keys** lists the clients that rules have banned automatically.
+- **Event log** lists the recorded firewall events with their details.
 - **Statistics** shows how much traffic the firewall blocked over time.
 
 Patterns
@@ -123,8 +124,31 @@ matching request.
 
 Blocklist matches do not appear here. A blocklist rule answers each matching
 request with a 403 response on the spot and keeps no ban, so there is nothing
-to list. To see blocklist activity, use the event log and the
-:doc:`Statistics` view.
+to list. To see blocklist activity, use the :ref:`Event log <backend-module-event-log>`
+and the :doc:`Statistics` view.
+
+..  _backend-module-event-log:
+
+Event log
+=========
+
+This view lists the latest recorded firewall events, newest first. Every
+entry shows the time, the event type, the rule, the key (an anonymized IP
+address, or a hash for sensitive keys), the request line with the user
+agent, and the event details.
+
+The details column renders everything the event carried as ``key: value``
+lines, including counters (``threshold``, ``count``, ``banSeconds``) and the
+diagnostic headers a matcher attached to its match, for example
+``diagnosticHeaders.X-Phirewall-Owasp-Rule: 942100`` for an OWASP CRS match.
+The diagnostics land in the log independently of the
+``X-Phirewall-*`` response headers, so you can inspect which rule fired
+without exposing that information to clients.
+
+Filter the list by event type with the dropdown, or search across rule
+names, keys, and request paths. The list is paginated with 50 entries per
+page; the pager keeps the active filter. See :doc:`Statistics` for the
+retention settings of the underlying log table.
 
 Statistics
 ==========

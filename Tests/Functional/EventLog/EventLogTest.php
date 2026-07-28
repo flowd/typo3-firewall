@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace Flowd\Typo3Firewall\Tests\Functional\EventLog;
 
 use Flowd\Phirewall\Config\MatchResult;
+use Flowd\Phirewall\Events\Allow2BanBlocked;
 use Flowd\Phirewall\Events\BlocklistMatched;
+use Flowd\Phirewall\Events\Fail2BanBlocked;
 use Flowd\Phirewall\Events\Fail2BanMatched;
 use Flowd\Phirewall\Events\FirewallError;
 use Flowd\Phirewall\Events\SafelistMatched;
 use Flowd\Phirewall\Events\ThrottleExceeded;
 use Flowd\Typo3Firewall\Command\PruneEventLogCommand;
 use Flowd\Typo3Firewall\EventLog\EventLogger;
+use Flowd\Typo3Firewall\EventLog\EventLogSettings;
+use Flowd\Typo3Firewall\EventLog\FirewallEventType;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -24,6 +28,9 @@ use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 #[CoversClass(EventLogger::class)]
 final class EventLogTest extends FunctionalTestCase
 {
+    /** Mirrors the eventLogTypes default in ext_conf_template.txt. */
+    private const string DEFAULT_EVENT_LOG_TYPES = 'blocklist_matched,throttle_exceeded,fail2ban_matched,fail2ban_banned,allow2ban_banned,firewall_error';
+
     protected array $testExtensionsToLoad = [
         'flowd/typo3-firewall',
     ];
@@ -95,6 +102,66 @@ final class EventLogTest extends FunctionalTestCase
         self::assertIsString($rows[0]['meta']);
         $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
         self::assertSame(['threshold' => 5, 'period' => 300, 'count' => 3], $meta);
+    }
+
+    #[Test]
+    public function fail2BanBlockedEventStoresTheBanType(): void
+    {
+        // Banned-key blocks are high-volume, so they are off by default. Keep
+        // the shipped default types too: ExtensionConfiguration state leaks
+        // into later tests in this class, which rely on the defaults.
+        $this->get(ExtensionConfiguration::class)->set('firewall', ['eventLogEnabled' => '1', 'eventLogTypes' => self::DEFAULT_EVENT_LOG_TYPES . ',fail2ban_blocked']);
+
+        $serverRequest = new ServerRequest('https://example.com/login', 'POST');
+
+        $this->dispatch(new Fail2BanBlocked('login-brute-force', '203.0.113.10', $serverRequest));
+
+        $rows = $this->fetchAllEventRows();
+        self::assertCount(1, $rows);
+        self::assertSame('fail2ban_blocked', $rows[0]['event_type']);
+        self::assertSame('login-brute-force', $rows[0]['rule']);
+        self::assertSame(hash('sha256', '203.0.113.10'), $rows[0]['key_hash']);
+        self::assertSame('203.0.113.0', $rows[0]['key_display']);
+        self::assertSame('fail2ban', $rows[0]['ban_type']);
+    }
+
+    #[Test]
+    public function allow2BanBlockedEventStoresTheBanType(): void
+    {
+        // Banned-key blocks are high-volume, so they are off by default. Keep
+        // the shipped default types too: ExtensionConfiguration state leaks
+        // into later tests in this class, which rely on the defaults.
+        $this->get(ExtensionConfiguration::class)->set('firewall', ['eventLogEnabled' => '1', 'eventLogTypes' => self::DEFAULT_EVENT_LOG_TYPES . ',allow2ban_blocked']);
+
+        $serverRequest = new ServerRequest('https://example.com/form', 'POST');
+
+        $this->dispatch(new Allow2BanBlocked('form-flood', '203.0.113.10', $serverRequest));
+
+        $rows = $this->fetchAllEventRows();
+        self::assertCount(1, $rows);
+        self::assertSame('allow2ban_blocked', $rows[0]['event_type']);
+        self::assertSame('form-flood', $rows[0]['rule']);
+        self::assertSame('allow2ban', $rows[0]['ban_type']);
+    }
+
+    #[Test]
+    public function nestedDiagnosticHeadersMetaIsPersisted(): void
+    {
+        $serverRequest = new ServerRequest('https://example.com/probe', 'GET');
+        $eventLogger = new EventLogger(
+            $this->getConnectionPool(),
+            new EventLogSettings($this->get(ExtensionConfiguration::class)),
+        );
+
+        $eventLogger->log(FirewallEventType::BlocklistMatched, $serverRequest, rule: 'crs', meta: [
+            'diagnosticHeaders' => ['X-Phirewall-Owasp-Rule' => '942100'],
+        ]);
+
+        $rows = $this->fetchAllEventRows();
+        self::assertCount(1, $rows);
+        self::assertIsString($rows[0]['meta']);
+        $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame(['diagnosticHeaders' => ['X-Phirewall-Owasp-Rule' => '942100']], $meta);
     }
 
     #[Test]
