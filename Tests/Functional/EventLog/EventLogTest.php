@@ -28,6 +28,9 @@ use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 #[CoversClass(EventLogger::class)]
 final class EventLogTest extends FunctionalTestCase
 {
+    /** Mirrors the eventLogTypes default in ext_conf_template.txt. */
+    private const string DEFAULT_EVENT_LOG_TYPES = 'blocklist_matched,throttle_exceeded,fail2ban_matched,fail2ban_banned,allow2ban_banned,firewall_error';
+
     protected array $testExtensionsToLoad = [
         'flowd/typo3-firewall',
     ];
@@ -104,9 +107,10 @@ final class EventLogTest extends FunctionalTestCase
     #[Test]
     public function fail2BanBlockedEventStoresTheBanType(): void
     {
-        if (!class_exists(Fail2BanBlocked::class)) {
-            self::markTestSkipped('Requires a phirewall version that ships Fail2BanBlocked.');
-        }
+        // Banned-key blocks are high-volume, so they are off by default. Keep
+        // the shipped default types too: ExtensionConfiguration state leaks
+        // into later tests in this class, which rely on the defaults.
+        $this->get(ExtensionConfiguration::class)->set('firewall', ['eventLogEnabled' => '1', 'eventLogTypes' => self::DEFAULT_EVENT_LOG_TYPES . ',fail2ban_blocked']);
 
         $serverRequest = new ServerRequest('https://example.com/login', 'POST');
 
@@ -124,9 +128,10 @@ final class EventLogTest extends FunctionalTestCase
     #[Test]
     public function allow2BanBlockedEventStoresTheBanType(): void
     {
-        if (!class_exists(Allow2BanBlocked::class)) {
-            self::markTestSkipped('Requires a phirewall version that ships Allow2BanBlocked.');
-        }
+        // Banned-key blocks are high-volume, so they are off by default. Keep
+        // the shipped default types too: ExtensionConfiguration state leaks
+        // into later tests in this class, which rely on the defaults.
+        $this->get(ExtensionConfiguration::class)->set('firewall', ['eventLogEnabled' => '1', 'eventLogTypes' => self::DEFAULT_EVENT_LOG_TYPES . ',allow2ban_blocked']);
 
         $serverRequest = new ServerRequest('https://example.com/form', 'POST');
 

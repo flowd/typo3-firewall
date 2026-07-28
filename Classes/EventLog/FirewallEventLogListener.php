@@ -39,7 +39,7 @@ final class FirewallEventLogListener
 
     public function onBlocklistMatched(BlocklistMatched $blocklistMatched): void
     {
-        $this->eventLogger->log(FirewallEventType::BlocklistMatched, $blocklistMatched->serverRequest, rule: $blocklistMatched->rule, meta: $this->diagnosticMeta($blocklistMatched->matchResult ?? null));
+        $this->eventLogger->log(FirewallEventType::BlocklistMatched, $blocklistMatched->serverRequest, rule: $blocklistMatched->rule, meta: $this->diagnosticMeta($blocklistMatched->matchResult));
     }
 
     public function onThrottleExceeded(ThrottleExceeded $throttleExceeded): void
@@ -49,7 +49,7 @@ final class FirewallEventLogListener
             'period' => $throttleExceeded->period,
             'count' => $throttleExceeded->count,
             'retryAfter' => $throttleExceeded->retryAfter,
-            ...$this->diagnosticMeta($throttleExceeded->matchResult ?? null),
+            ...$this->diagnosticMeta($throttleExceeded->matchResult),
         ]);
     }
 
@@ -59,7 +59,7 @@ final class FirewallEventLogListener
             'threshold' => $fail2BanMatched->threshold,
             'period' => $fail2BanMatched->period,
             'count' => $fail2BanMatched->count,
-            ...$this->diagnosticMeta($fail2BanMatched->matchResult ?? null),
+            ...$this->diagnosticMeta($fail2BanMatched->matchResult),
         ]);
     }
 
@@ -70,7 +70,7 @@ final class FirewallEventLogListener
             'period' => $fail2BanBanned->period,
             'banSeconds' => $fail2BanBanned->banSeconds,
             'count' => $fail2BanBanned->count,
-            ...$this->diagnosticMeta($fail2BanBanned->matchResult ?? null),
+            ...$this->diagnosticMeta($fail2BanBanned->matchResult),
         ]);
     }
 
@@ -86,7 +86,7 @@ final class FirewallEventLogListener
             'period' => $allow2BanBanned->period,
             'banSeconds' => $allow2BanBanned->banSeconds,
             'count' => $allow2BanBanned->count,
-            ...$this->diagnosticMeta($allow2BanBanned->matchResult ?? null),
+            ...$this->diagnosticMeta($allow2BanBanned->matchResult),
         ]);
     }
 
@@ -97,7 +97,7 @@ final class FirewallEventLogListener
 
     public function onSafelistMatched(SafelistMatched $safelistMatched): void
     {
-        $this->eventLogger->log(FirewallEventType::SafelistMatched, $safelistMatched->serverRequest, rule: $safelistMatched->rule, meta: $this->diagnosticMeta($safelistMatched->matchResult ?? null));
+        $this->eventLogger->log(FirewallEventType::SafelistMatched, $safelistMatched->serverRequest, rule: $safelistMatched->rule, meta: $this->diagnosticMeta($safelistMatched->matchResult));
     }
 
     public function onTrackHit(TrackHit $trackHit): void
@@ -106,7 +106,7 @@ final class FirewallEventLogListener
             'period' => $trackHit->period,
             'count' => $trackHit->count,
             'limit' => $trackHit->limit,
-            ...$this->diagnosticMeta($trackHit->matchResult ?? null),
+            ...$this->diagnosticMeta($trackHit->matchResult),
         ]);
     }
 
@@ -119,8 +119,8 @@ final class FirewallEventLogListener
     }
 
     /**
-     * Extract the matcher's diagnostic headers as a meta fragment. Events from
-     * phirewall versions without the matchResult property yield no fragment.
+     * Extract the matcher's diagnostic headers as a meta fragment. Null on the
+     * signal-path events (no matcher ran) and on any match without diagnostics.
      *
      * @return array<string, array<string, string>>
      */
