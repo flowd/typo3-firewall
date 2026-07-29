@@ -354,7 +354,7 @@ final class ConfigFactoryTest extends TestCase
             /** @var list<array{level: string, message: string}> */
             public array $records = [];
 
-            public function log($level, \Stringable|string $message, array $context = []): void
+            public function log(mixed $level, \Stringable|string $message, array $context = []): void
             {
                 $this->records[] = ['level' => is_string($level) ? $level : 'unknown', 'message' => (string)$message];
             }
