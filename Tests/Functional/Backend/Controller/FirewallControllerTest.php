@@ -22,6 +22,8 @@ use TYPO3\CMS\Core\Core\SystemEnvironmentBuilder;
 use TYPO3\CMS\Core\Http\NormalizedParams;
 use TYPO3\CMS\Core\Http\ServerRequest;
 use TYPO3\CMS\Core\Localization\LanguageServiceFactory;
+use TYPO3\CMS\Core\Page\PageRenderer;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Core\Bootstrap;
 use TYPO3\CMS\Extbase\Mvc\Controller\MvcPropertyMappingConfigurationService;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
@@ -427,6 +429,9 @@ final class FirewallControllerTest extends FunctionalTestCase
             'normalizedParams',
             NormalizedParams::createFromRequest($serverRequest)
         );
+
+        // TYPO3 v12 module rendering appends to the PageRenderer singleton; reset it between dispatches.
+        GeneralUtility::makeInstance(PageRenderer::class)->setBodyContent('');
 
         $GLOBALS['TYPO3_REQUEST'] = $serverRequest;
 

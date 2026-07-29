@@ -350,7 +350,7 @@ final class ConfigFactoryTest extends TestCase
      */
     private function createSpyLogger(): AbstractLogger
     {
-        return new class () extends AbstractLogger {
+        return new class extends AbstractLogger {
             /** @var list<array{level: string, message: string}> */
             public array $records = [];
 
@@ -363,7 +363,7 @@ final class ConfigFactoryTest extends TestCase
 
     private function createFactory(?LoggerInterface $logger = null, bool $cli = true, ?FormFloodSettings $formFloodSettings = null): ConfigFactory
     {
-        $listenerProvider = new class () implements ListenerProviderInterface {
+        $listenerProvider = new class implements ListenerProviderInterface {
             /**
              * @return list<callable>
              */

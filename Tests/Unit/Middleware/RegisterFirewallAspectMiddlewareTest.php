@@ -51,8 +51,8 @@ final class RegisterFirewallAspectMiddlewareTest extends TestCase
 
     private function handler(): RequestHandlerInterface
     {
-        return new class () implements RequestHandlerInterface {
-            public function handle(ServerRequestInterface $request): ResponseInterface
+        return new class implements RequestHandlerInterface {
+            public function handle(ServerRequestInterface $serverRequest): ResponseInterface
             {
                 return new Response();
             }

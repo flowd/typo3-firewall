@@ -33,12 +33,12 @@ final class FloodProtectionFinisher extends AbstractFinisher
         private readonly EventDispatcherInterface $eventDispatcher,
     ) {}
 
-    protected function executeInternal(): void
+    protected function executeInternal(): ?string
     {
         $requestContext = $this->finisherContext->getRequest()->getAttribute(RequestContext::ATTRIBUTE_NAME);
         if (!$requestContext instanceof RequestContext) {
             // The firewall middleware did not run for this request.
-            return;
+            return null;
         }
 
         $configuredRuleIdentifier = $this->options['ruleIdentifier'] ?? null;
@@ -51,11 +51,13 @@ final class FloodProtectionFinisher extends AbstractFinisher
 
         $ruleIdentifier = trim($floodProtectionFinisherTriggered->ruleIdentifier);
         if ($ruleIdentifier === '') {
-            return;
+            return null;
         }
 
         // No key: the firewall resolves the client IP through its own,
         // trusted-proxy aware resolver when it processes the signal.
         $requestContext->recordHit($ruleIdentifier);
+
+        return null;
     }
 }
