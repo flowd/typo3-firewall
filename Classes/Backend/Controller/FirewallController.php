@@ -205,7 +205,7 @@ class FirewallController extends ActionController
 
         return array_values(array_filter(
             $bans,
-            static fn(array $ban): bool => stripos((string)$ban['key'], $search) !== false
+            static fn(array $ban): bool => stripos($ban['key'], $search) !== false
         ));
     }
 

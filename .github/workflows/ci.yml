@@ -113,9 +113,6 @@ jobs:
         include:
           - typo3-version: "12.4"
             php-version: "8.3"
-            composer-dependencies: Min
-          - typo3-version: "12.4"
-            php-version: "8.3"
             composer-dependencies: Max
           - typo3-version: "12.4"
             php-version: "8.4"
@@ -127,6 +124,15 @@ jobs:
             php-version: "8.4"
             composer-dependencies: Max
           - typo3-version: "13.4"
+            php-version: "8.5"
+            composer-dependencies: Max
+          - typo3-version: "14.3"
+            php-version: "8.3"
+            composer-dependencies: Min
+          - typo3-version: "14.3"
+            php-version: "8.4"
+            composer-dependencies: Max
+          - typo3-version: "14.3"
             php-version: "8.5"
             composer-dependencies: Max
   functional-tests:
@@ -154,10 +160,6 @@ jobs:
         include:
           - typo3-version: "12.4"
             php-version: "8.3"
-            composer-dependencies: Min
-            dbms: sqlite
-          - typo3-version: "12.4"
-            php-version: "8.3"
             composer-dependencies: Max
             dbms: sqlite
           - typo3-version: "13.4"
@@ -173,6 +175,23 @@ jobs:
             composer-dependencies: Max
             dbms: sqlite
           - typo3-version: "13.4"
+            php-version: "8.4"
+            composer-dependencies: Max
+            dbms: mariadb
+            extra-args: "-i 10.11"
+          - typo3-version: "14.3"
+            php-version: "8.3"
+            composer-dependencies: Min
+            dbms: sqlite
+          - typo3-version: "14.3"
+            php-version: "8.4"
+            composer-dependencies: Max
+            dbms: sqlite
+          - typo3-version: "14.3"
+            php-version: "8.5"
+            composer-dependencies: Max
+            dbms: sqlite
+          - typo3-version: "14.3"
             php-version: "8.4"
             composer-dependencies: Max
             dbms: mariadb

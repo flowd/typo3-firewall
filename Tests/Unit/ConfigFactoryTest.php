@@ -350,11 +350,11 @@ final class ConfigFactoryTest extends TestCase
      */
     private function createSpyLogger(): AbstractLogger
     {
-        return new class () extends AbstractLogger {
+        return new class extends AbstractLogger {
             /** @var list<array{level: string, message: string}> */
             public array $records = [];
 
-            public function log($level, \Stringable|string $message, array $context = []): void
+            public function log(mixed $level, \Stringable|string $message, array $context = []): void
             {
                 $this->records[] = ['level' => is_string($level) ? $level : 'unknown', 'message' => (string)$message];
             }
@@ -363,7 +363,7 @@ final class ConfigFactoryTest extends TestCase
 
     private function createFactory(?LoggerInterface $logger = null, bool $cli = true, ?FormFloodSettings $formFloodSettings = null): ConfigFactory
     {
-        $listenerProvider = new class () implements ListenerProviderInterface {
+        $listenerProvider = new class implements ListenerProviderInterface {
             /**
              * @return list<callable>
              */

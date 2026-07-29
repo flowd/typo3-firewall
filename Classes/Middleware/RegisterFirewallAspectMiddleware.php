@@ -20,15 +20,15 @@ final readonly class RegisterFirewallAspectMiddleware implements MiddlewareInter
 {
     public function __construct(private Context $context) {}
 
-    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
+    public function process(ServerRequestInterface $serverRequest, RequestHandlerInterface $requestHandler): ResponseInterface
     {
-        $requestContext = $request->getAttribute(RequestContext::ATTRIBUTE_NAME);
+        $requestContext = $serverRequest->getAttribute(RequestContext::ATTRIBUTE_NAME);
 
         // Without the firewall middleware there is no decision to expose.
         if ($requestContext instanceof RequestContext) {
             $this->context->setAspect('firewall', new FirewallAspect($requestContext));
         }
 
-        return $handler->handle($request);
+        return $requestHandler->handle($serverRequest);
     }
 }
