@@ -551,15 +551,23 @@ case ${TEST_SUITE} in
         ;;
     composerUpdateMax)
         # `dumpautoload` removed due to error with missing `composer.lock` file on publishing public assets.
-        # Advisory blocking is disabled so EOL core versions stay installable in the test setup.
-        COMMAND="composer config policy.advisories.block false && composer config --unset platform.php && composer require --no-ansi --no-interaction --no-progress --no-install typo3/cms-core:"^${CORE_VERSION}" && composer update --no-progress --no-interaction && composer show"
+        # Every TYPO3 v12 release is affected by security advisories, so policy blocking would refuse to install the EOL core.
+        COMPOSER_BLOCKING_OPTION=""
+        if [ "${CORE_VERSION}" = "12.4" ]; then
+            COMPOSER_BLOCKING_OPTION=" --no-blocking"
+        fi
+        COMMAND="composer config --unset platform.php && composer require --no-ansi --no-interaction --no-progress --no-install${COMPOSER_BLOCKING_OPTION} typo3/cms-core:"^${CORE_VERSION}" && composer update${COMPOSER_BLOCKING_OPTION} --no-progress --no-interaction && composer show"
         ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name composer-install-max-${SUFFIX} -e COMPOSER_CACHE_DIR=.cache/composer -e COMPOSER_ROOT_VERSION=${COMPOSER_ROOT_VERSION} ${IMAGE_PHP} /bin/sh -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
     composerUpdateMin)
         # `dumpautoload` removed due to error with missing `composer.lock` file on publishing public assets.
-        # Advisory blocking is disabled so EOL core versions stay installable in the test setup.
-        COMMAND="composer config policy.advisories.block false && composer config platform.php ${PHP_VERSION}.0 && composer require --no-ansi --no-interaction --no-progress --no-install typo3/cms-core:"^${CORE_VERSION}" && composer update --prefer-lowest --no-progress --no-interaction && composer show"
+        # Every TYPO3 v12 release is affected by security advisories, so policy blocking would refuse to install the EOL core.
+        COMPOSER_BLOCKING_OPTION=""
+        if [ "${CORE_VERSION}" = "12.4" ]; then
+            COMPOSER_BLOCKING_OPTION=" --no-blocking"
+        fi
+        COMMAND="composer config platform.php ${PHP_VERSION}.0 && composer require --no-ansi --no-interaction --no-progress --no-install${COMPOSER_BLOCKING_OPTION} typo3/cms-core:"^${CORE_VERSION}" && composer update${COMPOSER_BLOCKING_OPTION} --prefer-lowest --no-progress --no-interaction && composer show"
         ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name composer-install-min-${SUFFIX} -e COMPOSER_CACHE_DIR=.cache/composer -e COMPOSER_ROOT_VERSION=${COMPOSER_ROOT_VERSION} ${IMAGE_PHP} /bin/sh -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
