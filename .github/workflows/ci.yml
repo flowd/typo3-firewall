@@ -113,9 +113,6 @@ jobs:
         include:
           - typo3-version: "12.4"
             php-version: "8.3"
-            composer-dependencies: Min
-          - typo3-version: "12.4"
-            php-version: "8.3"
             composer-dependencies: Max
           - typo3-version: "12.4"
             php-version: "8.4"
@@ -161,10 +158,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - typo3-version: "12.4"
-            php-version: "8.3"
-            composer-dependencies: Min
-            dbms: sqlite
           - typo3-version: "12.4"
             php-version: "8.3"
             composer-dependencies: Max
