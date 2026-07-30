@@ -22,6 +22,9 @@ formFloodPeriod = 60
 # cat=form flood protection; type=int+; label=Ban duration in seconds: How long the client stays banned once the threshold is exceeded.
 formFloodBan = 3600
 
+# cat=patterns; type=string; label=Patterns file directory: Absolute path where the backend module stores its managed patterns (phirewall.patterns.json plus its lock file). Must lie within the TYPO3 project directory or BE/lockRootPath. Leave empty to store them next to phirewall.php in config/system (classic installation: typo3conf/system).
+patternsDirectory =
+
 # cat=performance; type=boolean; label=Enable the compiled-data cache: Let preset packages (OWASP CRS, bad IPs) load their parsed rule data from OPcache-backed artifacts instead of re-parsing it on every request. Recommended.
 compiledCacheEnabled = 1
 

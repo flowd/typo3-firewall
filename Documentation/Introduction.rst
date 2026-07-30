@@ -36,5 +36,5 @@ Where things live
 =================
 
 - Firewall configuration: ``config/system/phirewall.php`` (see :doc:`Configuration`)
-- Backend managed block patterns: ``config/system/phirewall.patterns.json`` (see :doc:`BackendModule`)
+- Backend managed block patterns: ``config/system/phirewall.patterns.json``, directory configurable (see :doc:`BackendModule`)
 - Recorded firewall events: database table ``tx_firewall_event`` (see :doc:`Statistics`)

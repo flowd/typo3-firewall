@@ -11,6 +11,7 @@ use Flowd\Phirewall\Pattern\PatternKind;
 use Flowd\Typo3Firewall\Backend\Controller\FirewallController;
 use Flowd\Typo3Firewall\ConfigFactory;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
+use Flowd\Typo3Firewall\Pattern\PatternStorageSettings;
 use Flowd\Typo3Firewall\Writer\FileArrayWriter;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -18,6 +19,8 @@ use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Backend\Module\ModuleProvider;
 use TYPO3\CMS\Backend\Routing\Route;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
+use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Core\SystemEnvironmentBuilder;
 use TYPO3\CMS\Core\Http\NormalizedParams;
 use TYPO3\CMS\Core\Http\ServerRequest;
@@ -65,7 +68,7 @@ final class FirewallControllerTest extends FunctionalTestCase
         $GLOBALS['LANG'] = $this->get(LanguageServiceFactory::class)->createFromUserPreferences($this->backendUserAuthentication);
 
         // The instance directory survives between tests, only the database is reset.
-        foreach ([ConfigFactory::getPatternsFilePath(), ConfigFactory::getConfigurationPath()] as $filePath) {
+        foreach ([$this->patternsFilePath(), ConfigFactory::getConfigurationPath()] as $filePath) {
             if (is_file($filePath)) {
                 unlink($filePath);
             }
@@ -98,6 +101,31 @@ final class FirewallControllerTest extends FunctionalTestCase
         self::assertCount(1, $patterns);
         self::assertSame('/xmlrpc.php', $patterns[0]['value']);
         self::assertSame(PatternKind::PATH_PREFIX->value, $patterns[0]['kind']);
+    }
+
+    #[Test]
+    public function createActionWritesThePatternsFileToTheConfiguredDirectory(): void
+    {
+        $directory = Environment::getVarPath() . '/custom-patterns';
+        $extensionConfiguration = $this->get(ExtensionConfiguration::class);
+        $originalConfiguration = $extensionConfiguration->get('firewall');
+        self::assertIsArray($originalConfiguration);
+        $extensionConfiguration->set('firewall', array_merge($originalConfiguration, ['patternsDirectory' => $directory]));
+
+        try {
+            $response = $this->dispatchCreateRequest([
+                'kind' => PatternKind::PATH_PREFIX->value,
+                'value' => '/xmlrpc.php',
+                'target' => '',
+                'expiresAt' => '',
+            ]);
+
+            self::assertSame(303, $response->getStatusCode());
+            self::assertFileExists($directory . '/phirewall.patterns.json');
+        } finally {
+            $extensionConfiguration->set('firewall', $originalConfiguration);
+            GeneralUtility::rmdir($directory, true);
+        }
     }
 
     #[Test]
@@ -461,8 +489,13 @@ final class FirewallControllerTest extends FunctionalTestCase
 
     private function createPatternBackend(): FileArrayPatternBackend
     {
-        $patternsFilePath = ConfigFactory::getPatternsFilePath();
+        $patternsFilePath = $this->patternsFilePath();
 
         return new FileArrayPatternBackend($patternsFilePath, new FileArrayWriter($patternsFilePath));
+    }
+
+    private function patternsFilePath(): string
+    {
+        return $this->get(PatternStorageSettings::class)->getPatternsFilePath();
     }
 }

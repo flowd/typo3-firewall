@@ -9,10 +9,10 @@ use Flowd\Phirewall\Config;
 use Flowd\Phirewall\Pattern\PatternEntry;
 use Flowd\Phirewall\Pattern\PatternKind;
 use Flowd\Phirewall\Store\InMemoryCache;
-use Flowd\Typo3Firewall\ConfigFactory;
 use Flowd\Typo3Firewall\Dto\PatternEntryDto;
 use Flowd\Typo3Firewall\EventLog\EventLogViewDataProvider;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
+use Flowd\Typo3Firewall\Pattern\PatternStorageSettings;
 use Flowd\Typo3Firewall\Pattern\PatternValidationException;
 use Flowd\Typo3Firewall\Statistics\StatisticsViewDataProvider;
 use Flowd\Typo3Firewall\Writer\FileArrayWriter;
@@ -50,6 +50,7 @@ class FirewallController extends ActionController
         private readonly Config $config,
         private readonly StatisticsViewDataProvider $statisticsViewDataProvider,
         private readonly EventLogViewDataProvider $eventLogViewDataProvider,
+        private readonly PatternStorageSettings $patternStorageSettings,
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
@@ -324,7 +325,7 @@ class FirewallController extends ActionController
             return $this->fileArrayPatternBackend;
         }
 
-        $path = ConfigFactory::getPatternsFilePath();
+        $path = $this->patternStorageSettings->getPatternsFilePath();
         return $this->fileArrayPatternBackend = new FileArrayPatternBackend(
             $path,
             new FileArrayWriter($path, $this->logger),
