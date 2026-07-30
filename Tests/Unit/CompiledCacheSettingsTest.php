@@ -8,6 +8,8 @@ use Flowd\Typo3Firewall\CompiledCacheSettings;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\AbstractLogger;
+use Psr\Log\LoggerInterface;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 use TYPO3\CMS\Core\Core\Environment;
 
@@ -35,11 +37,21 @@ final class CompiledCacheSettingsTest extends TestCase
     }
 
     #[Test]
-    public function aConfiguredDirectoryWins(): void
+    public function aConfiguredDirectoryWithinTheProjectWins(): void
     {
-        $compiledCacheSettings = $this->createSettings(['compiledCacheDirectory' => '/srv/cache/phirewall']);
+        $directory = Environment::getProjectPath() . '/var/compiled-cache';
+        $compiledCacheSettings = $this->createSettings(['compiledCacheDirectory' => $directory]);
 
-        self::assertSame('/srv/cache/phirewall', $compiledCacheSettings->getDirectory());
+        self::assertSame($directory, $compiledCacheSettings->getDirectory());
+    }
+
+    #[Test]
+    public function aTrailingSlashInTheConfiguredDirectoryIsIgnored(): void
+    {
+        $directory = Environment::getProjectPath() . '/var/compiled-cache';
+        $compiledCacheSettings = $this->createSettings(['compiledCacheDirectory' => $directory . '/']);
+
+        self::assertSame($directory, $compiledCacheSettings->getDirectory());
     }
 
     #[Test]
@@ -50,10 +62,30 @@ final class CompiledCacheSettingsTest extends TestCase
         self::assertSame(Environment::getVarPath() . '/cache/code/firewall', $compiledCacheSettings->getDirectory());
     }
 
+    #[Test]
+    public function aDirectoryOutsideTheAllowedPathsFallsBackAndWarns(): void
+    {
+        $logger = $this->createSpyLogger();
+        $compiledCacheSettings = $this->createSettings(['compiledCacheDirectory' => '/srv/cache/phirewall'], $logger);
+
+        self::assertSame(Environment::getVarPath() . '/cache/code/firewall', $compiledCacheSettings->getDirectory());
+        self::assertCount(1, $logger->records);
+        self::assertSame('warning', $logger->records[0]['level']);
+    }
+
+    #[Test]
+    public function aPathTraversalInTheConfiguredDirectoryFallsBack(): void
+    {
+        $directory = Environment::getProjectPath() . '/var/../../outside';
+        $compiledCacheSettings = $this->createSettings(['compiledCacheDirectory' => $directory]);
+
+        self::assertSame(Environment::getVarPath() . '/cache/code/firewall', $compiledCacheSettings->getDirectory());
+    }
+
     /**
      * @param array<string, string> $settings
      */
-    private function createSettings(array $settings): CompiledCacheSettings
+    private function createSettings(array $settings, ?LoggerInterface $logger = null): CompiledCacheSettings
     {
         $extensionConfiguration = $this->createMock(ExtensionConfiguration::class);
         $extensionConfiguration->method('get')->willReturnCallback(
@@ -66,6 +98,22 @@ final class CompiledCacheSettingsTest extends TestCase
             }
         );
 
-        return new CompiledCacheSettings($extensionConfiguration);
+        return new CompiledCacheSettings($extensionConfiguration, $logger);
+    }
+
+    /**
+     * @return AbstractLogger&object{records: list<array{level: string, message: string}>}
+     */
+    private function createSpyLogger(): AbstractLogger
+    {
+        return new class extends AbstractLogger {
+            /** @var list<array{level: string, message: string}> */
+            public array $records = [];
+
+            public function log(mixed $level, \Stringable|string $message, array $context = []): void
+            {
+                $this->records[] = ['level' => is_string($level) ? $level : 'unknown', 'message' => (string)$message];
+            }
+        };
     }
 }
