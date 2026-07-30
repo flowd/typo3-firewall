@@ -88,9 +88,12 @@ Compiled-data cache
     re-parsed only when a source file changes. It is on by default and writes
     to ``var/cache/code/firewall`` (outside the web root). Turn it off or point
     it at another directory in the extension configuration
-    (``compiledCacheEnabled``, ``compiledCacheDirectory``). If the directory
-    cannot be created the extension logs a warning; a directory that exists
-    but is not writable degrades silently. Either way the presets fall back to
+    (``compiledCacheEnabled``, ``compiledCacheDirectory``). The directory must
+    lie within the TYPO3 project directory or within
+    ``$GLOBALS['TYPO3_CONF_VARS']['BE']['lockRootPath']``; other values are
+    ignored with a logged warning and the default directory is used. If the
+    directory cannot be created the extension logs a warning; a directory
+    that exists but is not writable degrades silently. Either way the presets fall back to
     per-request parsing, so the firewall keeps working.
 
 Behavior without a configuration file
