@@ -55,6 +55,13 @@ final class EventLogSettingsTest extends TestCase
         self::assertFalse($this->createSettings(['eventLogAnonymizeIp' => '0'])->isIpAnonymizationEnabled());
     }
 
+    #[Test]
+    public function parameterMaskingIsEnabledByDefault(): void
+    {
+        self::assertTrue($this->createSettings([])->isParameterMaskingEnabled());
+        self::assertFalse($this->createSettings(['eventLogMaskParameters' => '0'])->isParameterMaskingEnabled());
+    }
+
     /**
      * @param array<string, string> $settings
      */
