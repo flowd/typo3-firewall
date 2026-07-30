@@ -8,6 +8,7 @@ use Flowd\Phirewall\Store\PdoCache;
 use Flowd\Typo3Firewall\CompiledCacheSettings;
 use Flowd\Typo3Firewall\ConfigFactory;
 use Flowd\Typo3Firewall\Form\FormFloodSettings;
+use Flowd\Typo3Firewall\Pattern\PatternStorageSettings;
 use org\bovigo\vfs\vfsStream;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -57,28 +58,11 @@ final class ConfigFactoryTest extends TestCase
     }
 
     #[Test]
-    public function getPatternsFilePathReturnsJsonFilePath(): void
-    {
-        $path = ConfigFactory::getPatternsFilePath();
-
-        self::assertStringEndsWith('/system/phirewall.patterns.json', $path);
-    }
-
-    #[Test]
     public function getBaseConfigPathReturnsValidPath(): void
     {
         $path = ConfigFactory::getBaseConfigPath();
 
         self::assertNotEmpty($path);
-    }
-
-    #[Test]
-    public function configurationAndPatternsPathsShareSameBaseDirectory(): void
-    {
-        $configPath = ConfigFactory::getConfigurationPath();
-        $patternsPath = ConfigFactory::getPatternsFilePath();
-
-        self::assertSame(dirname($configPath), dirname($patternsPath));
     }
 
     #[Test]
@@ -376,11 +360,12 @@ final class ConfigFactoryTest extends TestCase
         $formFloodSettings ??= $this->createFormFloodSettings([]);
         // Disabled here so the unit tests never touch the real var/cache path.
         $compiledCacheSettings = $this->createCompiledCacheSettings(['compiledCacheEnabled' => '0']);
+        $patternStorageSettings = $this->createPatternStorageSettings([]);
 
-        return new class (new EventDispatcher($listenerProvider), $formFloodSettings, $compiledCacheSettings, $logger, $cli) extends ConfigFactory {
-            public function __construct(EventDispatcher $eventDispatcher, FormFloodSettings $formFloodSettings, CompiledCacheSettings $compiledCacheSettings, ?LoggerInterface $logger, private readonly bool $cli)
+        return new class (new EventDispatcher($listenerProvider), $formFloodSettings, $compiledCacheSettings, $patternStorageSettings, $logger, $cli) extends ConfigFactory {
+            public function __construct(EventDispatcher $eventDispatcher, FormFloodSettings $formFloodSettings, CompiledCacheSettings $compiledCacheSettings, PatternStorageSettings $patternStorageSettings, ?LoggerInterface $logger, private readonly bool $cli)
             {
-                parent::__construct($eventDispatcher, $formFloodSettings, $compiledCacheSettings, $logger);
+                parent::__construct($eventDispatcher, $formFloodSettings, $compiledCacheSettings, $patternStorageSettings, $logger);
             }
 
             protected function isCliRequest(): bool
@@ -407,6 +392,25 @@ final class ConfigFactoryTest extends TestCase
         );
 
         return new CompiledCacheSettings($extensionConfiguration);
+    }
+
+    /**
+     * @param array<string, string> $settings
+     */
+    private function createPatternStorageSettings(array $settings): PatternStorageSettings
+    {
+        $extensionConfiguration = $this->createMock(ExtensionConfiguration::class);
+        $extensionConfiguration->method('get')->willReturnCallback(
+            static function (string $extension, string $path) use ($settings): string {
+                if (!isset($settings[$path])) {
+                    throw new \RuntimeException('Setting not configured: ' . $path, 1770000007);
+                }
+
+                return $settings[$path];
+            }
+        );
+
+        return new PatternStorageSettings($extensionConfiguration);
     }
 
     /**

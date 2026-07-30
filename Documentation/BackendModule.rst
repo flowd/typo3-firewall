@@ -22,7 +22,11 @@ This view manages the static block patterns. The extension always adds them
 to the firewall as the blocklist rule ``typo3-blocklist``, so they take
 effect even when no configuration file exists (see :doc:`Configuration`).
 Patterns are stored in the file ``config/system/phirewall.patterns.json``
-(classic installation: ``typo3conf/system/phirewall.patterns.json``).
+(classic installation: ``typo3conf/system/phirewall.patterns.json``). The
+extension configuration setting ``patternsDirectory`` moves the file and its
+lock file to another directory, for example when ``config/system`` is
+read-only at runtime; the directory must lie within the TYPO3 project
+directory or ``BE/lockRootPath`` (see :doc:`Configuration`).
 
 Every change takes effect on the next request. No deployment and no cache
 flush are needed.

@@ -9,6 +9,7 @@ use Flowd\Phirewall\Store\InMemoryCache;
 use Flowd\Phirewall\Support\CompiledDataCache;
 use Flowd\Typo3Firewall\Form\FormFloodSettings;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
+use Flowd\Typo3Firewall\Pattern\PatternStorageSettings;
 use Flowd\Typo3Firewall\Writer\FileArrayWriter;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
@@ -24,6 +25,7 @@ class ConfigFactory
         private readonly EventDispatcher $eventDispatcher,
         private readonly FormFloodSettings $formFloodSettings,
         private readonly CompiledCacheSettings $compiledCacheSettings,
+        private readonly PatternStorageSettings $patternStorageSettings,
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
@@ -129,7 +131,7 @@ class ConfigFactory
             return is_string($remoteAddress) && $remoteAddress !== '' ? $remoteAddress : null;
         });
 
-        $patternPath = self::getPatternsFilePath();
+        $patternPath = $this->patternStorageSettings->getPatternsFilePath();
         $fileArrayPatternBackend = new FileArrayPatternBackend($patternPath, new FileArrayWriter($patternPath, $this->logger), $this->logger);
         $config->blocklists->addPatternBackend('typo3-managed-patterns', $fileArrayPatternBackend)->fromBackend('typo3-blocklist', 'typo3-managed-patterns');
 
@@ -197,10 +199,5 @@ class ConfigFactory
     public static function getConfigurationPath(): string
     {
         return self::getBaseConfigPath() . '/system/phirewall.php';
-    }
-
-    public static function getPatternsFilePath(): string
-    {
-        return self::getBaseConfigPath() . '/system/phirewall.patterns.json';
     }
 }

@@ -71,7 +71,14 @@ Backend managed block patterns
     active even when your configuration file is missing. A rule with the
     same name in your file replaces them, so only define a rule named
     ``typo3-blocklist`` when you want to take over the backend managed
-    patterns yourself.
+    patterns yourself. The patterns live in
+    ``config/system/phirewall.patterns.json`` next to ``phirewall.php``;
+    point the extension configuration setting ``patternsDirectory`` at
+    another directory when that location is read-only at runtime. The
+    file's lock file is created in the same directory. The directory must
+    lie within the TYPO3 project directory or within
+    ``$GLOBALS['TYPO3_CONF_VARS']['BE']['lockRootPath']``; other values
+    are ignored with a logged warning and the default directory is used.
 
 Compiled-data cache
     Preset packages such as OWASP CRS and the bad-IP list parse large data
