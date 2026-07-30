@@ -139,10 +139,21 @@ Event log
 This view lists the latest recorded firewall events, newest first. Every
 entry shows the time, the event type, the rule, the key (an anonymized IP
 address, or a hash for sensitive keys), the request line with the user
-agent, and the event details.
+agent, and the event details. The request line contains the full request
+target including the query string, so GET payloads such as injection
+attempts are visible (and searchable) as they arrived.
 
 The details column renders everything the event carried as ``key: value``
-lines, including counters (``threshold``, ``count``, ``banSeconds``) and the
+lines. Submitted POST parameters appear as ``post.name: value`` lines.
+Every value is masked down to its first and last two characters
+(``administrator`` becomes ``ad***or``), parameter names that look like
+credentials (``pass``, ``token``, and similar) are masked completely, and
+large forms are truncated, so the log never stores passwords or other
+submitted data in clear text. To inspect attack payloads in POST fields,
+the value masking can be turned off with the ``eventLogMaskParameters``
+extension setting (credential-like parameters stay masked); see
+:doc:`Statistics` for all event log settings. The details also include counters
+(``threshold``, ``count``, ``banSeconds``) and the
 diagnostic headers a matcher attached to its match, for example
 ``diagnosticHeaders.X-Phirewall-Owasp-Rule: 942100`` for an OWASP CRS match.
 The diagnostics land in the log independently of the

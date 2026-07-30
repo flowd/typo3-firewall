@@ -55,6 +55,100 @@ final class EventLogTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function theRequestPathIncludesTheQueryString(): void
+    {
+        $serverRequest = new ServerRequest('https://example.com/index.php?id=1&mode=drop', 'GET');
+
+        $this->dispatch(new BlocklistMatched('scanner-paths', $serverRequest, MatchResult::matched('custom')));
+
+        $rows = $this->fetchAllEventRows();
+        self::assertCount(1, $rows);
+        self::assertSame('/index.php?id=1&mode=drop', $rows[0]['request_path']);
+    }
+
+    #[Test]
+    public function postParametersAreStoredMaskedAndBoundedInTheMeta(): void
+    {
+        $serverRequest = (new ServerRequest('https://example.com/login', 'POST'))
+            ->withParsedBody([
+                'username' => 'administrator',
+                'pass' => 'hunter2',
+                'code' => 'abc',
+                'form' => ['field' => 'value'],
+            ]);
+
+        $this->dispatch(new Fail2BanMatched('login-brute-force', '203.0.113.10', 5, 300, 3, $serverRequest, MatchResult::matched('custom')));
+
+        $rows = $this->fetchAllEventRows();
+        self::assertCount(1, $rows);
+        self::assertIsString($rows[0]['meta']);
+        $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($meta);
+        self::assertSame([
+            'username' => 'ad***or',
+            'pass' => '***',
+            'code' => '***',
+            'form' => ['field' => 'va***ue'],
+        ], $meta['post']);
+        self::assertStringNotContainsString('hunter2', $rows[0]['meta']);
+        self::assertStringNotContainsString('administrator', $rows[0]['meta']);
+    }
+
+    #[Test]
+    public function largeFormsAreTruncatedWithASkippedMarker(): void
+    {
+        $parameters = [];
+        for ($i = 1; $i <= 25; ++$i) {
+            $parameters['field' . $i] = 'value' . $i;
+        }
+
+        $serverRequest = (new ServerRequest('https://example.com/form', 'POST'))->withParsedBody($parameters);
+
+        $this->dispatch(new Fail2BanMatched('form-flood', '203.0.113.10', 5, 300, 3, $serverRequest, MatchResult::matched('custom')));
+
+        $rows = $this->fetchAllEventRows();
+        self::assertCount(1, $rows);
+        self::assertIsString($rows[0]['meta']);
+        $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($meta);
+        self::assertIsArray($meta['post']);
+        self::assertCount(21, $meta['post']);
+        self::assertSame('5 more parameters', $meta['post']['_skipped']);
+        self::assertArrayNotHasKey('field21', $meta['post']);
+    }
+
+    #[Test]
+    public function postParameterValuesAreStoredInClearTextWhenMaskingIsDisabled(): void
+    {
+        $this->get(ExtensionConfiguration::class)->set('firewall', ['eventLogEnabled' => '1', 'eventLogTypes' => self::DEFAULT_EVENT_LOG_TYPES, 'eventLogMaskParameters' => '0']);
+
+        try {
+            $serverRequest = (new ServerRequest('https://example.com/login', 'POST'))
+                ->withParsedBody([
+                    'username' => 'administrator',
+                    'pass' => 'hunter2',
+                    'comment' => str_repeat('a', 300),
+                ]);
+
+            $this->dispatch(new Fail2BanMatched('login-brute-force', '203.0.113.10', 5, 300, 3, $serverRequest, MatchResult::matched('custom')));
+
+            $rows = $this->fetchAllEventRows();
+            self::assertCount(1, $rows);
+            self::assertIsString($rows[0]['meta']);
+            $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
+            self::assertIsArray($meta);
+            self::assertSame([
+                'username' => 'administrator',
+                'pass' => '***',
+                'comment' => str_repeat('a', 256),
+            ], $meta['post']);
+            self::assertStringNotContainsString('hunter2', $rows[0]['meta']);
+        } finally {
+            $this->get(ExtensionConfiguration::class)->set('firewall', ['eventLogEnabled' => '1', 'eventLogTypes' => self::DEFAULT_EVENT_LOG_TYPES]);
+        }
+    }
+
+    #[Test]
     public function throttleExceededEventStoresHashAndAnonymizedIpAndMeta(): void
     {
         $serverRequest = new ServerRequest('https://example.com/search', 'GET');

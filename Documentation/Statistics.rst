@@ -78,6 +78,14 @@ it under **Admin Tools** > **Settings** >
     Stores client IP addresses in shortened form. The last part of the
     address is dropped, so a single visitor can no longer be identified.
 
+``eventLogMaskParameters`` (default: on)
+    Stores submitted POST parameter values with only their first and last
+    two characters visible (``administrator`` becomes ``ad***or``). Turn it
+    off to store the values in clear text, truncated to 256 characters, for
+    example to inspect attack payloads in form fields. Parameters whose
+    names look like credentials (``pass``, ``token``, and similar) stay
+    fully masked either way.
+
 Privacy and retention
 ======================
 
@@ -90,6 +98,9 @@ The event log is built to hold as little personal data as possible.
   only for real IP addresses and, with ``eventLogAnonymizeIp`` on, only in
   shortened form. Keys that are not IP addresses are never shown in readable
   form.
+- Submitted POST parameters are stored masked (``eventLogMaskParameters``),
+  and parameters whose names look like credentials are masked completely,
+  so the log never contains passwords in clear text.
 - Entries are deleted after the retention period. The console command
   removes the old rows:
 
