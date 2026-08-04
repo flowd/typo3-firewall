@@ -24,7 +24,11 @@ final class PatternEntryDto
         public ?string $expiresAt = null,
     ) {}
 
-    public function toPatternEntry(): PatternEntry
+    /**
+     * A non-empty $id is carried into the entry metadata, so an update keeps
+     * the existing pattern's identity.
+     */
+    public function toPatternEntry(string $id = ''): PatternEntry
     {
         $kindValue = trim($this->kind);
         $kind = PatternKind::tryFrom($kindValue);
@@ -41,6 +45,7 @@ final class PatternEntryDto
             value: trim($this->value),
             target: $this->target !== null ? trim($this->target) : null,
             expiresAt: $this->parseExpiresAt(),
+            metadata: $id === '' ? [] : ['id' => $id],
         );
     }
 

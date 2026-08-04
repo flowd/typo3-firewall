@@ -10,12 +10,14 @@ use Flowd\Phirewall\Pattern\PatternEntry;
 use Flowd\Phirewall\Pattern\PatternKind;
 use Flowd\Typo3Firewall\Backend\Controller\FirewallController;
 use Flowd\Typo3Firewall\ConfigFactory;
+use Flowd\Typo3Firewall\EventLog\KeyHasher;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
 use Flowd\Typo3Firewall\Pattern\PatternStorageSettings;
 use Flowd\Typo3Firewall\Writer\FileArrayWriter;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ResponseInterface;
+use TYPO3\CMS\Backend\Module\ModuleData;
 use TYPO3\CMS\Backend\Module\ModuleProvider;
 use TYPO3\CMS\Backend\Routing\Route;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
@@ -222,7 +224,7 @@ final class FirewallControllerTest extends FunctionalTestCase
         $this->getConnectionPool()->getConnectionForTable('tx_firewall_event')->insert('tx_firewall_event', [
             'event_type' => 'blocklist_matched',
             'rule' => 'scanner-paths',
-            'key_hash' => hash('sha256', '203.0.113.10'),
+            'key_hash' => $this->keyHash('203.0.113.10'),
             'key_display' => '203.0.113.0/24',
             'request_path' => '/wp-admin',
             'request_method' => 'GET',
@@ -241,6 +243,48 @@ final class FirewallControllerTest extends FunctionalTestCase
         self::assertStringContainsString('Recent blocked requests', $body);
         self::assertStringContainsString('GET /wp-admin', $body);
         self::assertStringContainsString('203.0.113.0/24', $body);
+    }
+
+    #[Test]
+    public function moduleEntryDefaultsToThePatternView(): void
+    {
+        $body = (string)$this->dispatchModuleRequest(null)->getBody();
+
+        self::assertStringContainsString('Active Patterns', $body);
+    }
+
+    #[Test]
+    public function moduleEntryOpensTheLastVisitedView(): void
+    {
+        $this->dispatchModuleRequest('statistics');
+
+        $body = (string)$this->dispatchModuleRequest(null)->getBody();
+
+        self::assertStringContainsString('Attackers blocked today', $body);
+    }
+
+    #[Test]
+    public function statisticsActionCollapsesRecentEventsPerKeyAndLinksToTheEventLog(): void
+    {
+        $connection = $this->getConnectionPool()->getConnectionForTable('tx_firewall_event');
+        $now = time();
+        for ($i = 0; $i < 5; ++$i) {
+            $connection->insert('tx_firewall_event', [
+                'event_type' => 'throttle_exceeded',
+                'rule' => 'flood-rule',
+                'key_hash' => $this->keyHash('203.0.113.10'),
+                'key_display' => '203.0.113.0',
+                'request_path' => '/flood',
+                'request_method' => 'GET',
+                'created_at' => $now - $i,
+            ]);
+        }
+
+        $body = (string)$this->dispatchModuleRequest('statistics')->getBody();
+
+        self::assertSame(3, substr_count($body, '203.0.113.0'));
+        self::assertSame(1, substr_count($body, '+2 more'));
+        self::assertStringContainsString($this->keyHash('203.0.113.10'), $body);
     }
 
     #[Test]
@@ -298,7 +342,7 @@ final class FirewallControllerTest extends FunctionalTestCase
     }
 
     #[Test]
-    public function bansActionBuildsSelectorSafeModalTargetsForDottedRuleNames(): void
+    public function bansActionBuildsSelectorSafeConfirmFormTargetsForDottedRuleNames(): void
     {
         $config = $this->setUpConfigWithFail2BanRule('preset.owasp-crs.fail2ban');
         $config->banManager()->ban('preset.owasp-crs.fail2ban', '203.0.113.10', 3600, BanType::Fail2Ban);
@@ -306,11 +350,12 @@ final class FirewallControllerTest extends FunctionalTestCase
         $response = $this->dispatchModuleRequest('bans');
 
         $body = (string)$response->getBody();
-        self::assertSame(1, preg_match_all('/data-bs-target="#(?<targets>unbanModal[^"]*)"/', $body, $matches));
+        self::assertStringContainsString('t3js-modal-trigger', $body);
+        self::assertSame(1, preg_match_all('/data-target-form="(?<targets>[^"]*)"/', $body, $matches));
         foreach ($matches['targets'] as $target) {
-            // A CSS metacharacter in the id selector (e.g. the dot of a rule name like
-            // "preset.owasp-crs.fail2ban") makes Bootstrap's querySelector() miss the
-            // modal, leaving the unban button dead.
+            // The core modal locates the form via querySelector('form#...'), so a CSS
+            // metacharacter in the id (e.g. the dot of a rule name like
+            // "preset.owasp-crs.fail2ban") would leave the unban button dead.
             self::assertMatchesRegularExpression('/^[A-Za-z][A-Za-z0-9_-]*$/', $target);
             self::assertStringContainsString(sprintf('id="%s"', $target), $body);
         }
@@ -324,7 +369,7 @@ final class FirewallControllerTest extends FunctionalTestCase
             'event_type' => 'blocklist_matched',
             'rule' => 'preset.owasp-crs.blocklist',
             'key_display' => '203.0.113.0',
-            'key_hash' => hash('sha256', '203.0.113.10'),
+            'key_hash' => $this->keyHash('203.0.113.10'),
             'request_host' => 'example.com',
             'request_path' => '/probe',
             'request_method' => 'GET',
@@ -358,10 +403,167 @@ final class FirewallControllerTest extends FunctionalTestCase
             'created_at' => time(),
         ]);
 
-        $body = (string)$this->dispatchModuleRequest('events', ['type' => 'track_hit'])->getBody();
+        $body = (string)$this->dispatchModuleRequest('events', ['types' => ['track_hit']])->getBody();
 
         self::assertStringContainsString('observed-endpoint', $body);
         self::assertStringNotContainsString('scanner-paths', $body);
+    }
+
+    #[Test]
+    public function eventsActionFiltersByMultipleEventTypes(): void
+    {
+        $this->setUpConfigWithFail2BanRule();
+        $connection = $this->getConnectionPool()->getConnectionForTable('tx_firewall_event');
+        foreach (['blocklist_matched' => 'scanner-paths', 'track_hit' => 'observed-endpoint', 'firewall_error' => 'store-error'] as $eventType => $rule) {
+            $connection->insert('tx_firewall_event', [
+                'event_type' => $eventType,
+                'rule' => $rule,
+                'created_at' => time(),
+            ]);
+        }
+
+        $body = (string)$this->dispatchModuleRequest('events', ['types' => ['track_hit', 'firewall_error']])->getBody();
+
+        self::assertStringContainsString('observed-endpoint', $body);
+        self::assertStringContainsString('store-error', $body);
+        self::assertStringNotContainsString('scanner-paths', $body);
+    }
+
+    #[Test]
+    public function eventsActionCollapsesRepeatedKeyEventsToTheNewestThree(): void
+    {
+        $this->setUpConfigWithFail2BanRule();
+        $connection = $this->getConnectionPool()->getConnectionForTable('tx_firewall_event');
+        $now = time();
+        for ($i = 0; $i < 5; ++$i) {
+            $connection->insert('tx_firewall_event', [
+                'event_type' => 'throttle_exceeded',
+                'rule' => 'flood-rule-' . $i,
+                'key_hash' => $this->keyHash('203.0.113.10'),
+                'key_display' => '203.0.113.0',
+                'created_at' => $now - $i,
+            ]);
+        }
+
+        $body = (string)$this->dispatchModuleRequest('events')->getBody();
+
+        self::assertStringContainsString('flood-rule-0', $body);
+        self::assertStringContainsString('flood-rule-1', $body);
+        self::assertStringContainsString('flood-rule-2', $body);
+        self::assertStringNotContainsString('flood-rule-3', $body);
+        self::assertStringNotContainsString('flood-rule-4', $body);
+        self::assertStringContainsString('+2 more', $body);
+        self::assertStringContainsString($this->keyHash('203.0.113.10'), $body);
+    }
+
+    #[Test]
+    public function eventsActionDoesNotCollapseEventsWithoutAKey(): void
+    {
+        $this->setUpConfigWithFail2BanRule();
+        $connection = $this->getConnectionPool()->getConnectionForTable('tx_firewall_event');
+        $now = time();
+        for ($i = 0; $i < 5; ++$i) {
+            $connection->insert('tx_firewall_event', [
+                'event_type' => 'blocklist_matched',
+                'rule' => 'probe-rule-' . $i,
+                'created_at' => $now - $i,
+            ]);
+        }
+
+        $body = (string)$this->dispatchModuleRequest('events')->getBody();
+
+        for ($i = 0; $i < 5; ++$i) {
+            self::assertStringContainsString('probe-rule-' . $i, $body);
+        }
+
+        self::assertStringNotContainsString('+2 more', $body);
+    }
+
+    #[Test]
+    public function eventsActionKeyFilterListsAllEventsForTheKey(): void
+    {
+        $this->setUpConfigWithFail2BanRule();
+        $connection = $this->getConnectionPool()->getConnectionForTable('tx_firewall_event');
+        $now = time();
+        for ($i = 0; $i < 5; ++$i) {
+            $connection->insert('tx_firewall_event', [
+                'event_type' => 'throttle_exceeded',
+                'rule' => 'flood-rule-' . $i,
+                'key_hash' => $this->keyHash('203.0.113.10'),
+                'key_display' => '203.0.113.0',
+                'created_at' => $now - $i,
+            ]);
+        }
+
+        $connection->insert('tx_firewall_event', [
+            'event_type' => 'throttle_exceeded',
+            'rule' => 'other-client-rule',
+            'key_hash' => $this->keyHash('198.51.100.7'),
+            'key_display' => '198.51.100.0',
+            'created_at' => $now,
+        ]);
+
+        $body = (string)$this->dispatchModuleRequest('events', ['key' => $this->keyHash('203.0.113.10')])->getBody();
+
+        for ($i = 0; $i < 5; ++$i) {
+            self::assertStringContainsString('flood-rule-' . $i, $body);
+        }
+
+        self::assertStringNotContainsString('other-client-rule', $body);
+        self::assertStringContainsString('Remove the key filter', $body);
+    }
+
+    #[Test]
+    public function eventsActionFiltersByAClickedRule(): void
+    {
+        $this->setUpConfigWithFail2BanRule();
+        $connection = $this->getConnectionPool()->getConnectionForTable('tx_firewall_event');
+        $connection->insert('tx_firewall_event', [
+            'event_type' => 'throttle_exceeded',
+            'rule' => 'flood-rule',
+            'key_hash' => $this->keyHash('203.0.113.10'),
+            'key_display' => '203.0.113.0',
+            'created_at' => time(),
+        ]);
+        $connection->insert('tx_firewall_event', [
+            'event_type' => 'throttle_exceeded',
+            'rule' => 'other-rule',
+            'key_hash' => $this->keyHash('198.51.100.7'),
+            'key_display' => '198.51.100.0',
+            'created_at' => time(),
+        ]);
+
+        $body = (string)$this->dispatchModuleRequest('events', ['rule' => 'flood-rule'])->getBody();
+
+        self::assertStringContainsString('flood-rule', $body);
+        self::assertStringNotContainsString('other-rule', $body);
+        self::assertStringContainsString('Remove the rule filter', $body);
+    }
+
+    #[Test]
+    public function eventsActionFindsAnonymizedKeyEventsBySearchingTheFullIp(): void
+    {
+        $this->setUpConfigWithFail2BanRule();
+        $connection = $this->getConnectionPool()->getConnectionForTable('tx_firewall_event');
+        $connection->insert('tx_firewall_event', [
+            'event_type' => 'throttle_exceeded',
+            'rule' => 'flood-rule',
+            'key_hash' => $this->keyHash('20.251.48.208'),
+            'key_display' => '20.251.48.0',
+            'created_at' => time(),
+        ]);
+        $connection->insert('tx_firewall_event', [
+            'event_type' => 'throttle_exceeded',
+            'rule' => 'other-client-rule',
+            'key_hash' => $this->keyHash('198.51.100.7'),
+            'key_display' => '198.51.100.0',
+            'created_at' => time(),
+        ]);
+
+        $body = (string)$this->dispatchModuleRequest('events', ['search' => '20.251.48.208'], 'POST')->getBody();
+
+        self::assertStringContainsString('flood-rule', $body);
+        self::assertStringNotContainsString('other-client-rule', $body);
     }
 
     #[Test]
@@ -390,6 +592,192 @@ final class FirewallControllerTest extends FunctionalTestCase
         $secondPage = (string)$this->dispatchModuleRequest('events', ['page' => '2'])->getBody();
         self::assertStringContainsString('oldest-entry', $secondPage);
         self::assertStringNotContainsString('filler-0', $secondPage);
+    }
+
+    #[Test]
+    public function eventsActionKeyFilterCombinesWithSearchAndTypeFilters(): void
+    {
+        $this->setUpConfigWithFail2BanRule();
+        $connection = $this->getConnectionPool()->getConnectionForTable('tx_firewall_event');
+        $now = time();
+        $flooderHash = $this->keyHash('203.0.113.10');
+        foreach ([
+            ['event_type' => 'throttle_exceeded', 'rule' => 'flood-login', 'key_hash' => $flooderHash, 'request_path' => '/login'],
+            ['event_type' => 'throttle_exceeded', 'rule' => 'flood-search', 'key_hash' => $flooderHash, 'request_path' => '/search'],
+            ['event_type' => 'blocklist_matched', 'rule' => 'probe-login', 'key_hash' => $flooderHash, 'request_path' => '/login'],
+            ['event_type' => 'throttle_exceeded', 'rule' => 'other-login', 'key_hash' => $this->keyHash('198.51.100.7'), 'request_path' => '/login'],
+        ] as $eventRow) {
+            $connection->insert('tx_firewall_event', array_merge([
+                'key_display' => '203.0.113.0',
+                'request_method' => 'GET',
+                'created_at' => $now,
+            ], $eventRow));
+        }
+
+        $body = (string)$this->dispatchModuleRequest('events', [
+            'types' => ['throttle_exceeded'],
+            'search' => 'login',
+            'key' => $flooderHash,
+        ])->getBody();
+
+        self::assertStringContainsString('flood-login', $body);
+        self::assertStringNotContainsString('flood-search', $body);
+        self::assertStringNotContainsString('probe-login', $body);
+        self::assertStringNotContainsString('other-login', $body);
+        self::assertStringContainsString('Remove the key filter', $body);
+    }
+
+    #[Test]
+    public function eventsActionRendersAHashOnlyKeyAsACroppedHashLink(): void
+    {
+        $this->setUpConfigWithFail2BanRule();
+        $keyHash = $this->keyHash('secret-api-key');
+        $this->getConnectionPool()->getConnectionForTable('tx_firewall_event')->insert('tx_firewall_event', [
+            'event_type' => 'throttle_exceeded',
+            'rule' => 'api-flood',
+            'key_hash' => $keyHash,
+            'key_display' => '',
+            'request_path' => '/api',
+            'request_method' => 'GET',
+            'created_at' => time(),
+        ]);
+
+        $croppedHash = substr($keyHash, 0, 12) . '…';
+
+        $timelineBody = (string)$this->dispatchModuleRequest('events')->getBody();
+        self::assertStringContainsString($croppedHash, $timelineBody);
+        self::assertStringContainsString($keyHash, $timelineBody);
+
+        $keyFilterBody = (string)$this->dispatchModuleRequest('events', ['key' => $keyHash])->getBody();
+        self::assertStringContainsString('api-flood', $keyFilterBody);
+        self::assertStringContainsString($croppedHash, $keyFilterBody);
+        self::assertStringContainsString('Remove the key filter', $keyFilterBody);
+    }
+
+    #[Test]
+    public function eventsActionTrimsWhitespaceBeforeHashingTheSearchedIp(): void
+    {
+        $this->setUpConfigWithFail2BanRule();
+        $connection = $this->getConnectionPool()->getConnectionForTable('tx_firewall_event');
+        $connection->insert('tx_firewall_event', [
+            'event_type' => 'throttle_exceeded',
+            'rule' => 'flood-rule',
+            'key_hash' => $this->keyHash('20.251.48.208'),
+            'key_display' => '20.251.48.0',
+            'created_at' => time(),
+        ]);
+        $connection->insert('tx_firewall_event', [
+            'event_type' => 'throttle_exceeded',
+            'rule' => 'other-client-rule',
+            'key_hash' => $this->keyHash('198.51.100.7'),
+            'key_display' => '198.51.100.0',
+            'created_at' => time(),
+        ]);
+
+        $body = (string)$this->dispatchModuleRequest('events', ['search' => '  20.251.48.208  '], 'POST')->getBody();
+
+        self::assertStringContainsString('flood-rule', $body);
+        self::assertStringNotContainsString('other-client-rule', $body);
+    }
+
+    #[Test]
+    public function eventsActionRestoresPersistedFiltersOnPlainNavigation(): void
+    {
+        $this->setUpConfigWithFail2BanRule();
+        $connection = $this->getConnectionPool()->getConnectionForTable('tx_firewall_event');
+        $connection->insert('tx_firewall_event', ['event_type' => 'track_hit', 'rule' => 'observed-endpoint', 'created_at' => time()]);
+        $connection->insert('tx_firewall_event', ['event_type' => 'blocklist_matched', 'rule' => 'scanner-paths', 'created_at' => time()]);
+
+        $filteredBody = (string)$this->dispatchModuleRequest('events', ['types' => ['track_hit'], 'operation' => 'filter'])->getBody();
+        self::assertStringNotContainsString('scanner-paths', $filteredBody);
+
+        $plainBody = (string)$this->dispatchModuleRequest('events')->getBody();
+        self::assertStringContainsString('observed-endpoint', $plainBody);
+        self::assertStringNotContainsString('scanner-paths', $plainBody);
+    }
+
+    #[Test]
+    public function eventsActionResetFiltersClearsThePersistedState(): void
+    {
+        $this->setUpConfigWithFail2BanRule();
+        $connection = $this->getConnectionPool()->getConnectionForTable('tx_firewall_event');
+        $connection->insert('tx_firewall_event', ['event_type' => 'track_hit', 'rule' => 'observed-endpoint', 'created_at' => time()]);
+        $connection->insert('tx_firewall_event', ['event_type' => 'blocklist_matched', 'rule' => 'scanner-paths', 'created_at' => time()]);
+
+        $this->dispatchModuleRequest('events', ['types' => ['track_hit'], 'operation' => 'filter']);
+        $resetBody = (string)$this->dispatchModuleRequest('events', ['operation' => 'reset-filters'])->getBody();
+        self::assertStringContainsString('scanner-paths', $resetBody);
+
+        $plainBody = (string)$this->dispatchModuleRequest('events')->getBody();
+        self::assertStringContainsString('scanner-paths', $plainBody);
+        self::assertStringContainsString('observed-endpoint', $plainBody);
+    }
+
+    #[Test]
+    public function eventsActionKeyFilterIgnoresPersistedFilters(): void
+    {
+        $this->setUpConfigWithFail2BanRule();
+        $connection = $this->getConnectionPool()->getConnectionForTable('tx_firewall_event');
+        $connection->insert('tx_firewall_event', [
+            'event_type' => 'throttle_exceeded',
+            'rule' => 'flood-rule',
+            'key_hash' => $this->keyHash('203.0.113.10'),
+            'key_display' => '203.0.113.0',
+            'created_at' => time(),
+        ]);
+
+        $this->dispatchModuleRequest('events', ['types' => ['track_hit'], 'operation' => 'filter']);
+        $keyBody = (string)$this->dispatchModuleRequest('events', ['key' => $this->keyHash('203.0.113.10')])->getBody();
+
+        self::assertStringContainsString('flood-rule', $keyBody);
+        self::assertStringContainsString('Remove the key filter', $keyBody);
+    }
+
+    #[Test]
+    public function statisticsActionPersistsTheSelectedRange(): void
+    {
+        $this->getConnectionPool()->getConnectionForTable('tx_firewall_event')->insert('tx_firewall_event', [
+            'event_type' => 'blocklist_matched',
+            'rule' => 'scanner-paths',
+            'created_at' => time(),
+        ]);
+
+        $this->dispatchModuleRequest('statistics', ['range' => '7d']);
+        $plainBody = (string)$this->dispatchModuleRequest('statistics')->getBody();
+
+        self::assertStringContainsString('(7 days)', $plainBody);
+    }
+
+    #[Test]
+    public function eventsActionRendersManyDetailLinesInsideADetailsElement(): void
+    {
+        $this->setUpConfigWithFail2BanRule();
+        $connection = $this->getConnectionPool()->getConnectionForTable('tx_firewall_event');
+        $now = time();
+        $connection->insert('tx_firewall_event', [
+            'event_type' => 'blocklist_matched',
+            'rule' => 'many-meta',
+            'request_path' => '/.env',
+            'request_method' => 'GET',
+            'meta' => '{"alpha":"1","beta":"2","gamma":"3","delta":"4"}',
+            'created_at' => $now,
+        ]);
+        $connection->insert('tx_firewall_event', [
+            'event_type' => 'blocklist_matched',
+            'rule' => 'few-meta',
+            'request_path' => '/.git/config',
+            'request_method' => 'GET',
+            'meta' => '{"alpha":"1","beta":"2"}',
+            'created_at' => $now - 1,
+        ]);
+
+        $body = (string)$this->dispatchModuleRequest('events')->getBody();
+
+        self::assertStringContainsString('many-meta', $body);
+        self::assertStringContainsString('few-meta', $body);
+        self::assertStringContainsString('4 details', $body);
+        self::assertStringContainsString('gamma: 3', $body);
+        self::assertSame(1, substr_count($body, '<details>'));
     }
 
     #[Test]
@@ -425,26 +813,36 @@ final class FirewallControllerTest extends FunctionalTestCase
     }
 
     /**
+     * A null action dispatches the plain module entry point, like opening
+     * the module from the module menu.
+     *
      * @param array<string, mixed> $arguments
      */
-    private function dispatchModuleRequest(string $action, array $arguments = [], string $method = 'GET'): ResponseInterface
+    private function dispatchModuleRequest(?string $action, array $arguments = [], string $method = 'GET'): ResponseInterface
     {
         $module = $this->get(ModuleProvider::class)->getModule('system_firewall', $this->backendUserAuthentication);
         self::assertNotNull($module, 'The system_firewall module must be registered and accessible.');
         // Extbase backend modules read their arguments without a plugin namespace.
-        $parameters = array_merge(['action' => $action], $arguments);
+        $parameters = $action === null ? $arguments : array_merge(['action' => $action], $arguments);
 
-        $route = new Route('/module/system/firewall', [
+        $routeOptions = [
             'module' => $module,
             'moduleName' => 'system_firewall',
             'packageName' => 'flowd/typo3-firewall',
             '_identifier' => 'system_firewall',
-            'action' => $action,
-        ]);
+        ];
+        if ($action !== null) {
+            $routeOptions['action'] = $action;
+        }
+
+        $route = new Route('/module/system/firewall', $routeOptions);
+        // Mirrors the backend module router: module data comes from the user's uc.
+        $storedModuleData = $this->backendUserAuthentication->getModuleData('system_firewall');
         $serverRequest = (new ServerRequest('https://typo3-testing.local/typo3/module/system/firewall', $method))
             ->withAttribute('applicationType', SystemEnvironmentBuilder::REQUESTTYPE_BE)
             ->withAttribute('module', $module)
-            ->withAttribute('route', $route);
+            ->withAttribute('route', $route)
+            ->withAttribute('moduleData', ModuleData::createFromModule($module, is_array($storedModuleData) ? $storedModuleData : []));
 
         if ($method === 'POST') {
             $serverRequest = $serverRequest->withParsedBody($parameters);
@@ -497,5 +895,10 @@ final class FirewallControllerTest extends FunctionalTestCase
     private function patternsFilePath(): string
     {
         return $this->get(PatternStorageSettings::class)->getPatternsFilePath();
+    }
+
+    private function keyHash(string $key): string
+    {
+        return (new KeyHasher())->hash($key);
     }
 }

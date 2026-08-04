@@ -31,6 +31,14 @@ final class FileArrayPatternBackend implements PatternBackendInterface
         $this->now = $now ?? time();
     }
 
+    /**
+     * Build a backend for a pattern file, wiring its writer from the same path.
+     */
+    public static function forFile(string $filePath, ?LoggerInterface $logger = null): self
+    {
+        return new self($filePath, new FileArrayWriter($filePath, $logger), $logger);
+    }
+
     public function consume(): PatternSnapshot
     {
         $this->fileArrayWriter->ensureDirectory();

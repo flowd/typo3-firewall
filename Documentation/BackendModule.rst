@@ -18,6 +18,11 @@ dropdown in the module's doc-header:
 Patterns
 ========
 
+..  figure:: /Images/backend-module-patterns.png
+    :alt: Screenshot of the Patterns view with the pattern list and edit form
+
+    The Patterns view: the active pattern list next to the add and edit form.
+
 This view manages the static block patterns. The extension always adds them
 to the firewall as the blocklist rule ``typo3-blocklist``, so they take
 effect even when no configuration file exists (see :doc:`Configuration`).
@@ -66,11 +71,11 @@ A pattern's kind decides what part of the request it compares against.
 
 ``path_prefix``
     Blocks requests whose path starts with this value, for example
-    ``/wp-admin``.
+    ``/.git/``.
 
 ``path_regex``
     Blocks requests whose path matches this regular expression, for example
-    ``#^/(wp-admin|xmlrpc\.php)#``.
+    ``#^/(\.git|\.env)#``.
 
 ``header_exact``
     Blocks requests where a header has exactly this value. Put the header
@@ -109,6 +114,11 @@ patterns file and fix or remove them.
 Blocked keys
 ============
 
+..  figure:: /Images/backend-module-bans.png
+    :alt: Screenshot of the Blocked keys view grouped by rule
+
+    The Blocked keys view: active bans grouped by the rule that created them.
+
 This view lists the keys that ``fail2ban`` and ``allow2ban`` rules have
 banned automatically. A key is usually a client IP address. The bans are
 read live from the store that your configuration uses (see :doc:`Storage`),
@@ -136,6 +146,11 @@ and the :doc:`Statistics` view.
 Event log
 =========
 
+..  figure:: /Images/backend-module-events.png
+    :alt: Screenshot of the Event log view with type tags, key filter and search
+
+    The Event log view: the type tags, the active key filter, and the search field above the event table.
+
 This view lists the latest recorded firewall events, newest first. Every
 entry shows the time, the event type, the rule, the key (an anonymized IP
 address, or a hash for sensitive keys), the request line with the user
@@ -160,13 +175,34 @@ The diagnostics land in the log independently of the
 ``X-Phirewall-*`` response headers, so you can inspect which rule fired
 without exposing that information to clients.
 
-Filter the list by event type with the dropdown, or search across rule
-names, keys, and request paths. The list is paginated with 50 entries per
-page; the pager keeps the active filter. See :doc:`Statistics` for the
+When a client triggers many events, the list collapses them: each key shows
+only its three newest events, and the third row carries a hint with the
+number of older events. Events without a key, for example blocklist matches,
+are never collapsed. Click a key or the hint to filter the list to that key
+and see every one of its events. The rule is clickable as well and filters
+the list to the events of that rule; both filters combine with the tags and
+the search. Every active filter appears above the list and is removed again
+with the close button next to it.
+
+Filter the list by event type with the type tags: a click toggles a tag,
+and all active tags combine into one filter. The active tags and the search
+term are stored per backend user and restored the next time the module is
+opened; **Reset** clears them. The key filter is a transient drill-down and
+is not stored. The search field matches rule names, keys, and request
+paths. It also compares the search term against
+the stored key hash, so searching for the full IP address (for example
+``203.0.113.10``) finds its events even when the list only displays the
+anonymized form ``203.0.113.0``. The list is paginated with 50 entries per
+page; the pager keeps the active filters. See :doc:`Statistics` for the
 retention settings of the underlying log table.
 
 Statistics
 ==========
+
+..  figure:: /Images/backend-module-statistics.png
+    :alt: Screenshot of the Statistics view with the chart and top lists
+
+    The Statistics view: the blocked-requests chart over time and the top lists below it.
 
 This view answers one question: how much unwanted traffic the firewall
 blocked. It shows the number of attackers blocked today, a chart over time,

@@ -108,10 +108,60 @@ final class EventStatisticsRepositoryTest extends FunctionalTestCase
                 'requestMethod' => 'POST',
                 'requestPath' => '/search',
                 'keyDisplay' => '198.51.100.0/24',
+                'keyHash' => 'hash-d',
+                'keyRowNumber' => 1,
             ],
             $recentEvents[0]
         );
         self::assertSame([], $repository->findRecentBlockingEvents(5000, 2));
+    }
+
+    #[Test]
+    public function recentBlockingEventsCollapseEachKeyToItsNewestEvents(): void
+    {
+        for ($i = 0; $i < 5; ++$i) {
+            $this->insertEvent('throttle_exceeded', 'flood-rule-' . $i, 'hash-flood', 1000 + $i);
+        }
+
+        $this->insertEvent('blocklist_matched', 'other-rule', 'hash-other', 2000);
+
+        $repository = $this->get(EventStatisticsRepository::class);
+        $recentEvents = $repository->findRecentBlockingEvents(0, 20);
+
+        self::assertSame(
+            ['other-rule', 'flood-rule-4', 'flood-rule-3', 'flood-rule-2'],
+            array_column($recentEvents, 'rule')
+        );
+        self::assertSame([1, 1, 2, 3], array_column($recentEvents, 'keyRowNumber'));
+    }
+
+    #[Test]
+    public function recentBlockingEventsWithoutAKeyAreNotCollapsed(): void
+    {
+        for ($i = 0; $i < 5; ++$i) {
+            $this->insertEvent('blocklist_matched', 'probe-rule-' . $i, '', 1000 + $i);
+        }
+
+        $repository = $this->get(EventStatisticsRepository::class);
+
+        self::assertCount(5, $repository->findRecentBlockingEvents(0, 20));
+    }
+
+    #[Test]
+    public function blockingEventsPerKeyCountOnlyTheRequestedKeysInTheWindow(): void
+    {
+        for ($i = 0; $i < 5; ++$i) {
+            $this->insertEvent('throttle_exceeded', 'flood-rule', 'hash-flood', 1000 + $i);
+        }
+
+        $this->insertEvent('throttle_exceeded', 'flood-rule', 'hash-flood', 10);
+        $this->insertEvent('safelist_matched', 'office-ips', 'hash-flood', 1500);
+        $this->insertEvent('throttle_exceeded', 'other-rule', 'hash-other', 1500);
+
+        $repository = $this->get(EventStatisticsRepository::class);
+
+        self::assertSame(['hash-flood' => 5], $repository->countBlockingEventsPerKeySince(1000, ['hash-flood']));
+        self::assertSame([], $repository->countBlockingEventsPerKeySince(1000, []));
     }
 
     private function insertEvent(string $eventType, string $rule, string $keyHash, int $createdAt, string $requestPath = '/', string $requestMethod = 'GET', string $keyDisplay = ''): void

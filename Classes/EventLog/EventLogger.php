@@ -21,17 +21,23 @@ final class EventLogger
     public const string TABLE_NAME = 'tx_firewall_event';
 
     /** Parameter names containing one of these markers are masked in the log. */
-    private const array SENSITIVE_PARAMETER_MARKERS = ['pass', 'pwd', 'secret', 'token', 'otp', 'userident', 'credential'];
+    private const array SENSITIVE_PARAMETER_MARKERS = ['pass', 'pwd', 'secret', 'token', 'otp', 'userident', 'credential', 'apikey', 'api_key', 'api-key', 'auth', 'jwt', 'bearer', 'session', 'csrf', 'signature'];
 
     private const int MAX_PARAMETERS_PER_LEVEL = 20;
 
     private const int MAX_PARAMETER_VALUE_LENGTH = 256;
 
+    private const int MAX_PARAMETER_NAME_LENGTH = 64;
+
     private const int MAX_PARAMETER_DEPTH = 2;
+
+    /** Keeps the encoded meta below the 64 KB TEXT column so the insert never fails on it. */
+    private const int MAX_META_BYTES = 60000;
 
     public function __construct(
         private readonly ConnectionPool $connectionPool,
         private readonly EventLogSettings $eventLogSettings,
+        private readonly KeyHasher $keyHasher,
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
@@ -58,13 +64,13 @@ final class EventLogger
                 'event_type' => $firewallEventType->value,
                 'rule' => mb_substr($rule, 0, 255),
                 'ban_type' => mb_substr($banType, 0, 16),
-                'key_hash' => $key === '' ? '' : hash('sha256', $key),
+                'key_hash' => $key === '' ? '' : $this->keyHasher->hash($key),
                 'key_display' => $this->buildKeyDisplay($key),
                 'request_host' => mb_substr($serverRequest->getUri()->getHost(), 0, 255),
                 'request_path' => mb_substr($this->buildRequestTarget($serverRequest), 0, 2048),
                 'request_method' => mb_substr($serverRequest->getMethod(), 0, 10),
                 'user_agent' => mb_substr($serverRequest->getHeaderLine('User-Agent'), 0, 255),
-                'meta' => json_encode(array_filter($meta, static fn(int|string|array|null $value): bool => $value !== null && $value !== []), JSON_THROW_ON_ERROR),
+                'meta' => $this->encodeMeta($meta),
                 'created_at' => time(),
             ]);
         } catch (\Throwable $throwable) {
@@ -73,6 +79,29 @@ final class EventLogger
                 'exception' => $throwable,
             ]);
         }
+    }
+
+    /**
+     * Encode the meta array, replacing it with a marker entry when the
+     * result would not fit the meta column; an oversized meta must never
+     * make the insert fail, because that would drop the audit record.
+     *
+     * @param array<string, int|string|array<string, mixed>|null> $meta
+     */
+    private function encodeMeta(array $meta): string
+    {
+        $encodedMeta = json_encode(
+            array_filter($meta, static fn(int|string|array|null $value): bool => $value !== null && $value !== []),
+            JSON_THROW_ON_ERROR
+        );
+        if (strlen($encodedMeta) > self::MAX_META_BYTES) {
+            return json_encode(
+                ['_truncated' => sprintf('meta of %d bytes exceeded the %d byte limit', strlen($encodedMeta), self::MAX_META_BYTES)],
+                JSON_THROW_ON_ERROR
+            );
+        }
+
+        return $encodedMeta;
     }
 
     /**
@@ -112,7 +141,7 @@ final class EventLogger
     {
         $sanitized = [];
         foreach (array_slice($parameters, 0, self::MAX_PARAMETERS_PER_LEVEL, true) as $name => $value) {
-            $name = (string)$name;
+            $name = mb_substr((string)$name, 0, self::MAX_PARAMETER_NAME_LENGTH);
             $sanitized[$name] = $this->isSensitiveParameterName($name) ? '***' : $this->sanitizeParameterValue($value, $maskValues, $depth);
         }
 

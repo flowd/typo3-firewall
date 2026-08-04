@@ -33,8 +33,16 @@ types are:
 ``fail2ban_banned``
     A fail2ban rule banned a client after repeated abuse.
 
+``fail2ban_blocked``
+    A fail2ban rule blocked a request from a client that is already banned.
+    High volume, so off by default.
+
 ``allow2ban_banned``
     An allow2ban rule banned a client for too many requests.
+
+``allow2ban_blocked``
+    An allow2ban rule blocked a request from a client that is already banned.
+    High volume, so off by default.
 
 ``safelist_matched``
     A safelist rule let a request through without further checks.
@@ -47,13 +55,15 @@ types are:
     unreachable.
 
 The ``blocklist_matched``, ``throttle_exceeded``, ``fail2ban_matched``,
-``fail2ban_banned``, and ``allow2ban_banned`` types count as a blocked
-attacker: each one rejected a request. They feed the numbers, the chart, and
-the top lists in the statistics view. The ``firewall_error`` type is recorded
-but not counted, because an internal error makes the firewall fail open by
-default, so the request was not blocked. The ``safelist_matched`` and
-``track_hit`` types are high volume and switched off by default, because they
-fire on normal traffic and would fill the table quickly.
+``fail2ban_banned``, ``fail2ban_blocked``, ``allow2ban_banned``, and
+``allow2ban_blocked`` types count as a blocked attacker: each one rejected a
+request. They feed the numbers, the chart, and the top lists in the statistics
+view. The ``firewall_error`` type is recorded but not counted, because an
+internal error makes the firewall fail open by default, so the request was not
+blocked. Four types are high volume and switched off by default so they do not
+fill the table quickly: ``safelist_matched`` and ``track_hit`` fire on normal
+traffic, and ``fail2ban_blocked`` and ``allow2ban_blocked`` fire on every
+request from an already-banned client.
 
 Settings
 ========
@@ -67,9 +77,9 @@ it under **Admin Tools** > **Settings** >
     statistics view stays empty.
 
 ``eventLogTypes`` (default: ``blocklist_matched``, ``throttle_exceeded``, ``fail2ban_matched``, ``fail2ban_banned``, ``allow2ban_banned``, ``firewall_error``)
-    A comma-separated list of the event types to record. Add
-    ``safelist_matched`` or ``track_hit`` only when you need them, and expect
-    many more rows.
+    A comma-separated list of the event types to record. Add the high-volume
+    types (``fail2ban_blocked``, ``allow2ban_blocked``, ``safelist_matched``,
+    ``track_hit``) only when you need them, and expect many more rows.
 
 ``eventLogRetentionDays`` (default: 30)
     How many days to keep entries. The prune command uses this value.
@@ -91,9 +101,10 @@ Privacy and retention
 
 The event log is built to hold as little personal data as possible.
 
-- The key of a client, usually its IP address, is stored only as a SHA-256
-  hash. The hash lets the view count distinct clients without storing the
-  raw key.
+- The key of a client, usually its IP address, is stored only as a keyed
+  hash (HMAC-SHA-256 with the installation's encryption key). The hash lets
+  the view count distinct clients and find a key by its full value, and the
+  keying prevents reversing the small IPv4 address space by brute force.
 - A readable address is kept in a separate field for the backend view, but
   only for real IP addresses and, with ``eventLogAnonymizeIp`` on, only in
   shortened form. Keys that are not IP addresses are never shown in readable
@@ -124,14 +135,19 @@ it shows:
   total for the selected time range.
 - A time range switch with three options: the last 24 hours, 7 days, or 30
   days. The 24-hour range groups the data by hour, the other two by day.
+  The selected range is stored per backend user and restored the next time
+  the view is opened.
 - A **Blocked requests over time** chart. Each bar is stacked and split by
   event type, so you see at a glance whether blocklists, rate limits, or bans
   caused the traffic. Every type keeps the same color across ranges, and a
   legend below the chart names each color with its count.
-- A **Recent blocked requests** table with the last 20 blocking events in
-  the selected range. Each row shows the time, the event type in the same
-  color as the chart, the rule that fired, the request method and path, and
-  the client. This answers which rule blocked a specific request.
+- A **Recent blocked requests** table with the most recent blocking events in
+  the selected range (up to 20 rows). Each row shows the time, the event type
+  in the same color as the chart, the rule that fired, the request method and
+  path, and the client. This answers which rule blocked a specific request. A
+  client that triggers many events is collapsed to its three newest ones; a
+  hint shows how many more it caused. The client links to the event log
+  filtered to that key, where every one of its events is listed.
 - A **Top rules** list with the five rules that blocked the most requests,
   and a **Top blocked paths** list with the five paths that attackers
   targeted most.

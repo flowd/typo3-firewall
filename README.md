@@ -19,7 +19,7 @@ composer require flowd/typo3-firewall
 ```
 
 ## Quick Start
-Add a file at `config/system/phirewall.php` in your TYPO3 project. This example blocks requests to `/wp_admin` using APCu as the cache backend.
+Add a file at `config/system/phirewall.php` in your TYPO3 project. This example blocks requests probing for `/.env` files using APCu as the cache backend.
 
 ```php
 <?php
@@ -30,8 +30,8 @@ use Psr\EventDispatcher\EventDispatcherInterface;
 return function (EventDispatcherInterface $eventDispatcher): Config {
     $config = new Config(new ApcuCache(), $eventDispatcher);
     $config->blocklists->add(
-        name: 'block-wp-admin',
-        callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp_admin')
+        name: 'block-env-probes',
+        callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/.env')
     );
     return $config;
 };

@@ -114,62 +114,133 @@ final class EventStatisticsRepository
 
     /**
      * The latest blocking events, newest first, with the rule that fired.
+     * Each key contributes at most $eventsPerKey of its newest events;
+     * events without a key are always included. keyRowNumber numbers each
+     * key's events from newest to oldest.
      *
-     * @return list<array{createdAt: int, eventType: string, rule: string, requestMethod: string, requestPath: string, keyDisplay: string}>
+     * The window function requires raw SQL around the inner query builder;
+     * the raw part only interpolates quoted identifiers and integer
+     * constants, every user-supplied value stays a bound parameter of the
+     * inner query.
+     *
+     * @return list<array{createdAt: int, eventType: string, rule: string, requestMethod: string, requestPath: string, keyDisplay: string, keyHash: string, keyRowNumber: int}>
      */
-    public function findRecentBlockingEvents(int $since, int $limit): array
+    public function findRecentBlockingEvents(int $since, int $limit, int $eventsPerKey = 3): array
     {
-        $queryBuilder = $this->createQueryBuilder();
-        $rows = $queryBuilder
-            ->select('created_at', 'event_type', 'rule', 'request_method', 'request_path', 'key_display')
+        $connection = $this->connectionPool->getConnectionForTable(EventLogger::TABLE_NAME);
+        $rankedQueryBuilder = $this->createQueryBuilder();
+        $rankedQueryBuilder
+            ->select('uid', 'created_at', 'event_type', 'rule', 'request_method', 'request_path', 'key_display', 'key_hash')
+            ->addSelectLiteral(sprintf(
+                'ROW_NUMBER() OVER (PARTITION BY %s ORDER BY %s DESC, %s DESC) AS %s',
+                $rankedQueryBuilder->quoteIdentifier('key_hash'),
+                $rankedQueryBuilder->quoteIdentifier('created_at'),
+                $rankedQueryBuilder->quoteIdentifier('uid'),
+                $rankedQueryBuilder->quoteIdentifier('key_row_number'),
+            ))
             ->from(EventLogger::TABLE_NAME)
             ->where(
-                $queryBuilder->expr()->in('event_type', $this->quotedBlockingTypes($queryBuilder)),
-                $queryBuilder->expr()->gte('created_at', $queryBuilder->createNamedParameter($since, Connection::PARAM_INT))
-            )
-            ->orderBy('created_at', 'DESC')
-            ->addOrderBy('uid', 'DESC')
-            ->setMaxResults($limit)
-            ->executeQuery()
+                $rankedQueryBuilder->expr()->in('event_type', $this->quotedBlockingTypes($rankedQueryBuilder)),
+                $rankedQueryBuilder->expr()->gte('created_at', $rankedQueryBuilder->createNamedParameter($since, Connection::PARAM_INT))
+            );
+
+        $sql = sprintf(
+            "SELECT * FROM (%s) %s WHERE (%s <= %d OR %s = '') ORDER BY %s DESC, %s DESC",
+            $rankedQueryBuilder->getSQL(),
+            $connection->quoteIdentifier('ranked_events'),
+            $connection->quoteIdentifier('key_row_number'),
+            $eventsPerKey,
+            $connection->quoteIdentifier('key_hash'),
+            $connection->quoteIdentifier('created_at'),
+            $connection->quoteIdentifier('uid'),
+        );
+        $sql = $connection->getDatabasePlatform()->modifyLimitQuery($sql, $limit);
+
+        $rows = $connection
+            ->executeQuery($sql, $rankedQueryBuilder->getParameters(), $rankedQueryBuilder->getParameterTypes())
             ->fetchAllAssociative();
 
         $recentEvents = [];
         foreach ($rows as $row) {
-            if (!is_numeric($row['created_at'])) {
-                continue;
+            $recentEvent = $this->mapRecentEventRow($row);
+            if ($recentEvent !== null) {
+                $recentEvents[] = $recentEvent;
             }
-
-            if (!is_string($row['event_type'])) {
-                continue;
-            }
-
-            if (!is_string($row['rule'])) {
-                continue;
-            }
-
-            if (!is_string($row['request_method'])) {
-                continue;
-            }
-
-            if (!is_string($row['request_path'])) {
-                continue;
-            }
-
-            if (!is_string($row['key_display'])) {
-                continue;
-            }
-
-            $recentEvents[] = [
-                'createdAt' => (int)$row['created_at'],
-                'eventType' => $row['event_type'],
-                'rule' => $row['rule'],
-                'requestMethod' => $row['request_method'],
-                'requestPath' => $row['request_path'],
-                'keyDisplay' => $row['key_display'],
-            ];
         }
 
         return $recentEvents;
+    }
+
+    /**
+     * Null for rows with unexpected column types.
+     *
+     * @param array<string, mixed> $row
+     * @return array{createdAt: int, eventType: string, rule: string, requestMethod: string, requestPath: string, keyDisplay: string, keyHash: string, keyRowNumber: int}|null
+     */
+    private function mapRecentEventRow(array $row): ?array
+    {
+        if (!is_numeric($row['created_at']) || !is_numeric($row['key_row_number'])) {
+            return null;
+        }
+
+        if (!is_string($row['event_type']) || !is_string($row['rule']) || !is_string($row['request_method'])) {
+            return null;
+        }
+
+        if (!is_string($row['request_path']) || !is_string($row['key_display']) || !is_string($row['key_hash'])) {
+            return null;
+        }
+
+        return [
+            'createdAt' => (int)$row['created_at'],
+            'eventType' => $row['event_type'],
+            'rule' => $row['rule'],
+            'requestMethod' => $row['request_method'],
+            'requestPath' => $row['request_path'],
+            'keyDisplay' => $row['key_display'],
+            'keyHash' => $row['key_hash'],
+            'keyRowNumber' => (int)$row['key_row_number'],
+        ];
+    }
+
+    /**
+     * Blocking event counts per key hash since the given time, restricted to
+     * the given hashes.
+     *
+     * @param list<string> $keyHashes
+     * @return array<string, int>
+     */
+    public function countBlockingEventsPerKeySince(int $since, array $keyHashes): array
+    {
+        if ($keyHashes === []) {
+            return [];
+        }
+
+        $queryBuilder = $this->createQueryBuilder();
+        $rows = $queryBuilder
+            ->select('key_hash')
+            ->addSelectLiteral('COUNT(*) AS ' . $queryBuilder->quoteIdentifier('event_count'))
+            ->from(EventLogger::TABLE_NAME)
+            ->where(
+                $queryBuilder->expr()->in('event_type', $this->quotedBlockingTypes($queryBuilder)),
+                $queryBuilder->expr()->gte('created_at', $queryBuilder->createNamedParameter($since, Connection::PARAM_INT)),
+                $queryBuilder->expr()->in('key_hash', array_map(
+                    static fn(string $keyHash): string => $queryBuilder->createNamedParameter($keyHash),
+                    $keyHashes,
+                )),
+            )
+            ->groupBy('key_hash')
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        $counts = [];
+        foreach ($rows as $row) {
+            if (is_string($row['key_hash']) && is_numeric($row['event_count'])) {
+                $counts[$row['key_hash']] = (int)$row['event_count'];
+            }
+        }
+
+        return $counts;
     }
 
     /**

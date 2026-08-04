@@ -251,11 +251,32 @@
       <trans-unit id="events.empty">
         <source>No events recorded.</source>
       </trans-unit>
-      <trans-unit id="events.filter.type">
-        <source>Event type</source>
+      <trans-unit id="events.filter.types">
+        <source>Event types</source>
       </trans-unit>
-      <trans-unit id="events.filter.allTypes">
-        <source>All types</source>
+      <trans-unit id="events.filter.key">
+        <source>Key filter</source>
+      </trans-unit>
+      <trans-unit id="events.filter.removeKey">
+        <source>Remove the key filter</source>
+      </trans-unit>
+      <trans-unit id="events.filter.rule">
+        <source>Rule filter</source>
+      </trans-unit>
+      <trans-unit id="events.filter.removeRule">
+        <source>Remove the rule filter</source>
+      </trans-unit>
+      <trans-unit id="events.rule.showOnly">
+        <source>Show only events of this rule</source>
+      </trans-unit>
+      <trans-unit id="events.key.showAll">
+        <source>Show all events for this key</source>
+      </trans-unit>
+      <trans-unit id="events.key.more">
+        <source>+%1$s more</source>
+      </trans-unit>
+      <trans-unit id="events.details.summary">
+        <source>%1$s details</source>
       </trans-unit>
       <trans-unit id="events.filter.submit">
         <source>Filter</source>
@@ -267,7 +288,7 @@
         <source>Search</source>
       </trans-unit>
       <trans-unit id="events.search.placeholder">
-        <source>Rule, key or path …</source>
+        <source>Rule, key, full IP or path …</source>
       </trans-unit>
       <trans-unit id="events.table.time">
         <source>Time</source>
@@ -346,6 +367,9 @@
       </trans-unit>
       <trans-unit id="bans.action.unban.confirm">
         <source>Are you sure you want to remove this ban? The key will be allowed again immediately.</source>
+      </trans-unit>
+      <trans-unit id="bans.action.unban.confirmFor">
+        <source>Remove the ban for key %1$s (rule %2$s)? The key will be allowed again immediately.</source>
       </trans-unit>
       <trans-unit id="flash.title.error">
         <source>Error</source>
