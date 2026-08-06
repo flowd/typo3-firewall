@@ -7,11 +7,13 @@ services:
     Flowd\Typo3Firewall\:
         resource: '../Classes/*'
         # Widgets depends on the optional typo3/cms-dashboard package,
-        # Form/Finisher on the optional typo3/cms-form package; both are
-        # registered conditionally in Services.php instead.
+        # Form/Finisher on the optional typo3/cms-form package, Reports on
+        # the optional typo3/cms-reports package; all are registered
+        # conditionally in Services.php instead.
         exclude:
             - '../Classes/Widgets/*'
             - '../Classes/Form/Finisher/*'
+            - '../Classes/Reports/*'
 
     Flowd\Phirewall\Middleware:
         autowire: true

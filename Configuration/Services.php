@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Flowd\Typo3Firewall\Form\Finisher\FloodProtectionFinisher;
+use Flowd\Typo3Firewall\Reports\PcreJitStatusProvider;
 use Flowd\Typo3Firewall\Widgets\Provider\BlockedTodayDataProvider;
 use Flowd\Typo3Firewall\Widgets\Provider\FirewallEventsChartDataProvider;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -11,6 +12,7 @@ use TYPO3\CMS\Dashboard\Widgets\BarChartWidget;
 use TYPO3\CMS\Dashboard\Widgets\NumberWithIconWidget;
 use TYPO3\CMS\Dashboard\Widgets\WidgetInterface;
 use TYPO3\CMS\Form\Domain\Finishers\FinisherInterface;
+use TYPO3\CMS\Reports\StatusProviderInterface;
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 
@@ -30,6 +32,12 @@ return static function (ContainerConfigurator $containerConfigurator, ContainerB
     // framework can instantiate it with dependency injection.
     if (interface_exists(FinisherInterface::class)) {
         $services->set(FloodProtectionFinisher::class);
+    }
+
+    // typo3/cms-reports: EXT:reports' autoconfiguration tags the provider
+    // as reports.status for the System > Status report.
+    if (interface_exists(StatusProviderInterface::class)) {
+        $services->set(PcreJitStatusProvider::class);
     }
 
     // typo3/cms-dashboard: the firewall dashboard widgets.
