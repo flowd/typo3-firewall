@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Flowd\Typo3Firewall\Writer;
 
 use Psr\Log\LoggerInterface;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Handles safe file I/O for pattern array persistence using JSON format.
@@ -49,7 +50,9 @@ final class FileArrayWriter
         try {
             $data = json_decode($content, true, 16, JSON_THROW_ON_ERROR);
         } catch (\JsonException $jsonException) {
-            $this->logger?->warning('Pattern file contains invalid JSON', [
+            // Corruption disables every stored pattern, so it is an error,
+            // not a warning; the module shows an integrity banner as well.
+            $this->logger?->error('Pattern file contains invalid JSON, no stored pattern is applied', [
                 'path' => $this->filePath,
                 'error' => $jsonException->getMessage(),
             ]);
@@ -57,7 +60,7 @@ final class FileArrayWriter
         }
 
         if (!is_array($data)) {
-            $this->logger?->warning('Pattern file does not contain an array', ['path' => $this->filePath]);
+            $this->logger?->error('Pattern file does not contain an array, no stored pattern is applied', ['path' => $this->filePath]);
             return [];
         }
 
@@ -171,10 +174,13 @@ final class FileArrayWriter
             return;
         }
 
-        if (!@mkdir($directory, 0775, true) && !is_dir($directory)) {
+        try {
+            GeneralUtility::mkdir_deep($directory);
+        } catch (\Throwable $throwable) {
             $this->logger?->warning('Cannot create directory for pattern file', [
                 'path' => $this->filePath,
                 'directory' => $directory,
+                'error' => $throwable->getMessage(),
             ]);
         }
     }

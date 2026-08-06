@@ -32,8 +32,8 @@ and returns a configured ``Flowd\Phirewall\Config`` object:
 
         // 2. Add your rules here.
         $config->blocklists->add(
-            name: 'block-wp-admin',
-            callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp-admin')
+            name: 'block-env-probes',
+            callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/.env')
         );
 
         return $config;

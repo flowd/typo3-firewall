@@ -1,0 +1,39 @@
+/**
+ * Minimal styles for the firewall backend module; everything else uses
+ * native backend components. Both classes derive their colors from
+ * currentColor or a custom property, so light and dark themes work.
+ */
+
+/* Quiet monospace chip for keys, rules, and request lines */
+.firewall-chip {
+    display: inline-block;
+    max-width: 100%;
+    padding: 0.1em 0.5em;
+    border-radius: 4px;
+    background: color-mix(in srgb, currentColor 8%, transparent);
+    font-family: var(--typo3-font-family-code, SFMono-Regular, Menlo, Consolas, monospace);
+    font-size: 0.85em;
+    word-break: break-all;
+}
+
+/* Linked chips show the backend link color so they read as clickable */
+a.firewall-chip {
+    color: var(--typo3-link-color, #0078e6);
+    text-decoration: none;
+}
+
+a.firewall-chip:hover,
+a.firewall-chip:focus {
+    background: color-mix(in srgb, currentColor 16%, transparent);
+    text-decoration: underline;
+}
+
+/* Colored dot marking an event type in the chart palette */
+.firewall-dot {
+    display: inline-block;
+    flex: none;
+    width: 0.65em;
+    height: 0.65em;
+    border-radius: 50%;
+    background: var(--firewall-type-color, #6b7280);
+}

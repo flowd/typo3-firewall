@@ -16,6 +16,7 @@ use Flowd\Typo3Firewall\Command\PruneEventLogCommand;
 use Flowd\Typo3Firewall\EventLog\EventLogger;
 use Flowd\Typo3Firewall\EventLog\EventLogSettings;
 use Flowd\Typo3Firewall\EventLog\FirewallEventType;
+use Flowd\Typo3Firewall\EventLog\KeyHasher;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -158,7 +159,7 @@ final class EventLogTest extends FunctionalTestCase
         $rows = $this->fetchAllEventRows();
         self::assertCount(1, $rows);
         self::assertSame('throttle_exceeded', $rows[0]['event_type']);
-        self::assertSame(hash('sha256', '203.0.113.10'), $rows[0]['key_hash']);
+        self::assertSame($this->keyHash('203.0.113.10'), $rows[0]['key_hash']);
         self::assertSame('203.0.113.0', $rows[0]['key_display']);
         self::assertIsString($rows[0]['meta']);
         $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
@@ -174,7 +175,7 @@ final class EventLogTest extends FunctionalTestCase
 
         $rows = $this->fetchAllEventRows();
         self::assertCount(1, $rows);
-        self::assertSame(hash('sha256', 'secret-api-key'), $rows[0]['key_hash']);
+        self::assertSame($this->keyHash('secret-api-key'), $rows[0]['key_hash']);
         self::assertSame('', $rows[0]['key_display']);
         self::assertStringNotContainsString('secret-api-key', json_encode($rows[0], JSON_THROW_ON_ERROR));
     }
@@ -190,7 +191,7 @@ final class EventLogTest extends FunctionalTestCase
         self::assertCount(1, $rows);
         self::assertSame('fail2ban_matched', $rows[0]['event_type']);
         self::assertSame('login-brute-force', $rows[0]['rule']);
-        self::assertSame(hash('sha256', '203.0.113.10'), $rows[0]['key_hash']);
+        self::assertSame($this->keyHash('203.0.113.10'), $rows[0]['key_hash']);
         self::assertSame('203.0.113.0', $rows[0]['key_display']);
         self::assertSame('', $rows[0]['ban_type']);
         self::assertIsString($rows[0]['meta']);
@@ -214,7 +215,7 @@ final class EventLogTest extends FunctionalTestCase
         self::assertCount(1, $rows);
         self::assertSame('fail2ban_blocked', $rows[0]['event_type']);
         self::assertSame('login-brute-force', $rows[0]['rule']);
-        self::assertSame(hash('sha256', '203.0.113.10'), $rows[0]['key_hash']);
+        self::assertSame($this->keyHash('203.0.113.10'), $rows[0]['key_hash']);
         self::assertSame('203.0.113.0', $rows[0]['key_display']);
         self::assertSame('fail2ban', $rows[0]['ban_type']);
     }
@@ -245,6 +246,7 @@ final class EventLogTest extends FunctionalTestCase
         $eventLogger = new EventLogger(
             $this->getConnectionPool(),
             new EventLogSettings($this->get(ExtensionConfiguration::class)),
+            new KeyHasher(),
         );
 
         $eventLogger->log(FirewallEventType::BlocklistMatched, $serverRequest, rule: 'crs', meta: [
@@ -273,6 +275,71 @@ final class EventLogTest extends FunctionalTestCase
         self::assertIsArray($meta);
         self::assertSame(\RuntimeException::class, $meta['exceptionClass']);
         self::assertSame('Redis connection refused', $meta['exceptionMessage']);
+    }
+
+    #[Test]
+    public function firewallErrorEventScrubsCredentialsFromTheMessage(): void
+    {
+        $serverRequest = new ServerRequest('https://example.com/', 'GET');
+
+        $this->dispatch(new FirewallError(new \RuntimeException('Connection to redis://firewall:hunter2@redis:6379 refused'), $serverRequest));
+
+        $rows = $this->fetchAllEventRows();
+        self::assertCount(1, $rows);
+        self::assertIsString($rows[0]['meta']);
+        $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($meta);
+        self::assertSame('Connection to redis://***@redis:6379 refused', $meta['exceptionMessage']);
+        self::assertStringNotContainsString('hunter2', $rows[0]['meta']);
+    }
+
+    #[Test]
+    public function oversizedMetaIsReplacedWithATruncationMarker(): void
+    {
+        $serverRequest = new ServerRequest('https://example.com/probe', 'GET');
+        $eventLogger = new EventLogger(
+            $this->getConnectionPool(),
+            new EventLogSettings($this->get(ExtensionConfiguration::class)),
+            new KeyHasher(),
+        );
+
+        $eventLogger->log(FirewallEventType::BlocklistMatched, $serverRequest, rule: 'oversized', meta: [
+            'blob' => str_repeat('a', 70000),
+        ]);
+
+        $rows = $this->fetchAllEventRows();
+        self::assertCount(1, $rows);
+        self::assertIsString($rows[0]['meta']);
+        $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($meta);
+        self::assertIsString($meta['_truncated']);
+        self::assertStringContainsString('exceeded the 60000 byte limit', $meta['_truncated']);
+        self::assertStringNotContainsString('aaaa', $rows[0]['meta']);
+    }
+
+    #[Test]
+    public function credentialLikeParameterNamesAreMaskedAndLongNamesTruncated(): void
+    {
+        $longName = str_repeat('n', 80);
+        $serverRequest = (new ServerRequest('https://example.com/login', 'POST'))
+            ->withParsedBody([
+                'x_apikey' => 'value-123',
+                'authorization' => 'Bearer abc',
+                $longName => 'value',
+            ]);
+
+        $this->dispatch(new Fail2BanMatched('login-brute-force', '203.0.113.10', 5, 300, 3, $serverRequest, MatchResult::matched('custom')));
+
+        $rows = $this->fetchAllEventRows();
+        self::assertCount(1, $rows);
+        self::assertIsString($rows[0]['meta']);
+        $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($meta);
+        self::assertIsArray($meta['post']);
+        self::assertSame('***', $meta['post']['x_apikey']);
+        self::assertSame('***', $meta['post']['authorization']);
+        self::assertArrayHasKey(str_repeat('n', 64), $meta['post']);
+        self::assertArrayNotHasKey($longName, $meta['post']);
     }
 
     #[Test]
@@ -322,6 +389,11 @@ final class EventLogTest extends FunctionalTestCase
     private function dispatch(object $event): void
     {
         $this->get(EventDispatcherInterface::class)->dispatch($event);
+    }
+
+    private function keyHash(string $key): string
+    {
+        return (new KeyHasher())->hash($key);
     }
 
     /**

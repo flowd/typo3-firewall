@@ -39,13 +39,13 @@
                             <table class="table table-striped table-hover mb-0">
                                 <thead class="table-light">
                                 <tr>
-                                    <th style="width: 15%"><f:translate key="field.kind" /></th>
-                                    <th style="width: 30%"><f:translate key="field.value" /></th>
-                                    <th style="width: 10%"><f:translate key="field.target" /></th>
-                                    <th style="width: 10%"><f:translate key="field.expiresAt" /></th>
-                                    <th style="width: 10%"><f:translate key="field.addedAt" /></th>
-                                    <th style="width: 10%"><f:translate key="field.lastModifiedAt" /></th>
-                                    <th style="width: 15%" class="text-end"><f:translate key="field.actions" /></th>
+                                    <th scope="col"><f:translate key="field.kind" /></th>
+                                    <th scope="col"><f:translate key="field.value" /></th>
+                                    <th scope="col"><f:translate key="field.target" /></th>
+                                    <th scope="col"><f:translate key="field.expiresAt" /></th>
+                                    <th scope="col"><f:translate key="field.addedAt" /></th>
+                                    <th scope="col"><f:translate key="field.lastModifiedAt" /></th>
+                                    <th class="text-end" scope="col"><f:translate key="field.actions" /></th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -66,11 +66,11 @@
                                             </f:switch>
                                         </td>
                                         <td>
-                                            <code class="text-break">{row.value}</code>
+                                            <span class="firewall-chip">{row.value}</span>
                                         </td>
                                         <td>
                                             <f:if condition="{row.target}">
-                                                <f:then><code>{row.target}</code></f:then>
+                                                <f:then><span class="firewall-chip">{row.target}</span></f:then>
                                                 <f:else><span class="text-muted">-</span></f:else>
                                             </f:if>
                                         </td>
@@ -81,7 +81,7 @@
                                                         <f:if condition="{isExpired}">
                                                             <f:then><core:icon identifier="actions-clock" size="small" /> </f:then>
                                                         </f:if>
-                                                        {row.expiresAt -> f:format.date(format:'d.m.Y H:i')}
+                                                        {row.expiresAt -> f:format.date(format: '{dateFormat} {timeFormat}')}
                                                     </small>
                                                 </f:then>
                                                 <f:else><span class="text-muted">-</span></f:else>
@@ -91,7 +91,7 @@
                                             <f:if condition="{row.addedAt}">
                                                 <f:then>
                                                     <small class="text-muted">
-                                                        {row.addedAt -> f:format.date(format:'d.m.Y H:i')}
+                                                        {row.addedAt -> f:format.date(format: '{dateFormat} {timeFormat}')}
                                                     </small>
                                                 </f:then>
                                                 <f:else><span class="text-muted">-</span></f:else>
@@ -101,7 +101,7 @@
                                             <f:if condition="{row.lastModifiedAt}">
                                                 <f:then>
                                                     <small class="text-muted">
-                                                        {row.lastModifiedAt -> f:format.date(format:'d.m.Y H:i')}
+                                                        {row.lastModifiedAt -> f:format.date(format: '{dateFormat} {timeFormat}')}
                                                     </small>
                                                 </f:then>
                                                 <f:else><span class="text-muted">-</span></f:else>
@@ -111,37 +111,19 @@
                                             <f:link.action action="overview" arguments="{editId: row.id}" class="btn btn-sm btn-outline-primary me-1" title="{f:translate(key: 'action.edit')}">
                                                 <core:icon identifier="actions-open" size="small" />
                                             </f:link.action>
-                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                            <f:form action="delete" method="post" id="delete-form-{row.id}" class="hidden">
+                                                <f:form.hidden name="id" value="{row.id}" />
+                                            </f:form>
+                                            <button type="button" class="btn btn-sm btn-outline-danger t3js-modal-trigger"
                                                 title="{f:translate(key: 'action.delete')}"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#deleteModal-{row.id}">
+                                                data-target-form="delete-form-{row.id}"
+                                                data-severity="warning"
+                                                data-title="{f:translate(key: 'action.delete.confirmTitle')}"
+                                                data-bs-content="{f:translate(key: 'action.delete.confirm')}"
+                                                data-button-ok-text="{f:translate(key: 'action.delete')}"
+                                                data-button-close-text="{f:translate(key: 'action.cancel')}">
                                                 <core:icon identifier="actions-delete" size="small" />
                                             </button>
-
-                                            <div class="modal fade" id="deleteModal-{row.id}" tabindex="-1" aria-hidden="true">
-                                                <div class="modal-dialog">
-                                                    <div class="modal-content">
-                                                        <div class="modal-header">
-                                                            <h5 class="modal-title"><f:translate key="action.delete.confirmTitle" /></h5>
-                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                        </div>
-                                                        <div class="modal-body">
-                                                            <f:translate key="action.delete.confirm" />
-                                                        </div>
-                                                        <div class="modal-footer">
-                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                                                <f:translate key="action.cancel" />
-                                                            </button>
-                                                            <f:form action="delete" method="post" class="d-inline m-0">
-                                                                <f:form.hidden name="id" value="{row.id}" />
-                                                                <f:form.button class="btn btn-danger" type="submit">
-                                                                    <f:translate key="action.delete" />
-                                                                </f:form.button>
-                                                            </f:form>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
                                         </td>
                                     </tr>
                                 </f:for>
@@ -289,9 +271,9 @@
                     <table class="table table-sm table-bordered mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th style="width: 25%"><f:translate key="examples.table.header.kind" /></th>
-                                <th style="width: 30%"><f:translate key="examples.table.header.value" /></th>
-                                <th><f:translate key="examples.table.header.description" /></th>
+                                <th scope="col"><f:translate key="examples.table.header.kind" /></th>
+                                <th scope="col"><f:translate key="examples.table.header.value" /></th>
+                                <th scope="col"><f:translate key="examples.table.header.description" /></th>
                             </tr>
                         </thead>
                         <tbody>

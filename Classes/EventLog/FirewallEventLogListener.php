@@ -114,8 +114,17 @@ final class FirewallEventLogListener
     {
         $this->eventLogger->log(FirewallEventType::FirewallError, $firewallError->serverRequest, meta: [
             'exceptionClass' => $firewallError->exception::class,
-            'exceptionMessage' => mb_substr($firewallError->exception->getMessage(), 0, 500),
+            'exceptionMessage' => $this->scrubCredentials(mb_substr($firewallError->exception->getMessage(), 0, 500)),
         ]);
+    }
+
+    /**
+     * Store backend errors may quote a connection DSN; strip the userinfo
+     * part of any URL so credentials never reach the event log.
+     */
+    private function scrubCredentials(string $message): string
+    {
+        return (string)preg_replace('#://[^/@\s]+@#', '://***@', $message);
     }
 
     /**

@@ -38,8 +38,8 @@ requests for paths that only scanners ask for:
         $config = new Config($cache, $eventDispatcher);
 
         $config->blocklists->add(
-            name: 'block-wp-admin',
-            callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/wp-admin')
+            name: 'block-env-probes',
+            callback: fn($request) => str_starts_with(strtolower($request->getUri()->getPath()), '/.env')
         );
 
         return $config;

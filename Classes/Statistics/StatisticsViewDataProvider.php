@@ -15,6 +15,8 @@ final class StatisticsViewDataProvider
 
     private const int RECENT_EVENTS_LIMIT = 20;
 
+    private const int EVENTS_PER_KEY = 3;
+
     /**
      * @var array<string, array{window: int, bucket: int, labelFormat: string}>
      */
@@ -74,14 +76,32 @@ final class StatisticsViewDataProvider
 
     /**
      * The latest blocking events with the color of their type in the chart.
+     * Each key is collapsed to its newest three events; the last visible row
+     * of a collapsed key carries the number of hidden events in moreCount.
      *
-     * @return list<array{createdAt: int, eventType: string, rule: string, requestMethod: string, requestPath: string, keyDisplay: string, color: ?string}>
+     * @return list<array{createdAt: int, eventType: string, rule: string, requestMethod: string, requestPath: string, keyDisplay: string, keyHash: string, keyRowNumber: int, color: ?string, moreCount: int}>
      */
     private function buildRecentEvents(int $since): array
     {
+        $recentEvents = $this->eventStatisticsRepository->findRecentBlockingEvents($since, self::RECENT_EVENTS_LIMIT, self::EVENTS_PER_KEY);
+
+        $cappedKeyHashes = [];
+        foreach ($recentEvents as $recentEvent) {
+            if ($recentEvent['keyRowNumber'] === self::EVENTS_PER_KEY && $recentEvent['keyHash'] !== '') {
+                $cappedKeyHashes[] = $recentEvent['keyHash'];
+            }
+        }
+
+        $totalCounts = $this->eventStatisticsRepository->countBlockingEventsPerKeySince($since, $cappedKeyHashes);
+
         return array_map(
-            fn(array $recentEvent): array => $recentEvent + ['color' => $this->barChartBuilder->colorForType($recentEvent['eventType'])],
-            $this->eventStatisticsRepository->findRecentBlockingEvents($since, self::RECENT_EVENTS_LIMIT)
+            fn(array $recentEvent): array => $recentEvent + [
+                'color' => $this->barChartBuilder->colorForType($recentEvent['eventType']),
+                'moreCount' => $recentEvent['keyRowNumber'] === self::EVENTS_PER_KEY
+                    ? max(0, ($totalCounts[$recentEvent['keyHash']] ?? 0) - self::EVENTS_PER_KEY)
+                    : 0,
+            ],
+            $recentEvents
         );
     }
 }

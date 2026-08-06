@@ -7,6 +7,7 @@ namespace Flowd\Typo3Firewall\Pattern;
 use Flowd\Typo3Firewall\ConfigFactory;
 use Psr\Log\LoggerInterface;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
+use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -53,7 +54,29 @@ final class PatternStorageSettings
             return $this->getDefaultDirectory();
         }
 
+        if ($this->isInsidePublicWebRoot($configured)) {
+            $this->logger?->warning(
+                'The configured firewall patterns directory lies inside the public web root, where the pattern file would be downloadable; using the default directory instead.',
+                ['configuredDirectory' => $configured]
+            );
+            return $this->getDefaultDirectory();
+        }
+
         return $configured;
+    }
+
+    /**
+     * Only meaningful in composer mode; in legacy mode the whole project is
+     * the web root and the check would reject every directory.
+     */
+    private function isInsidePublicWebRoot(string $directory): bool
+    {
+        $publicPath = Environment::getPublicPath();
+        if ($publicPath === Environment::getProjectPath()) {
+            return false;
+        }
+
+        return str_starts_with($directory . '/', $publicPath . '/');
     }
 
     private function getDefaultDirectory(): string

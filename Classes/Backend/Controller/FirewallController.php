@@ -6,25 +6,31 @@ namespace Flowd\Typo3Firewall\Backend\Controller;
 
 use Flowd\Phirewall\BanType;
 use Flowd\Phirewall\Config;
-use Flowd\Phirewall\Pattern\PatternEntry;
 use Flowd\Phirewall\Pattern\PatternKind;
 use Flowd\Phirewall\Store\InMemoryCache;
+use Flowd\Typo3Firewall\Backend\FirewallModuleState;
+use Flowd\Typo3Firewall\Backend\FirewallModuleTemplateFactory;
 use Flowd\Typo3Firewall\Dto\PatternEntryDto;
 use Flowd\Typo3Firewall\EventLog\EventLogViewDataProvider;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
 use Flowd\Typo3Firewall\Pattern\PatternStorageSettings;
 use Flowd\Typo3Firewall\Pattern\PatternValidationException;
 use Flowd\Typo3Firewall\Statistics\StatisticsViewDataProvider;
-use Flowd\Typo3Firewall\Writer\FileArrayWriter;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use TYPO3\CMS\Backend\Attribute\AsController;
-use TYPO3\CMS\Backend\Template\ModuleTemplate;
-use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Type\ContextualFeedbackSeverity;
+use TYPO3\CMS\Extbase\Http\ForwardResponse;
 use TYPO3\CMS\Extbase\Mvc\Controller\ActionController;
+use TYPO3\CMS\Extbase\Mvc\RequestInterface;
 
+/**
+ * One public method per backend view and mutation, so the public method
+ * count grows with the module's actions, not with complexity.
+ *
+ * @SuppressWarnings("PHPMD.TooManyPublicMethods")
+ */
 #[AsController]
 class FirewallController extends ActionController
 {
@@ -46,7 +52,8 @@ class FirewallController extends ActionController
     private ?FileArrayPatternBackend $fileArrayPatternBackend = null;
 
     public function __construct(
-        private readonly ModuleTemplateFactory $moduleTemplateFactory,
+        private readonly FirewallModuleTemplateFactory $firewallModuleTemplateFactory,
+        private readonly FirewallModuleState $firewallModuleState,
         private readonly Config $config,
         private readonly StatisticsViewDataProvider $statisticsViewDataProvider,
         private readonly EventLogViewDataProvider $eventLogViewDataProvider,
@@ -54,10 +61,27 @@ class FirewallController extends ActionController
         private readonly ?LoggerInterface $logger = null,
     ) {}
 
+    /**
+     * Remember an explicitly selected view as the module's default view.
+     */
+    public function processRequest(RequestInterface $request): ResponseInterface
+    {
+        $this->firewallModuleState->rememberSelectedView($request);
+
+        return parent::processRequest($request);
+    }
+
+    /**
+     * Module entry point: opens the view the user worked with last.
+     */
+    public function indexAction(): ForwardResponse
+    {
+        return new ForwardResponse($this->firewallModuleState->defaultView($this->request));
+    }
+
     public function overviewAction(?string $editId = null): ResponseInterface
     {
-        $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
-        $this->addModuleMenu($moduleTemplate, 'overview');
+        $moduleTemplate = $this->firewallModuleTemplateFactory->create($this->request, 'overview');
         $fileArrayPatternBackend = $this->getBackend();
 
         $editPattern = null;
@@ -95,15 +119,7 @@ class FirewallController extends ActionController
     public function updateAction(string $id, PatternEntryDto $patternEntryDto): ResponseInterface
     {
         try {
-            $entry = $patternEntryDto->toPatternEntry();
-            $this->getBackend()->append(new PatternEntry(
-                kind: $entry->kind,
-                value: $entry->value,
-                target: $entry->target,
-                expiresAt: $entry->expiresAt,
-                metadata: ['id' => $id],
-            ));
-
+            $this->getBackend()->append($patternEntryDto->toPatternEntry($id));
             $this->addFlashMessage($this->translateLabel('flash.pattern.updated'));
         } catch (\InvalidArgumentException $invalidArgumentException) {
             $this->addFlashMessage($this->translateValidationError($invalidArgumentException), $this->translateLabel('flash.title.validationError'), ContextualFeedbackSeverity::ERROR);
@@ -130,8 +146,7 @@ class FirewallController extends ActionController
     public function bansAction(string $search = ''): ResponseInterface
     {
         $search = trim($search);
-        $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
-        $this->addModuleMenu($moduleTemplate, 'bans');
+        $moduleTemplate = $this->firewallModuleTemplateFactory->create($this->request, 'bans');
 
         $banGroups = [];
         $totalBans = 0;
@@ -159,20 +174,23 @@ class FirewallController extends ActionController
         return $moduleTemplate->renderResponse('Backend/Firewall/Bans');
     }
 
-    public function eventsAction(string $type = '', string $search = '', int $page = 1): ResponseInterface
+    /**
+     * @param array<mixed> $types
+     */
+    public function eventsAction(array $types = [], string $search = '', string $key = '', string $rule = '', int $page = 1, string $operation = ''): ResponseInterface
     {
-        $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
-        $this->addModuleMenu($moduleTemplate, 'events');
-        $moduleTemplate->assignMultiple($this->eventLogViewDataProvider->getViewData($type, trim($search), $page));
+        $rule = mb_substr(trim($rule), 0, 255);
+        [$types, $search] = $this->firewallModuleState->resolveEventFilters($this->request, $types, trim($search), $key, $rule, $operation);
+        $moduleTemplate = $this->firewallModuleTemplateFactory->create($this->request, 'events');
+        $moduleTemplate->assignMultiple($this->eventLogViewDataProvider->getViewData($types, $search, $key, $rule, $page));
 
         return $moduleTemplate->renderResponse('Backend/Firewall/Events');
     }
 
     public function statisticsAction(string $range = ''): ResponseInterface
     {
-        $moduleTemplate = $this->moduleTemplateFactory->create($this->request);
-        $this->addModuleMenu($moduleTemplate, 'statistics');
-        $moduleTemplate->assignMultiple($this->statisticsViewDataProvider->getViewData($range));
+        $moduleTemplate = $this->firewallModuleTemplateFactory->create($this->request, 'statistics');
+        $moduleTemplate->assignMultiple($this->statisticsViewDataProvider->getViewData($this->firewallModuleState->resolveStatisticsRange($this->request, $range)));
 
         return $moduleTemplate->renderResponse('Backend/Firewall/Statistics');
     }
@@ -226,32 +244,6 @@ class FirewallController extends ActionController
         }
 
         return $this->redirect('bans');
-    }
-
-    private function addModuleMenu(ModuleTemplate $moduleTemplate, string $currentAction): void
-    {
-        $menuRegistry = $moduleTemplate->getDocHeaderComponent()->getMenuRegistry();
-        $menu = $menuRegistry->makeMenu();
-        $menu->setIdentifier('firewallModuleMenu');
-        $menu->setLabel($this->translateLabel('nav.label'));
-
-        $items = [
-            'overview' => 'nav.patterns',
-            'bans' => 'nav.bans',
-            'events' => 'nav.events',
-            'statistics' => 'nav.statistics',
-        ];
-
-        foreach ($items as $action => $labelKey) {
-            $menu->addMenuItem(
-                $menu->makeMenuItem()
-                    ->setTitle($this->translateLabel($labelKey))
-                    ->setHref($this->uriBuilder->reset()->uriFor($action))
-                    ->setActive($currentAction === $action),
-            );
-        }
-
-        $menuRegistry->addMenu($menu);
     }
 
     private function translateLabel(string $key): string
@@ -325,11 +317,9 @@ class FirewallController extends ActionController
             return $this->fileArrayPatternBackend;
         }
 
-        $path = $this->patternStorageSettings->getPatternsFilePath();
-        return $this->fileArrayPatternBackend = new FileArrayPatternBackend(
-            $path,
-            new FileArrayWriter($path, $this->logger),
-            $this->logger
+        return $this->fileArrayPatternBackend = FileArrayPatternBackend::forFile(
+            $this->patternStorageSettings->getPatternsFilePath(),
+            $this->logger,
         );
     }
 
