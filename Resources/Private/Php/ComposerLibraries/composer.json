@@ -3,13 +3,13 @@
 	"description": "This file contains the libraries required  by EXT:firewall. Note: in replace defined libs are provided by TYPO3 source.",
 	"config": {
 		"platform": {
-			"php": "8.2"
+			"php": "8.3"
 		},
 		"lock": false
 	},
 	"require": {
-		"php": "^8.2",
-		"flowd/phirewall": "^0.9.0",
+		"php": "^8.3",
+		"flowd/phirewall": "^0.10.0",
 		"flowd/phirewall-preset-owasp-crs": "^0.4",
 		"flowd/phirewall-preset-bots": "^0.1",
 		"flowd/phirewall-preset-bad-ips": "^0.2"
