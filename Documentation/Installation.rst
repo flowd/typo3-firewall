@@ -8,10 +8,10 @@ Requirements
 ============
 
 ===================  ===============================
-Extension version    0.4
+Extension version    0.7
 TYPO3                12.4 LTS, 13.4 LTS, 14
 PHP                  8.3, 8.4, 8.5
-Firewall engine      flowd/phirewall 0.8
+Firewall engine      flowd/phirewall 0.10
 ===================  ===============================
 
 The firewall works with every database supported by TYPO3. Rate limiting and
