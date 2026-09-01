@@ -162,6 +162,23 @@ final class EventLogRepository
     }
 
     /**
+     * The distinct event type values present in the table.
+     *
+     * @return list<string>
+     */
+    public function findDistinctEventTypes(): array
+    {
+        $eventTypes = $this->connectionPool->getQueryBuilderForTable(EventLogger::TABLE_NAME)
+            ->select('event_type')
+            ->from(EventLogger::TABLE_NAME)
+            ->groupBy('event_type')
+            ->executeQuery()
+            ->fetchFirstColumn();
+
+        return array_values(array_filter($eventTypes, is_string(...)));
+    }
+
+    /**
      * The readable key form of the newest event with the given key hash;
      * empty for hash-only keys and unknown hashes.
      */

@@ -22,9 +22,32 @@ enum FirewallEventType: string
 
     case SafelistMatched = 'safelist_matched';
 
+    case TrackMatched = 'track_matched';
+
+    case TrackThresholdReached = 'track_threshold_reached';
+
+    /**
+     * @deprecated Split into {@see self::TrackMatched} (every hit) and
+     *             {@see self::TrackThresholdReached} (limit set and count >= limit). Never
+     *             written anymore; kept so existing rows stay readable and filterable. A
+     *             configured track_hit enables both successors via {@see enables()}.
+     */
     case TrackHit = 'track_hit';
 
     case FirewallError = 'firewall_error';
+
+    /**
+     * The types a configured value enables: a deprecated value expands to its
+     * successors, every current value to itself.
+     *
+     * @return list<self>
+     */
+    public function enables(): array
+    {
+        return $this === self::TrackHit
+            ? [self::TrackMatched, self::TrackThresholdReached]
+            : [$this];
+    }
 
     /**
      * Event types that represent a blocked attacker, used for statistics.

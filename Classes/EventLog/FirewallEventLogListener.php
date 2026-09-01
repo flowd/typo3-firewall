@@ -102,7 +102,11 @@ final class FirewallEventLogListener
 
     public function onTrackHit(TrackHit $trackHit): void
     {
-        $this->eventLogger->log(FirewallEventType::TrackHit, $trackHit->serverRequest, rule: $trackHit->rule, key: $trackHit->key, meta: [
+        $firewallEventType = $trackHit->thresholdReached
+            ? FirewallEventType::TrackThresholdReached
+            : FirewallEventType::TrackMatched;
+
+        $this->eventLogger->log($firewallEventType, $trackHit->serverRequest, rule: $trackHit->rule, key: $trackHit->key, meta: [
             'period' => $trackHit->period,
             'count' => $trackHit->count,
             'limit' => $trackHit->limit,

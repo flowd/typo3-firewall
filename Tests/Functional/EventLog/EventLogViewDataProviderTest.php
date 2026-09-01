@@ -93,6 +93,48 @@ final class EventLogViewDataProviderTest extends FunctionalTestCase
         }
     }
 
+    #[Test]
+    public function typeFiltersOfferOnlyEventTypesPresentInTheTable(): void
+    {
+        $this->insertEvent(['event_type' => 'track_hit', 'rule' => 'observed-endpoint']);
+        $this->insertEvent(['event_type' => 'blocklist_matched', 'rule' => 'scanner-paths']);
+        $this->insertEvent(['event_type' => 'blocklist_matched', 'rule' => 'scanner-paths']);
+
+        $viewData = $this->eventLogViewDataProvider->getViewData([], '', '');
+        $typeFilters = $viewData['typeFilters'];
+        self::assertIsArray($typeFilters);
+
+        self::assertSame(
+            ['blocklist_matched', 'track_hit'],
+            array_column($typeFilters, 'value'),
+            'Only types with rows are offered, in the enum declaration order',
+        );
+    }
+
+    #[Test]
+    public function typeFiltersKeepAnActiveFilterWhoseTypeHasNoRows(): void
+    {
+        $this->insertEvent(['event_type' => 'blocklist_matched', 'rule' => 'scanner-paths']);
+
+        $viewData = $this->eventLogViewDataProvider->getViewData(['track_hit'], '', '');
+        $typeFilters = $viewData['typeFilters'];
+        self::assertIsArray($typeFilters);
+
+        self::assertSame(['blocklist_matched', 'track_hit'], array_column($typeFilters, 'value'));
+        $staleFilter = $typeFilters[1];
+        self::assertIsArray($staleFilter);
+        self::assertTrue($staleFilter['active'], 'The persisted filter stays visible so it can be toggled off');
+        self::assertSame([], $staleFilter['toggledTypes'], 'A click removes the stale filter');
+    }
+
+    #[Test]
+    public function typeFiltersAreEmptyForAnEmptyLog(): void
+    {
+        $viewData = $this->eventLogViewDataProvider->getViewData([], '', '');
+
+        self::assertSame([], $viewData['typeFilters']);
+    }
+
     private function insertKeyedEvents(string $key, int $count, string $rulePrefix): void
     {
         for ($i = 0; $i < $count; ++$i) {

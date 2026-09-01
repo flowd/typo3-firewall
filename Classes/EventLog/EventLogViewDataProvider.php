@@ -114,14 +114,24 @@ final class EventLogViewDataProvider
     }
 
     /**
-     * Tag list data: each event type with its active state and the type list
-     * a click on the tag switches to.
+     * Tag list data: each event type present in the log with its active state
+     * and the type list a click on the tag switches to. Types without rows
+     * (including never-written deprecated ones) are not offered - unless they
+     * are currently active: a persisted filter for a since-pruned type must
+     * stay visible so it can be toggled off.
      *
      * @param list<string> $currentTypes
      * @return list<array{value: string, active: bool, color: string, toggledTypes: list<string>}>
      */
     private function buildTypeFilters(array $currentTypes): array
     {
+        $presentTypes = $this->eventLogRepository->findDistinctEventTypes();
+        $offeredTypes = array_values(array_filter(
+            FirewallEventType::cases(),
+            static fn(FirewallEventType $firewallEventType): bool => in_array($firewallEventType->value, $presentTypes, true)
+                || in_array($firewallEventType->value, $currentTypes, true),
+        ));
+
         return array_map(function (FirewallEventType $firewallEventType) use ($currentTypes): array {
             $active = in_array($firewallEventType->value, $currentTypes, true);
 
@@ -133,7 +143,7 @@ final class EventLogViewDataProvider
                     ? array_values(array_diff($currentTypes, [$firewallEventType->value]))
                     : [...$currentTypes, $firewallEventType->value],
             ];
-        }, FirewallEventType::cases());
+        }, $offeredTypes);
     }
 
     /**

@@ -183,6 +183,25 @@ final class EventLogRepositoryTest extends FunctionalTestCase
         self::assertSame('', $this->eventLogRepository->findKeyDisplay($this->keyHash('unknown')));
     }
 
+    #[Test]
+    public function findDistinctEventTypesReturnsEachTypePresentInTheTableOnce(): void
+    {
+        $this->insertKeylessEvents(2, 'scanner-', 'blocklist_matched');
+        $this->insertKeylessEvents(1, 'tracked-', 'track_hit');
+        $this->insertKeylessEvents(1, 'error-', 'firewall_error');
+
+        $eventTypes = $this->eventLogRepository->findDistinctEventTypes();
+        sort($eventTypes);
+
+        self::assertSame(['blocklist_matched', 'firewall_error', 'track_hit'], $eventTypes);
+    }
+
+    #[Test]
+    public function findDistinctEventTypesReturnsNothingForAnEmptyTable(): void
+    {
+        self::assertSame([], $this->eventLogRepository->findDistinctEventTypes());
+    }
+
     private function insertKeyedEvents(string $key, int $count, string $rulePrefix, string $eventType = 'throttle_exceeded'): void
     {
         for ($i = 0; $i < $count; ++$i) {

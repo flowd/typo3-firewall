@@ -506,8 +506,14 @@
       <trans-unit id="statistics.type.safelist_matched">
         <source>Safelist matches</source>
       </trans-unit>
+      <trans-unit id="statistics.type.track_matched">
+        <source>Track matches</source>
+      </trans-unit>
+      <trans-unit id="statistics.type.track_threshold_reached">
+        <source>Track thresholds reached</source>
+      </trans-unit>
       <trans-unit id="statistics.type.track_hit">
-        <source>Track hits</source>
+        <source>Track hits (deprecated)</source>
       </trans-unit>
       <trans-unit id="statistics.type.firewall_error">
         <source>Firewall errors</source>
