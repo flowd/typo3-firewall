@@ -17,6 +17,12 @@ use TYPO3\CMS\Reports\StatusProviderInterface;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 
 return static function (ContainerConfigurator $containerConfigurator, ContainerBuilder $containerBuilder): void {
+    // Classic-mode installations have no root composer autoloader; load the
+    // autoloader of the bundled libraries before the container wires them.
+    if (!defined('TYPO3_COMPOSER_MODE') || !TYPO3_COMPOSER_MODE) {
+        require_once __DIR__ . '/../Resources/Private/Php/ComposerLibraries/vendor/autoload.php';
+    }
+
     $services = $containerConfigurator->services();
     $services->defaults()->autowire()->autoconfigure();
 

@@ -28,10 +28,7 @@ jobs:
 
       - name: Download vendor files
         run: |
-          composer install --no-autoloader --no-dev --no-scripts --no-plugins -d Resources/Private/Php/ComposerLibraries
-
-      - name: Add vendor autoload to ext_emconf.php
-        run: php Build/Scripts/addVendorAutoloadToExtEmConf.php
+          composer install --classmap-authoritative --no-dev --no-scripts --no-plugins -d Resources/Private/Php/ComposerLibraries
 
       - name: Create artefact
         run: |
