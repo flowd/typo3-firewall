@@ -10,7 +10,7 @@
 	"require": {
 		"php": "^8.3",
 		"flowd/phirewall": "^0.10.0",
-		"flowd/phirewall-preset-owasp-crs": "^0.4",
+		"flowd/phirewall-preset-owasp-crs": "^0.5",
 		"flowd/phirewall-preset-bots": "^0.1",
 		"flowd/phirewall-preset-bad-ips": "^0.2"
 	},
