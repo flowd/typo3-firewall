@@ -11,6 +11,8 @@ use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
  */
 final class EventLogSettings
 {
+    private bool $deprecatedTypeReported = false;
+
     public function __construct(
         private readonly ExtensionConfiguration $extensionConfiguration,
     ) {}
@@ -22,12 +24,42 @@ final class EventLogSettings
 
     public function isTypeEnabled(FirewallEventType $firewallEventType): bool
     {
-        $configuredTypes = array_map(
-            trim(...),
-            explode(',', $this->getSetting('eventLogTypes', ''))
-        );
+        return in_array($firewallEventType, $this->enabledTypes(), true);
+    }
 
-        return in_array($firewallEventType->value, $configuredTypes, true);
+    /**
+     * The configured event types, unknown values dropped and deprecated values
+     * expanded to their successors. A deprecated value logs one deprecation
+     * per instance.
+     *
+     * @return list<FirewallEventType>
+     */
+    private function enabledTypes(): array
+    {
+        $enabledTypes = [];
+        foreach (explode(',', $this->getSetting('eventLogTypes', '')) as $configuredValue) {
+            $configuredType = FirewallEventType::tryFrom(trim($configuredValue));
+            if (!$configuredType instanceof FirewallEventType) {
+                continue;
+            }
+
+            $enabledByValue = $configuredType->enables();
+            if ($enabledByValue !== [$configuredType] && !$this->deprecatedTypeReported) {
+                $this->deprecatedTypeReported = true;
+                trigger_error(
+                    sprintf(
+                        'The firewall event log type "%s" is deprecated, configure "%s" instead (eventLogTypes extension setting).',
+                        $configuredType->value,
+                        implode(', ', array_map(static fn(FirewallEventType $firewallEventType): string => $firewallEventType->value, $enabledByValue)),
+                    ),
+                    E_USER_DEPRECATED,
+                );
+            }
+
+            array_push($enabledTypes, ...$enabledByValue);
+        }
+
+        return $enabledTypes;
     }
 
     public function getRetentionDays(): int

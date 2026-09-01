@@ -12,12 +12,14 @@ use Flowd\Phirewall\Events\Fail2BanMatched;
 use Flowd\Phirewall\Events\FirewallError;
 use Flowd\Phirewall\Events\SafelistMatched;
 use Flowd\Phirewall\Events\ThrottleExceeded;
+use Flowd\Phirewall\Events\TrackHit;
 use Flowd\Typo3Firewall\Command\PruneEventLogCommand;
 use Flowd\Typo3Firewall\EventLog\EventLogger;
 use Flowd\Typo3Firewall\EventLog\EventLogSettings;
 use Flowd\Typo3Firewall\EventLog\FirewallEventType;
 use Flowd\Typo3Firewall\EventLog\KeyHasher;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -30,7 +32,7 @@ use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 final class EventLogTest extends FunctionalTestCase
 {
     /** Mirrors the eventLogTypes default in ext_conf_template.txt. */
-    private const string DEFAULT_EVENT_LOG_TYPES = 'blocklist_matched,throttle_exceeded,fail2ban_matched,fail2ban_banned,allow2ban_banned,firewall_error';
+    private const string DEFAULT_EVENT_LOG_TYPES = 'blocklist_matched,throttle_exceeded,fail2ban_matched,fail2ban_banned,allow2ban_banned,track_threshold_reached,firewall_error';
 
     protected array $testExtensionsToLoad = [
         'flowd/typo3-firewall',
@@ -282,6 +284,74 @@ final class EventLogTest extends FunctionalTestCase
         self::assertIsString($meta['_truncated']);
         self::assertStringContainsString('exceeded the 60000 byte limit', $meta['_truncated']);
         self::assertStringNotContainsString('aaaa', $rows[0]['meta']);
+    }
+
+    #[Test]
+    public function trackHitBelowTheThresholdIsLoggedAsTrackMatched(): void
+    {
+        $this->get(ExtensionConfiguration::class)->set('firewall', ['eventLogEnabled' => '1', 'eventLogTypes' => self::DEFAULT_EVENT_LOG_TYPES . ',track_matched']);
+
+        try {
+            $serverRequest = new ServerRequest('https://example.com/api', 'GET');
+            $this->dispatch(new TrackHit('observed-endpoint', '203.0.113.10', 60, 3, $serverRequest, MatchResult::matched('custom'), 10));
+            $this->dispatch(new TrackHit('unlimited-track', '203.0.113.10', 60, 500, $serverRequest, MatchResult::matched('custom')));
+
+            $rows = $this->fetchAllEventRows();
+            self::assertCount(2, $rows);
+            self::assertSame('track_matched', $rows[0]['event_type']);
+            self::assertSame('observed-endpoint', $rows[0]['rule']);
+            self::assertIsString($rows[0]['meta']);
+            $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
+            self::assertSame(['period' => 60, 'count' => 3, 'limit' => 10], $meta);
+            self::assertSame('track_matched', $rows[1]['event_type'], 'A track without a limit never reaches a threshold');
+        } finally {
+            $this->get(ExtensionConfiguration::class)->set('firewall', ['eventLogEnabled' => '1', 'eventLogTypes' => self::DEFAULT_EVENT_LOG_TYPES]);
+        }
+    }
+
+    #[Test]
+    public function trackHitReachingTheThresholdIsLoggedAsTrackThresholdReached(): void
+    {
+        $serverRequest = new ServerRequest('https://example.com/api', 'GET');
+
+        $this->dispatch(new TrackHit('observed-endpoint', '203.0.113.10', 60, 10, $serverRequest, MatchResult::matched('custom'), 10));
+
+        $rows = $this->fetchAllEventRows();
+        self::assertCount(1, $rows, 'track_threshold_reached is part of the default types');
+        self::assertSame('track_threshold_reached', $rows[0]['event_type']);
+        self::assertIsString($rows[0]['meta']);
+        $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame(['period' => 60, 'count' => 10, 'limit' => 10], $meta);
+    }
+
+    #[Test]
+    public function subThresholdTrackHitsAreNotLoggedByDefault(): void
+    {
+        $serverRequest = new ServerRequest('https://example.com/api', 'GET');
+
+        $this->dispatch(new TrackHit('observed-endpoint', '203.0.113.10', 60, 3, $serverRequest, MatchResult::matched('custom'), 10));
+
+        self::assertSame([], $this->fetchAllEventRows());
+    }
+
+    #[Test]
+    #[IgnoreDeprecations]
+    public function deprecatedTrackHitTypeEnablesBothTrackTypes(): void
+    {
+        $this->get(ExtensionConfiguration::class)->set('firewall', ['eventLogEnabled' => '1', 'eventLogTypes' => 'track_hit']);
+
+        try {
+            $serverRequest = new ServerRequest('https://example.com/api', 'GET');
+            $this->dispatch(new TrackHit('observed-endpoint', '203.0.113.10', 60, 3, $serverRequest, MatchResult::matched('custom'), 10));
+            $this->dispatch(new TrackHit('observed-endpoint', '203.0.113.10', 60, 10, $serverRequest, MatchResult::matched('custom'), 10));
+
+            $rows = $this->fetchAllEventRows();
+            self::assertCount(2, $rows, 'The deprecated value keeps covering every track hit');
+            self::assertSame('track_matched', $rows[0]['event_type']);
+            self::assertSame('track_threshold_reached', $rows[1]['event_type']);
+        } finally {
+            $this->get(ExtensionConfiguration::class)->set('firewall', ['eventLogEnabled' => '1', 'eventLogTypes' => self::DEFAULT_EVENT_LOG_TYPES]);
+        }
     }
 
     #[Test]

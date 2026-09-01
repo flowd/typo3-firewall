@@ -7,6 +7,7 @@ namespace Flowd\Typo3Firewall\Tests\Unit\EventLog;
 use Flowd\Typo3Firewall\EventLog\EventLogSettings;
 use Flowd\Typo3Firewall\EventLog\FirewallEventType;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
@@ -38,6 +39,73 @@ final class EventLogSettingsTest extends TestCase
         self::assertTrue($eventLogSettings->isTypeEnabled(FirewallEventType::BlocklistMatched));
         self::assertTrue($eventLogSettings->isTypeEnabled(FirewallEventType::Fail2BanBanned));
         self::assertFalse($eventLogSettings->isTypeEnabled(FirewallEventType::SafelistMatched));
+    }
+
+    #[Test]
+    public function trackTypesAreIndividuallyConfigurable(): void
+    {
+        $eventLogSettings = $this->createSettings(['eventLogTypes' => 'track_threshold_reached']);
+
+        self::assertTrue($eventLogSettings->isTypeEnabled(FirewallEventType::TrackThresholdReached));
+        self::assertFalse($eventLogSettings->isTypeEnabled(FirewallEventType::TrackMatched));
+    }
+
+    #[Test]
+    #[IgnoreDeprecations]
+    public function deprecatedTrackHitTypeEnablesBothTrackTypes(): void
+    {
+        $eventLogSettings = $this->createSettings(['eventLogTypes' => 'track_hit']);
+
+        self::assertTrue($eventLogSettings->isTypeEnabled(FirewallEventType::TrackThresholdReached));
+        self::assertTrue($eventLogSettings->isTypeEnabled(FirewallEventType::TrackMatched));
+        self::assertFalse($eventLogSettings->isTypeEnabled(FirewallEventType::ThrottleExceeded));
+    }
+
+    #[Test]
+    public function deprecatedTrackHitTypeTriggersOneDeprecation(): void
+    {
+        $eventLogSettings = $this->createSettings(['eventLogTypes' => 'track_hit']);
+
+        $deprecations = [];
+        set_error_handler(static function (int $errorNumber, string $errorMessage) use (&$deprecations): bool {
+            $deprecations[] = $errorMessage;
+
+            return true;
+        }, E_USER_DEPRECATED);
+
+        try {
+            $eventLogSettings->isTypeEnabled(FirewallEventType::TrackThresholdReached);
+            $eventLogSettings->isTypeEnabled(FirewallEventType::TrackMatched);
+        } finally {
+            restore_error_handler();
+        }
+
+        self::assertCount(1, $deprecations, 'The deprecation is logged once per instance, not once per check');
+        self::assertStringContainsString('track_hit', $deprecations[0]);
+        self::assertStringContainsString('track_matched', $deprecations[0]);
+        self::assertStringContainsString('track_threshold_reached', $deprecations[0]);
+    }
+
+    #[Test]
+    public function currentTypeValuesTriggerNoDeprecation(): void
+    {
+        $eventLogSettings = $this->createSettings(['eventLogTypes' => 'track_matched, track_threshold_reached']);
+
+        $deprecations = [];
+        set_error_handler(static function (int $errorNumber, string $errorMessage) use (&$deprecations): bool {
+            $deprecations[] = $errorMessage;
+
+            return true;
+        }, E_USER_DEPRECATED);
+
+        try {
+            self::assertTrue($eventLogSettings->isTypeEnabled(FirewallEventType::TrackMatched));
+            self::assertTrue($eventLogSettings->isTypeEnabled(FirewallEventType::TrackThresholdReached));
+        } finally {
+            restore_error_handler();
+        }
+
+        self::assertSame([], $deprecations);
     }
 
     #[Test]

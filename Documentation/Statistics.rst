@@ -47,8 +47,19 @@ types are:
 ``safelist_matched``
     A safelist rule let a request through without further checks.
 
+``track_matched``
+    A track rule counted a request without blocking it. High volume, so off
+    by default.
+
+``track_threshold_reached``
+    A track rule with a limit reached it: the counted requests within the
+    period hit the configured threshold. The rule still does not block; the
+    entry is the signal to look at the tracked traffic.
+
 ``track_hit``
-    A track rule counted a request without blocking it.
+    Deprecated: split into ``track_matched`` and ``track_threshold_reached``.
+    A configured ``track_hit`` enables both and logs a deprecation; new
+    entries are never written under the old type.
 
 ``firewall_error``
     The firewall hit an internal error, for example when the store was
@@ -61,7 +72,7 @@ request. They feed the numbers, the chart, and the top lists in the statistics
 view. The ``firewall_error`` type is recorded but not counted, because an
 internal error makes the firewall fail open by default, so the request was not
 blocked. Four types are high volume and switched off by default so they do not
-fill the table quickly: ``safelist_matched`` and ``track_hit`` fire on normal
+fill the table quickly: ``safelist_matched`` and ``track_matched`` fire on normal
 traffic, and ``fail2ban_blocked`` and ``allow2ban_blocked`` fire on every
 request from an already-banned client.
 
@@ -76,10 +87,10 @@ it under **Admin Tools** > **Settings** >
     Turns the event log on or off. When off, nothing is recorded and the
     statistics view stays empty.
 
-``eventLogTypes`` (default: ``blocklist_matched``, ``throttle_exceeded``, ``fail2ban_matched``, ``fail2ban_banned``, ``allow2ban_banned``, ``firewall_error``)
+``eventLogTypes`` (default: ``blocklist_matched``, ``throttle_exceeded``, ``fail2ban_matched``, ``fail2ban_banned``, ``allow2ban_banned``, ``track_threshold_reached``, ``firewall_error``)
     A comma-separated list of the event types to record. Add the high-volume
     types (``fail2ban_blocked``, ``allow2ban_blocked``, ``safelist_matched``,
-    ``track_hit``) only when you need them, and expect many more rows.
+    ``track_matched``) only when you need them, and expect many more rows.
 
 ``eventLogRetentionDays`` (default: 30)
     How many days to keep entries. The prune command uses this value.

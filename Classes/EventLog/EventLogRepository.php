@@ -162,6 +162,39 @@ final class EventLogRepository
     }
 
     /**
+     * The distinct event type values present in the table.
+     *
+     * @return list<string>
+     */
+    public function findDistinctEventTypes(): array
+    {
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(EventLogger::TABLE_NAME);
+        $eventTypes = $queryBuilder
+            ->selectLiteral('DISTINCT ' . $queryBuilder->quoteIdentifier('event_type'))
+            ->from(EventLogger::TABLE_NAME)
+            ->executeQuery()
+            ->fetchFirstColumn();
+
+        return array_values(array_filter($eventTypes, is_string(...)));
+    }
+
+    /**
+     * Whether any event is older than the given timestamp.
+     */
+    public function hasEventsOlderThan(int $timestamp): bool
+    {
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(EventLogger::TABLE_NAME);
+
+        return $queryBuilder
+            ->select('uid')
+            ->from(EventLogger::TABLE_NAME)
+            ->where($queryBuilder->expr()->lt('created_at', $queryBuilder->createNamedParameter($timestamp, Connection::PARAM_INT)))
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchOne() !== false;
+    }
+
+    /**
      * The readable key form of the newest event with the given key hash;
      * empty for hash-only keys and unknown hashes.
      */
