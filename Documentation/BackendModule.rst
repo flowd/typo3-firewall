@@ -159,21 +159,19 @@ target including the query string, so GET payloads such as injection
 attempts are visible (and searchable) as they arrived.
 
 The details column renders everything the event carried as ``key: value``
-lines. Submitted POST parameters appear as ``post.name: value`` lines.
-Every value is masked down to its first and last two characters
-(``administrator`` becomes ``ad***or``), parameter names that look like
-credentials (``pass``, ``token``, and similar) are masked completely, and
-large forms are truncated, so the log never stores passwords or other
-submitted data in clear text. To inspect attack payloads in POST fields,
-the value masking can be turned off with the ``eventLogMaskParameters``
-extension setting (credential-like parameters stay masked); see
-:doc:`Statistics` for all event log settings. The details also include counters
-(``threshold``, ``count``, ``banSeconds``) and the
-diagnostic headers a matcher attached to its match, for example
-``diagnosticHeaders.X-Phirewall-Owasp-Rule: 942100`` for an OWASP CRS match.
-The diagnostics land in the log independently of the
-``X-Phirewall-*`` response headers, so you can inspect which rule fired
-without exposing that information to clients.
+lines: the counters of the rule that fired (``threshold``, ``count``,
+``banSeconds``) and the metadata the matcher attached to its match. For an
+OWASP CRS match that is the rule id, its message (``msg``), the matched
+target (``owasp_matched_variable``, for example
+``REQUEST_HEADERS:User-Agent``) and the value the rule fired on
+(``owasp_matched_value``) - readable, so the match can be understood and
+tuned; the matcher redacts credential values (cookies,
+``Authorization``-type headers) before they reach the log. Submitted POST
+parameters are not stored; the log records only what led to the match. The
+diagnostic headers appear as ``diagnosticHeaders.X-Phirewall-Owasp-Rule:
+942100`` lines, independently of the ``X-Phirewall-*`` response headers, so
+you can inspect which rule fired without exposing that information to
+clients.
 
 When a client triggers many events, the list collapses them: each key shows
 only its three newest events, and the third row carries a hint with the

@@ -20,17 +20,6 @@ final class EventLogger
 {
     public const string TABLE_NAME = 'tx_firewall_event';
 
-    /** Parameter names containing one of these markers are masked in the log. */
-    private const array SENSITIVE_PARAMETER_MARKERS = ['pass', 'pwd', 'secret', 'token', 'otp', 'userident', 'credential', 'apikey', 'api_key', 'api-key', 'auth', 'jwt', 'bearer', 'session', 'csrf', 'signature'];
-
-    private const int MAX_PARAMETERS_PER_LEVEL = 20;
-
-    private const int MAX_PARAMETER_VALUE_LENGTH = 256;
-
-    private const int MAX_PARAMETER_NAME_LENGTH = 64;
-
-    private const int MAX_PARAMETER_DEPTH = 2;
-
     /** Keeps the encoded meta below the 64 KB TEXT column so the insert never fails on it. */
     private const int MAX_META_BYTES = 60000;
 
@@ -42,7 +31,7 @@ final class EventLogger
     ) {}
 
     /**
-     * @param array<string, int|string|array<string, mixed>|null> $meta
+     * @param array<string, scalar|array<string, mixed>|null> $meta
      */
     public function log(
         FirewallEventType $firewallEventType,
@@ -57,7 +46,6 @@ final class EventLogger
         }
 
         $key ??= $this->resolveClientIp();
-        $meta = [...$meta, ...$this->postParametersMeta($serverRequest)];
 
         try {
             $this->connectionPool->getConnectionForTable(self::TABLE_NAME)->insert(self::TABLE_NAME, [
@@ -86,12 +74,12 @@ final class EventLogger
      * result would not fit the meta column; an oversized meta must never
      * make the insert fail, because that would drop the audit record.
      *
-     * @param array<string, int|string|array<string, mixed>|null> $meta
+     * @param array<string, scalar|array<string, mixed>|null> $meta
      */
     private function encodeMeta(array $meta): string
     {
         $encodedMeta = json_encode(
-            array_filter($meta, static fn(int|string|array|null $value): bool => $value !== null && $value !== []),
+            array_filter($meta, static fn(bool|int|float|string|array|null $value): bool => $value !== null && $value !== []),
             JSON_THROW_ON_ERROR
         );
         if (strlen($encodedMeta) > self::MAX_META_BYTES) {
@@ -113,87 +101,6 @@ final class EventLogger
         $query = $uri->getQuery();
 
         return $uri->getPath() . ($query === '' ? '' : '?' . $query);
-    }
-
-    /**
-     * @return array{post?: array<string, mixed>}
-     */
-    private function postParametersMeta(ServerRequestInterface $serverRequest): array
-    {
-        $parsedBody = $serverRequest->getParsedBody();
-        if (!is_array($parsedBody) || $parsedBody === []) {
-            return [];
-        }
-
-        return ['post' => $this->sanitizeRequestParameters($parsedBody, $this->eventLogSettings->isParameterMaskingEnabled())];
-    }
-
-    /**
-     * Bounded copy of request parameters for the event meta: values are
-     * masked down to their first and last two characters (clear text but
-     * truncated when masking is disabled), names that look like credentials
-     * are masked completely either way, and large arrays are truncated.
-     *
-     * @param array<mixed> $parameters
-     * @return array<string, mixed>
-     */
-    private function sanitizeRequestParameters(array $parameters, bool $maskValues, int $depth = 0): array
-    {
-        $sanitized = [];
-        foreach (array_slice($parameters, 0, self::MAX_PARAMETERS_PER_LEVEL, true) as $name => $value) {
-            $name = mb_substr((string)$name, 0, self::MAX_PARAMETER_NAME_LENGTH);
-            $sanitized[$name] = $this->isSensitiveParameterName($name) ? '***' : $this->sanitizeParameterValue($value, $maskValues, $depth);
-        }
-
-        $skippedCount = count($parameters) - self::MAX_PARAMETERS_PER_LEVEL;
-        if ($skippedCount > 0) {
-            $sanitized['_skipped'] = sprintf('%d more parameters', $skippedCount);
-        }
-
-        return $sanitized;
-    }
-
-    /**
-     * @return array<string, mixed>|string
-     */
-    private function sanitizeParameterValue(mixed $value, bool $maskValues, int $depth): array|string
-    {
-        if (is_array($value)) {
-            return $depth < self::MAX_PARAMETER_DEPTH ? $this->sanitizeRequestParameters($value, $maskValues, $depth + 1) : '[...]';
-        }
-
-        if (!is_scalar($value)) {
-            return get_debug_type($value);
-        }
-
-        $value = (string)$value;
-
-        return $maskValues ? $this->maskParameterValue($value) : mb_substr($value, 0, self::MAX_PARAMETER_VALUE_LENGTH);
-    }
-
-    /**
-     * Keeps the first and last two characters; values too short to keep
-     * anything hidden are masked completely.
-     */
-    private function maskParameterValue(string $value): string
-    {
-        if (mb_strlen($value) <= 4) {
-            return '***';
-        }
-
-        return mb_substr($value, 0, 2) . '***' . mb_substr($value, -2);
-    }
-
-    private function isSensitiveParameterName(string $name): bool
-    {
-        $normalizedName = strtolower($name);
-        foreach (self::SENSITIVE_PARAMETER_MARKERS as $marker) {
-            if (str_contains($normalizedName, $marker)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**

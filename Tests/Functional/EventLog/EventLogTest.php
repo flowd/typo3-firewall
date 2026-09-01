@@ -68,14 +68,12 @@ final class EventLogTest extends FunctionalTestCase
     }
 
     #[Test]
-    public function postParametersAreStoredMaskedAndBoundedInTheMeta(): void
+    public function postParametersAreNotStoredInTheMeta(): void
     {
         $serverRequest = (new ServerRequest('https://example.com/login', 'POST'))
             ->withParsedBody([
                 'username' => 'administrator',
                 'pass' => 'hunter2',
-                'code' => 'abc',
-                'form' => ['field' => 'value'],
             ]);
 
         $this->dispatch(new Fail2BanMatched('login-brute-force', '203.0.113.10', 5, 300, 3, $serverRequest, MatchResult::matched('custom')));
@@ -85,68 +83,37 @@ final class EventLogTest extends FunctionalTestCase
         self::assertIsString($rows[0]['meta']);
         $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
         self::assertIsArray($meta);
-        self::assertSame([
-            'username' => 'ad***or',
-            'pass' => '***',
-            'code' => '***',
-            'form' => ['field' => 'va***ue'],
-        ], $meta['post']);
+        self::assertArrayNotHasKey('post', $meta);
         self::assertStringNotContainsString('hunter2', $rows[0]['meta']);
         self::assertStringNotContainsString('administrator', $rows[0]['meta']);
     }
 
     #[Test]
-    public function largeFormsAreTruncatedWithASkippedMarker(): void
+    public function matchResultMetadataIsPersistedInTheMeta(): void
     {
-        $parameters = [];
-        for ($i = 1; $i <= 25; ++$i) {
-            $parameters['field' . $i] = 'value' . $i;
-        }
+        $serverRequest = (new ServerRequest('https://example.com/', 'GET'))
+            ->withAddedHeader('User-Agent', 'curl /etc/passwd');
 
-        $serverRequest = (new ServerRequest('https://example.com/form', 'POST'))->withParsedBody($parameters);
-
-        $this->dispatch(new Fail2BanMatched('form-flood', '203.0.113.10', 5, 300, 3, $serverRequest, MatchResult::matched('custom')));
+        $this->dispatch(new BlocklistMatched('owasp', $serverRequest, MatchResult::matched('owasp', [
+            'owasp_rule_id' => 930121,
+            'msg' => 'OS File Access Attempt in REQUEST_HEADERS',
+            'owasp_matched_variable' => 'REQUEST_HEADERS:User-Agent',
+            'owasp_matched_value' => 'curl /etc/passwd',
+            'owasp_fail_closed' => false,
+            'diagnostic_headers' => ['X-Phirewall-Owasp-Rule' => '930121'],
+        ])));
 
         $rows = $this->fetchAllEventRows();
         self::assertCount(1, $rows);
         self::assertIsString($rows[0]['meta']);
         $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
         self::assertIsArray($meta);
-        self::assertIsArray($meta['post']);
-        self::assertCount(21, $meta['post']);
-        self::assertSame('5 more parameters', $meta['post']['_skipped']);
-        self::assertArrayNotHasKey('field21', $meta['post']);
-    }
-
-    #[Test]
-    public function postParameterValuesAreStoredInClearTextWhenMaskingIsDisabled(): void
-    {
-        $this->get(ExtensionConfiguration::class)->set('firewall', ['eventLogEnabled' => '1', 'eventLogTypes' => self::DEFAULT_EVENT_LOG_TYPES, 'eventLogMaskParameters' => '0']);
-
-        try {
-            $serverRequest = (new ServerRequest('https://example.com/login', 'POST'))
-                ->withParsedBody([
-                    'username' => 'administrator',
-                    'pass' => 'hunter2',
-                    'comment' => str_repeat('a', 300),
-                ]);
-
-            $this->dispatch(new Fail2BanMatched('login-brute-force', '203.0.113.10', 5, 300, 3, $serverRequest, MatchResult::matched('custom')));
-
-            $rows = $this->fetchAllEventRows();
-            self::assertCount(1, $rows);
-            self::assertIsString($rows[0]['meta']);
-            $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
-            self::assertIsArray($meta);
-            self::assertSame([
-                'username' => 'administrator',
-                'pass' => '***',
-                'comment' => str_repeat('a', 256),
-            ], $meta['post']);
-            self::assertStringNotContainsString('hunter2', $rows[0]['meta']);
-        } finally {
-            $this->get(ExtensionConfiguration::class)->set('firewall', ['eventLogEnabled' => '1', 'eventLogTypes' => self::DEFAULT_EVENT_LOG_TYPES]);
-        }
+        self::assertSame(930121, $meta['owasp_rule_id']);
+        self::assertSame('OS File Access Attempt in REQUEST_HEADERS', $meta['msg']);
+        self::assertSame('REQUEST_HEADERS:User-Agent', $meta['owasp_matched_variable']);
+        self::assertSame('curl /etc/passwd', $meta['owasp_matched_value']);
+        self::assertSame(['X-Phirewall-Owasp-Rule' => '930121'], $meta['diagnosticHeaders']);
+        self::assertArrayNotHasKey('diagnostic_headers', $meta, 'The raw header fragment is folded into diagnosticHeaders');
     }
 
     #[Test]
@@ -315,31 +282,6 @@ final class EventLogTest extends FunctionalTestCase
         self::assertIsString($meta['_truncated']);
         self::assertStringContainsString('exceeded the 60000 byte limit', $meta['_truncated']);
         self::assertStringNotContainsString('aaaa', $rows[0]['meta']);
-    }
-
-    #[Test]
-    public function credentialLikeParameterNamesAreMaskedAndLongNamesTruncated(): void
-    {
-        $longName = str_repeat('n', 80);
-        $serverRequest = (new ServerRequest('https://example.com/login', 'POST'))
-            ->withParsedBody([
-                'x_apikey' => 'value-123',
-                'authorization' => 'Bearer abc',
-                $longName => 'value',
-            ]);
-
-        $this->dispatch(new Fail2BanMatched('login-brute-force', '203.0.113.10', 5, 300, 3, $serverRequest, MatchResult::matched('custom')));
-
-        $rows = $this->fetchAllEventRows();
-        self::assertCount(1, $rows);
-        self::assertIsString($rows[0]['meta']);
-        $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
-        self::assertIsArray($meta);
-        self::assertIsArray($meta['post']);
-        self::assertSame('***', $meta['post']['x_apikey']);
-        self::assertSame('***', $meta['post']['authorization']);
-        self::assertArrayHasKey(str_repeat('n', 64), $meta['post']);
-        self::assertArrayNotHasKey($longName, $meta['post']);
     }
 
     #[Test]

@@ -40,11 +40,6 @@ final class EventLogSettings
         return (bool)$this->getSetting('eventLogAnonymizeIp', '1');
     }
 
-    public function isParameterMaskingEnabled(): bool
-    {
-        return (bool)$this->getSetting('eventLogMaskParameters', '1');
-    }
-
     private function getSetting(string $settingName, string $default): string
     {
         try {
