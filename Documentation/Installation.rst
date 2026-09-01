@@ -8,7 +8,7 @@ Requirements
 ============
 
 ===================  ===============================
-Extension version    0.7
+Extension version    0.8
 TYPO3                12.4 LTS, 13.4 LTS, 14
 PHP                  8.3, 8.4, 8.5
 Firewall engine      flowd/phirewall 0.10
@@ -72,6 +72,31 @@ the three preset packages, and ``psr/simple-cache``. They live inside the
 extension under ``Resources/Private/Php/ComposerLibraries`` and are loaded
 automatically. No extra installation step is needed, and the presets are
 available without further setup.
+
+Upgrade from 0.7
+================
+
+Version 0.8 changes what the event log records. Review these points when
+upgrading:
+
+POST parameters are no longer stored
+    Event log entries record the metadata of the match itself (rule,
+    counters, matched target and value) instead of the submitted POST
+    parameters. The ``eventLogMaskParameters`` extension setting was removed
+    together with the parameter storage; a leftover value in the extension
+    configuration is ignored.
+
+The track_hit event type is deprecated
+    Track events are recorded as ``track_matched`` (every hit of a track
+    rule, high volume) or ``track_threshold_reached`` (a track rule with a
+    limit reached it). Replace ``track_hit`` in the ``eventLogTypes``
+    extension setting with one or both of the new types; until then the
+    deprecated value keeps enabling both and logs a deprecation.
+
+New default event log types
+    The default ``eventLogTypes`` now include ``track_threshold_reached``.
+    Installations without an explicit type list start recording an entry
+    when a track rule with a limit reaches it.
 
 Upgrade from 0.3
 ================
