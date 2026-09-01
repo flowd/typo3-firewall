@@ -10,9 +10,6 @@ eventLogRetentionDays = 30
 # cat=event log; type=boolean; label=Anonymize IP addresses: Store client IPs with the last IPv4 octet (or the IPv6 host part) removed.
 eventLogAnonymizeIp = 1
 
-# cat=event log; type=boolean; label=Mask POST parameter values: Store submitted POST parameters with only their first and last two characters visible. When disabled, values are stored in clear text (truncated to 256 characters); parameters that look like credentials stay fully masked either way.
-eventLogMaskParameters = 1
-
 # cat=form flood protection; type=boolean; label=Enable form flood protection: Register a default "form-flood" allow2ban rule, fed by the "Firewall: flood protection" form finisher. Needs a persistent store (APCu/Redis) configured in phirewall.php.
 formFloodEnabled = 0
 
