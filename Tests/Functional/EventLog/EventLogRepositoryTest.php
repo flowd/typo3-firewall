@@ -197,6 +197,16 @@ final class EventLogRepositoryTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function hasEventsOlderThanComparesAgainstCreatedAt(): void
+    {
+        $this->insertEvent(['event_type' => 'fail2ban_matched', 'rule' => 'old-rule', 'created_at' => 1000]);
+        $this->insertEvent(['event_type' => 'blocklist_matched', 'rule' => 'fresh-rule', 'created_at' => 5000]);
+
+        self::assertTrue($this->eventLogRepository->hasEventsOlderThan(3000));
+        self::assertFalse($this->eventLogRepository->hasEventsOlderThan(500));
+    }
+
+    #[Test]
     public function findDistinctEventTypesReturnsNothingForAnEmptyTable(): void
     {
         self::assertSame([], $this->eventLogRepository->findDistinctEventTypes());

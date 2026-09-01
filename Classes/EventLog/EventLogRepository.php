@@ -168,14 +168,30 @@ final class EventLogRepository
      */
     public function findDistinctEventTypes(): array
     {
-        $eventTypes = $this->connectionPool->getQueryBuilderForTable(EventLogger::TABLE_NAME)
-            ->select('event_type')
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(EventLogger::TABLE_NAME);
+        $eventTypes = $queryBuilder
+            ->selectLiteral('DISTINCT ' . $queryBuilder->quoteIdentifier('event_type'))
             ->from(EventLogger::TABLE_NAME)
-            ->groupBy('event_type')
             ->executeQuery()
             ->fetchFirstColumn();
 
         return array_values(array_filter($eventTypes, is_string(...)));
+    }
+
+    /**
+     * Whether any event is older than the given timestamp.
+     */
+    public function hasEventsOlderThan(int $timestamp): bool
+    {
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(EventLogger::TABLE_NAME);
+
+        return $queryBuilder
+            ->select('uid')
+            ->from(EventLogger::TABLE_NAME)
+            ->where($queryBuilder->expr()->lt('created_at', $queryBuilder->createNamedParameter($timestamp, Connection::PARAM_INT)))
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchOne() !== false;
     }
 
     /**

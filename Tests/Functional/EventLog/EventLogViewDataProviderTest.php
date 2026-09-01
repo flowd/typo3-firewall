@@ -22,7 +22,7 @@ final class EventLogViewDataProviderTest extends FunctionalTestCase
 
     private EventLogViewDataProvider $eventLogViewDataProvider;
 
-    /** Base lies inside the retention window the collapsed timeline is bounded to. */
+    /** Increases per insert so later inserts are newer. */
     private int $createdAtCounter = 0;
 
     protected function setUp(): void
@@ -125,6 +125,36 @@ final class EventLogViewDataProviderTest extends FunctionalTestCase
         self::assertIsArray($staleFilter);
         self::assertTrue($staleFilter['active'], 'The persisted filter stays visible so it can be toggled off');
         self::assertSame([], $staleFilter['toggledTypes'], 'A click removes the stale filter');
+    }
+
+    #[Test]
+    public function eventsOlderThanTheRetentionStayVisibleAndFlagTheOverduePrune(): void
+    {
+        // The retention period only drives the prune command; rows it has not
+        // removed yet stay visible and searchable, and their age surfaces as
+        // the prune-overdue notice instead.
+        $this->insertEvent(['event_type' => 'fail2ban_matched', 'rule' => 'stale-rule', 'created_at' => time() - 40 * 86400]);
+        $this->insertEvent(['event_type' => 'blocklist_matched', 'rule' => 'fresh-rule', 'created_at' => time() - 3600]);
+
+        $viewData = $this->eventLogViewDataProvider->getViewData([], '', '');
+        $events = $viewData['events'];
+        self::assertIsArray($events);
+        $typeFilters = $viewData['typeFilters'];
+        self::assertIsArray($typeFilters);
+
+        self::assertSame(['fresh-rule', 'stale-rule'], array_column($events, 'rule'));
+        self::assertSame(['blocklist_matched', 'fail2ban_matched'], array_column($typeFilters, 'value'));
+        self::assertTrue($viewData['pruneOverdue']);
+    }
+
+    #[Test]
+    public function pruneIsNotOverdueWhenAllEventsAreWithinTheRetention(): void
+    {
+        $this->insertEvent(['event_type' => 'blocklist_matched', 'rule' => 'fresh-rule', 'created_at' => time() - 3600]);
+
+        $viewData = $this->eventLogViewDataProvider->getViewData([], '', '');
+
+        self::assertFalse($viewData['pruneOverdue']);
     }
 
     #[Test]

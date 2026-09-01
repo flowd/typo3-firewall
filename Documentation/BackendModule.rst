@@ -185,7 +185,10 @@ with the close button next to it.
 Filter the list by event type with the type tags: a click toggles a tag,
 and all active tags combine into one filter. Only event types that actually
 occur in the log are offered as tags, plus any filter that is currently
-active, so a stored filter can always be toggled off. The active tags and the search
+active, so a stored filter can always be toggled off. When the log still
+contains entries older than the configured retention period, the view shows
+a warning: the ``firewall:eventlog:prune`` console command is not running
+regularly and should be scheduled (TYPO3 scheduler or cron). The active tags and the search
 term are stored per backend user and restored the next time the module is
 opened; **Reset** clears them. The key filter is a transient drill-down and
 is not stored. The search field matches rule names, keys, and request

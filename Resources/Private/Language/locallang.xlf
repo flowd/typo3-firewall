@@ -248,6 +248,9 @@
       <trans-unit id="events.disabled">
         <source>Event logging is disabled. Enable it in the extension configuration to record events.</source>
       </trans-unit>
+      <trans-unit id="events.pruneOverdue">
+        <source>The event log contains entries older than the configured retention period. Schedule the "firewall:eventlog:prune" console command (TYPO3 scheduler or cron) to remove them regularly.</source>
+      </trans-unit>
       <trans-unit id="events.empty">
         <source>No events recorded.</source>
       </trans-unit>

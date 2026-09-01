@@ -52,6 +52,7 @@ final class EventLogViewDataProvider
             'search' => $search,
             'ruleFilter' => $rule === '' ? null : $rule,
             'loggingEnabled' => $this->eventLogSettings->isEnabled(),
+            'pruneOverdue' => $this->isPruneOverdue(),
         ];
     }
 
@@ -65,24 +66,20 @@ final class EventLogViewDataProvider
      */
     private function buildCollapsedTimelineData(array $currentTypes, string $search, string $rule, int $page): array
     {
-        // The window ranking sorts every matching row, so bound it to the
-        // retention period; older rows are awaiting the prune run anyway.
-        $since = max(0, time() - $this->eventLogSettings->getRetentionDays() * 86400);
-
-        $rowCount = $this->eventLogRepository->countCollapsedByKey($currentTypes, $search, self::EVENTS_PER_KEY, $since, $rule);
+        $rowCount = $this->eventLogRepository->countCollapsedByKey($currentTypes, $search, self::EVENTS_PER_KEY, 0, $rule);
         $pageCount = max(1, (int)ceil($rowCount / self::ITEMS_PER_PAGE));
         $page = min(max(1, $page), $pageCount);
 
         $events = array_map(
             $this->decorateEvent(...),
-            $this->eventLogRepository->findLatestCollapsedByKey($currentTypes, $search, self::EVENTS_PER_KEY, self::ITEMS_PER_PAGE, ($page - 1) * self::ITEMS_PER_PAGE, $since, $rule),
+            $this->eventLogRepository->findLatestCollapsedByKey($currentTypes, $search, self::EVENTS_PER_KEY, self::ITEMS_PER_PAGE, ($page - 1) * self::ITEMS_PER_PAGE, 0, $rule),
         );
-        $events = $this->attachMoreEventsCounts($events, $currentTypes, $search, $since, $rule);
+        $events = $this->attachMoreEventsCounts($events, $currentTypes, $search, $rule);
 
         return [
             'events' => $events,
             'keyFilter' => null,
-            'pagination' => $this->buildPagination($page, $pageCount, $this->eventLogRepository->count($currentTypes, $search, '', $since, $rule)),
+            'pagination' => $this->buildPagination($page, $pageCount, $this->eventLogRepository->count($currentTypes, $search, '', 0, $rule)),
         ];
     }
 
@@ -111,6 +108,18 @@ final class EventLogViewDataProvider
             ],
             'pagination' => $this->buildPagination($page, $pageCount, $totalCount),
         ];
+    }
+
+    /**
+     * Whether events older than the retention period, plus one day of grace
+     * for the scheduled run, still exist - the signal that the prune command
+     * is not running regularly.
+     */
+    private function isPruneOverdue(): bool
+    {
+        $cutOff = time() - ($this->eventLogSettings->getRetentionDays() + 1) * 86400;
+
+        return $cutOff > 0 && $this->eventLogRepository->hasEventsOlderThan($cutOff);
     }
 
     /**
@@ -153,7 +162,7 @@ final class EventLogViewDataProvider
      * @param list<string> $currentTypes
      * @return list<array<string, mixed>>
      */
-    private function attachMoreEventsCounts(array $events, array $currentTypes, string $search, int $since, string $rule): array
+    private function attachMoreEventsCounts(array $events, array $currentTypes, string $search, string $rule): array
     {
         $cappedKeyHashes = [];
         foreach ($events as $event) {
@@ -162,7 +171,7 @@ final class EventLogViewDataProvider
             }
         }
 
-        $totalCounts = $this->eventLogRepository->countByKeyHashes($currentTypes, $search, $cappedKeyHashes, $since, $rule);
+        $totalCounts = $this->eventLogRepository->countByKeyHashes($currentTypes, $search, $cappedKeyHashes, 0, $rule);
 
         return array_map(static function (array $event) use ($totalCounts): array {
             $keyHash = is_string($event['key_hash']) ? $event['key_hash'] : '';
