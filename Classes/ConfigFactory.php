@@ -11,11 +11,13 @@ use Flowd\Typo3Firewall\Form\FormFloodSettings;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
 use Flowd\Typo3Firewall\Pattern\PatternStorageSettings;
 use Flowd\Typo3Firewall\Writer\FileArrayWriter;
+use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use Psr\SimpleCache\CacheInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\EventDispatcher\EventDispatcher;
+use TYPO3\CMS\Core\Http\NormalizedParams;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 #[Autoconfigure(autowire: true)]
@@ -125,10 +127,16 @@ class ConfigFactory
 
         $this->configureCompiledCache($config);
 
-        // getIndpEnv() applies TYPO3's reverseProxyIP settings, so rules key on the real client IP.
-        $config->setIpResolver(static function (): ?string {
-            $remoteAddress = GeneralUtility::getIndpEnv('REMOTE_ADDR');
-            return is_string($remoteAddress) && $remoteAddress !== '' ? $remoteAddress : null;
+        // The normalized params apply TYPO3's reverseProxyIP settings, so rules key on the real
+        // client IP; for requests without the attribute they are computed from the request.
+        $config->setIpResolver(static function (ServerRequestInterface $serverRequest): ?string {
+            $normalizedParams = $serverRequest->getAttribute('normalizedParams');
+            if (!$normalizedParams instanceof NormalizedParams) {
+                $normalizedParams = NormalizedParams::createFromRequest($serverRequest);
+            }
+
+            $remoteAddress = $normalizedParams->getRemoteAddress();
+            return $remoteAddress !== '' ? $remoteAddress : null;
         });
 
         $patternPath = $this->patternStorageSettings->getPatternsFilePath();

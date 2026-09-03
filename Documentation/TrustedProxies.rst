@@ -18,9 +18,9 @@ resolution, two things go wrong:
 The default: TYPO3 resolves the client IP
 ==========================================
 
-The extension resolves the client IP through
-``GeneralUtility::getIndpEnv('REMOTE_ADDR')``. This applies the reverse
-proxy settings of your TYPO3 installation. Configure them once in
+The extension resolves the client IP through the request's normalized
+parameters (``NormalizedParams``). This applies the reverse proxy settings
+of your TYPO3 installation. Configure them once in
 ``config/system/settings.php`` (classic installation:
 ``typo3conf/system/settings.php``) and both TYPO3 and the firewall see the
 real visitor address:

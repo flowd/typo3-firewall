@@ -47,17 +47,12 @@ available); other form extensions ship equivalent protections. Beyond that:
             name: 'contact-form-flood',
             limit: 3,
             period: 600,
-            key: function (\Psr\Http\Message\ServerRequestInterface $request): ?string {
-                // Only count POST submissions to the contact page.
-                if ($request->getMethod() !== 'POST'
-                    || !str_starts_with($request->getUri()->getPath(), '/contact')) {
-                    return null; // the rule does not apply to other requests
-                }
-                // getIndpEnv() applies the reverseProxyIP settings, so the
-                // throttle keys on the real client IP behind a proxy or CDN.
-                $clientIp = \TYPO3\CMS\Core\Utility\GeneralUtility::getIndpEnv('REMOTE_ADDR');
-                return is_string($clientIp) && $clientIp !== '' ? $clientIp : null;
-            },
+            // Only count POST submissions to the contact page. Without a key
+            // the throttle uses the default client-IP resolver, which applies
+            // TYPO3's reverseProxyIP settings.
+            scope: static fn(\Psr\Http\Message\ServerRequestInterface $request): bool
+                => $request->getMethod() === 'POST'
+                    && str_starts_with($request->getUri()->getPath(), '/contact'),
         );
 
 Throttles need a persistent store, see :doc:`Storage`.

@@ -22,9 +22,9 @@ brings its own rate limiting for backend login attempts.
 How does the firewall see the real client IP behind a proxy?
 =============================================================
 
-The extension resolves the client IP through
-``GeneralUtility::getIndpEnv('REMOTE_ADDR')``, which applies the
-``reverseProxyIP`` settings of your TYPO3 installation. Configure those
+The extension resolves the client IP through the request's normalized
+parameters (``NormalizedParams``), which apply the ``reverseProxyIP``
+settings of your TYPO3 installation. Configure those
 settings once and both TYPO3 and the firewall see the real visitor address
 (see :doc:`TrustedProxies`).
 

@@ -11,9 +11,10 @@ return [
             'target' => Middleware::class,
             'after' => [
                 'typo3/cms-frontend/timetracker',
+                'typo3/cms-core/normalized-params-attribute',
             ],
             'before' => [
-                'typo3/cms-core/normalized-params-attribute',
+                'typo3/cms-frontend/site',
             ],
         ],
         'flowd/typo3-firewall-aspect' => [
@@ -22,7 +23,7 @@ return [
                 'flowd/typo3-firewall',
             ],
             'before' => [
-                'typo3/cms-core/normalized-params-attribute',
+                'typo3/cms-frontend/site',
             ],
         ],
     ],
