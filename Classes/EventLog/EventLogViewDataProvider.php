@@ -340,7 +340,11 @@ final class EventLogViewDataProvider
         $keyHash = is_string($event['key_hash']) ? $event['key_hash'] : '';
         $keyDisplay = is_string($event['key_display']) ? $event['key_display'] : '';
 
-        $event['excludeKeysWithSelf'] = $keyHash === '' ? $excludeKeyHashes : [...$excludeKeyHashes, $keyHash];
+        // The row's own hash goes first so hiding it still works when the
+        // exclusion list is already at its cap: the last entry drops out.
+        $event['excludeKeysWithSelf'] = $keyHash === ''
+            ? $excludeKeyHashes
+            : self::sanitizeExcludeKeys([$keyHash, ...$excludeKeyHashes]);
 
         $event['blockStatus'] = $keyHash === ''
             ? null

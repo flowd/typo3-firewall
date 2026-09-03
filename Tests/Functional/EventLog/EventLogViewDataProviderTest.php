@@ -203,6 +203,28 @@ final class EventLogViewDataProviderTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function hidingAKeyAtTheExclusionCapDropsTheLastEntryInstead(): void
+    {
+        $this->insertKeyedEvents(self::KEY_FLOODER, 1, 'flood-rule-');
+        $fullExclusionList = array_map(
+            fn(int $index): string => $this->keyHash('excluded-key-' . $index),
+            range(1, EventLogViewDataProvider::MAX_EXCLUDED_KEYS),
+        );
+
+        $viewData = $this->eventLogViewDataProvider->getViewData([], '', '', excludeKeys: $fullExclusionList);
+        $events = $viewData['events'];
+        self::assertIsArray($events);
+
+        $event = $events[0];
+        self::assertIsArray($event);
+        $excludeKeysWithSelf = $event['excludeKeysWithSelf'];
+        self::assertIsArray($excludeKeysWithSelf);
+        self::assertCount(EventLogViewDataProvider::MAX_EXCLUDED_KEYS, $excludeKeysWithSelf);
+        self::assertSame($this->keyHash(self::KEY_FLOODER), $excludeKeysWithSelf[0], 'The row key survives the cap');
+        self::assertNotContains($fullExclusionList[EventLogViewDataProvider::MAX_EXCLUDED_KEYS - 1], $excludeKeysWithSelf, 'The last exclusion drops out');
+    }
+
+    #[Test]
     public function aKeyWithAFullIpDisplayOffersTheIpBlockAction(): void
     {
         $this->insertKeyedEvents(self::KEY_FLOODER, 1, 'flood-rule-');
