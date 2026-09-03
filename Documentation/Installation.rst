@@ -8,7 +8,7 @@ Requirements
 ============
 
 ===================  ===============================
-Extension version    0.8
+Extension version    0.9
 TYPO3                12.4 LTS, 13.4 LTS, 14
 PHP                  8.3, 8.4, 8.5
 Firewall engine      flowd/phirewall 0.10
@@ -73,6 +73,33 @@ the three preset packages, and ``psr/simple-cache``. They live inside the
 extension under ``Resources/Private/Php/ComposerLibraries`` and are loaded
 automatically. No extra installation step is needed, and the presets are
 available without further setup.
+
+Upgrade from 0.8
+================
+
+Version 0.9 extends the event log and fixes the client IP resolution.
+Review these points when upgrading:
+
+Database schema and caches
+    Update the database schema (a new index on ``tx_firewall_event``) and
+    flush all caches after the upgrade, for example with
+    ``vendor/bin/typo3 extension:setup`` followed by
+    ``vendor/bin/typo3 cache:flush``.
+
+The event log view defaults to the last 7 days
+    Older entries stay recorded and reachable through the new "All" time
+    range button.
+
+The firewall middleware moved after the normalized params
+    The middleware now runs after ``typo3/cms-core/normalized-params-attribute``
+    (and before site resolution), so the ``reverseProxyIP`` settings apply
+    to every IP-keyed rule. Review site packages that order their own
+    middlewares relative to the firewall.
+
+New opt-in event log settings
+    ``eventLogFullIpRules`` and ``eventLogRequestHeaders`` record more data
+    for attack analysis and are off by default; see :doc:`Statistics` before
+    enabling them.
 
 Upgrade from 0.7
 ================
