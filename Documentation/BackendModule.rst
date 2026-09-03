@@ -15,6 +15,8 @@ dropdown in the module's doc-header:
 - **Event log** lists the recorded firewall events with their details.
 - **Statistics** shows how much traffic the firewall blocked over time.
 
+..  _backend-module-patterns:
+
 Patterns
 ========
 
@@ -173,14 +175,55 @@ diagnostic headers appear as ``diagnosticHeaders.X-Phirewall-Owasp-Rule:
 you can inspect which rule fired without exposing that information to
 clients.
 
+With the ``eventLogRequestHeaders`` extension setting enabled, every event
+also records the request headers, shown collapsed behind their own details
+element in the request column - the full picture of how a request arrived.
+Credential headers are stored redacted; see :doc:`Statistics` for the
+privacy notes. And while ``eventLogFullIpRules`` lists rules whose events
+store the client IP unanonymized for an ongoing attack analysis, a warning
+icon appears in the view's header - a click shows the affected rules - and
+the **System > Status** report warns as well.
+
 When a client triggers many events, the list collapses them: each key shows
 only its three newest events, and the third row carries a hint with the
 number of older events. Events without a key, for example blocklist matches,
-are never collapsed. Click a key or the hint to filter the list to that key
-and see every one of its events. The rule is clickable as well and filters
-the list to the events of that rule; both filters combine with the tags and
-the search. Every active filter appears above the list and is removed again
-with the close button next to it.
+are never collapsed. The filter button next to the key - a plus overlay
+marks it - filters the list to that key and shows every one of its events;
+in the filtered view it turns into a remove-filter button with a minus
+overlay. The hint on a collapsed key opens the same filter. The rule is clickable and filters the list to the events of that
+rule; both filters combine with the tags and the search. Every active filter
+appears above the list and is removed again with the close button next to
+it.
+
+The view covers the last seven days by default; the range buttons in the
+header switch between 24 hours, 7 days, 30 days, and the whole log. A
+bounded range also keeps the view fast on large event tables.
+
+A lock icon next to a key means the key is blocked right now: an active
+fail2ban or allow2ban ban, or a matching ``ip`` or ``cidr`` entry on the
+:ref:`pattern blocklist <backend-module-patterns>`. The icon's tooltip names
+the source, for example the banning rule. The check works for every banned
+key, including hash-only keys; for ``cidr`` entries with an anonymized key
+it is limited to networks at least as coarse as the anonymization mask
+(``/24`` for IPv4, ``/64`` for IPv6).
+
+Keys that are not blocked yet and store the full IP address offer a red
+block button next to the key. After a confirmation dialog it creates
+an exact ``ip`` entry on the pattern blocklist for exactly the address the
+row displays; the entry appears in the Patterns view, where it can be edited,
+given an expiry, or removed. This requires the full address, so the button
+appears with IP anonymization disabled or for events whose rule is listed
+in ``eventLogFullIpRules``. Anonymized addresses are not blockable from the
+log - the real client IP behind the anonymized network address is unknown -
+and neither are keys stored as hash only (for example header or session
+based throttle keys), where the clear text needed for a pattern entry does
+not exist.
+
+Single keys can also be hidden from the list: the minus button next to the
+key hides all of its events, for example a noisy
+monitoring service while inspecting the remaining traffic. Hidden keys
+appear as chips above the list and can be removed there one by one; up to
+20 keys can be hidden at the same time.
 
 Filter the list by event type with the type tags: a click toggles a tag,
 and all active tags combine into one filter. Only event types that actually
@@ -188,10 +231,10 @@ occur in the log are offered as tags, plus any filter that is currently
 active, so a stored filter can always be toggled off. When the log still
 contains entries older than the configured retention period, the view shows
 a warning: the ``firewall:eventlog:prune`` console command is not running
-regularly and should be scheduled (TYPO3 scheduler or cron). The active tags and the search
-term are stored per backend user and restored the next time the module is
-opened; **Reset** clears them. The key filter is a transient drill-down and
-is not stored. The search field matches rule names, keys, and request
+regularly and should be scheduled (TYPO3 scheduler or cron). The active tags, the search
+term, the hidden keys, and the selected time range are stored per backend
+user and restored the next time the module is opened; **Reset** clears them.
+The key filter is a transient drill-down and is not stored. The search field matches rule names, keys, and request
 paths. It also compares the search term against
 the stored key hash, so searching for the full IP address (for example
 ``203.0.113.10``) finds its events even when the list only displays the

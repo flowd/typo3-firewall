@@ -628,7 +628,7 @@ final class FirewallControllerTest extends FunctionalTestCase
     }
 
     #[Test]
-    public function eventsActionRendersAHashOnlyKeyAsACroppedHashLink(): void
+    public function eventsActionRendersAHashOnlyKeyAsACroppedHash(): void
     {
         $this->setUpConfigWithFail2BanRule();
         $keyHash = $this->keyHash('secret-api-key');
@@ -794,6 +794,82 @@ final class FirewallControllerTest extends FunctionalTestCase
 
         self::assertSame(303, $response->getStatusCode());
         self::assertFalse($config->banManager()->isBanned('login-protection', '203.0.113.10', BanType::Fail2Ban));
+    }
+
+    #[Test]
+    public function eventsActionPersistsExcludedKeysAndTheRange(): void
+    {
+        $this->setUpConfigWithFail2BanRule();
+        $connection = $this->getConnectionPool()->getConnectionForTable('tx_firewall_event');
+        $connection->insert('tx_firewall_event', [
+            'event_type' => 'throttle_exceeded',
+            'rule' => 'flood-rule',
+            'key_hash' => $this->keyHash('203.0.113.10'),
+            'key_display' => '203.0.113.10',
+            'created_at' => time(),
+        ]);
+        $connection->insert('tx_firewall_event', ['event_type' => 'blocklist_matched', 'rule' => 'old-rule', 'created_at' => time() - 10 * 86400]);
+
+        $filteredBody = (string)$this->dispatchModuleRequest('events', [
+            'excludeKeys' => [$this->keyHash('203.0.113.10')],
+            'range' => 'all',
+            'operation' => 'filter',
+        ])->getBody();
+        self::assertStringNotContainsString('flood-rule', $filteredBody);
+        self::assertStringContainsString('old-rule', $filteredBody, 'The "all" range shows events older than the default range');
+
+        $plainBody = (string)$this->dispatchModuleRequest('events')->getBody();
+        self::assertStringNotContainsString('flood-rule', $plainBody);
+        self::assertStringContainsString('old-rule', $plainBody);
+        self::assertStringContainsString('Hidden keys', $plainBody);
+    }
+
+    #[Test]
+    public function eventsActionShowsTheBlockedIconForABannedKey(): void
+    {
+        $config = $this->setUpConfigWithFail2BanRule();
+        $config->banManager()->ban('login-protection', '203.0.113.10', 3600, BanType::Fail2Ban);
+        $this->getConnectionPool()->getConnectionForTable('tx_firewall_event')->insert('tx_firewall_event', [
+            'event_type' => 'fail2ban_banned',
+            'rule' => 'login-protection',
+            'key_hash' => $this->keyHash('203.0.113.10'),
+            'key_display' => '203.0.113.10',
+            'created_at' => time(),
+        ]);
+
+        $body = (string)$this->dispatchModuleRequest('events')->getBody();
+
+        self::assertStringContainsString('Currently banned: login-protection (fail2ban)', $body);
+    }
+
+    #[Test]
+    public function blockKeyActionCreatesAnIpPatternEntryForThePostedIp(): void
+    {
+        $response = $this->dispatchModuleRequest('blockKey', ['ip' => '203.0.113.10'], 'POST');
+
+        self::assertSame(303, $response->getStatusCode());
+        $patterns = $this->createPatternBackend()->listRaw();
+        self::assertCount(1, $patterns);
+        self::assertSame(PatternKind::IP->value, $patterns[0]['kind']);
+        self::assertSame('203.0.113.10', $patterns[0]['value']);
+    }
+
+    #[Test]
+    public function blockKeyActionRejectsAnAnonymizedNetworkAddress(): void
+    {
+        $response = $this->dispatchModuleRequest('blockKey', ['ip' => '203.0.113.0'], 'POST');
+
+        self::assertSame(303, $response->getStatusCode());
+        self::assertCount(0, $this->createPatternBackend()->listRaw());
+    }
+
+    #[Test]
+    public function blockKeyActionRejectsANonIpValue(): void
+    {
+        $response = $this->dispatchModuleRequest('blockKey', ['ip' => 'not-an-ip'], 'POST');
+
+        self::assertSame(303, $response->getStatusCode());
+        self::assertCount(0, $this->createPatternBackend()->listRaw());
     }
 
     /**

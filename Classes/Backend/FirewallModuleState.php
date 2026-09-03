@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowd\Typo3Firewall\Backend;
 
+use Flowd\Typo3Firewall\EventLog\EventLogViewDataProvider;
 use Flowd\Typo3Firewall\EventLog\FirewallEventType;
 use TYPO3\CMS\Backend\Module\ModuleData;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
@@ -51,43 +52,65 @@ final class FirewallModuleState
     }
 
     /**
-     * Persist or restore the type and search filters. Filter submits and tag
-     * toggles carry operation=filter and persist their state; plain navigation
-     * without any filter arguments restores it. The key and rule filters are
-     * transient drill-downs and are never persisted; a request carrying one
-     * shows it unfiltered instead of restoring the stored filters.
+     * Persist or restore the type, search, excluded-key and range filters.
+     * Filter submits and tag toggles carry operation=filter and persist their
+     * state; plain navigation without any filter arguments restores it. The
+     * key and rule filters are transient drill-downs and are never persisted;
+     * a request carrying one shows it unfiltered instead of restoring the
+     * stored filters.
      *
      * @param array<mixed> $types
-     * @return array{0: list<string>, 1: string}
+     * @param array<mixed> $excludeKeys
+     * @return array{0: list<string>, 1: string, 2: list<string>, 3: string}
      */
-    public function resolveEventFilters(RequestInterface $request, array $types, string $search, string $key, string $rule, string $operation): array
+    public function resolveEventFilters(RequestInterface $request, array $types, string $search, string $key, string $rule, string $operation, array $excludeKeys = [], string $range = ''): array
     {
-        $stringTypes = $this->filterKnownEventTypes($types);
-        $search = mb_substr($search, 0, self::MAX_SEARCH_LENGTH);
+        $requestedFilters = $this->sanitizeEventFilters($types, $search, $excludeKeys, $range);
         $moduleData = $request->getAttribute('moduleData');
         if (!$moduleData instanceof ModuleData) {
-            return [$stringTypes, $search];
+            return $requestedFilters;
         }
 
         if ($operation === 'reset-filters') {
             $moduleData->set('eventsFilter', []);
             $this->persist($moduleData);
 
-            return [[], ''];
+            return [[], '', [], ''];
         }
 
         if ($operation === 'filter') {
-            $moduleData->set('eventsFilter', ['types' => $stringTypes, 'search' => $search]);
+            [$stringTypes, $sanitizedSearch, $excludeKeyHashes, $sanitizedRange] = $requestedFilters;
+            $moduleData->set('eventsFilter', [
+                'types' => $stringTypes,
+                'search' => $sanitizedSearch,
+                'excludeKeys' => $excludeKeyHashes,
+                'range' => $sanitizedRange,
+            ]);
             $this->persist($moduleData);
 
-            return [$stringTypes, $search];
+            return $requestedFilters;
         }
 
-        if ($stringTypes === [] && $search === '' && $key === '' && $rule === '') {
+        if ($key === '' && $rule === '' && $requestedFilters === [[], '', [], '']) {
             return $this->restorePersistedEventFilters($moduleData);
         }
 
-        return [$stringTypes, $search];
+        return $requestedFilters;
+    }
+
+    /**
+     * @param array<mixed> $types
+     * @param array<mixed> $excludeKeys
+     * @return array{0: list<string>, 1: string, 2: list<string>, 3: string}
+     */
+    private function sanitizeEventFilters(array $types, string $search, array $excludeKeys, string $range): array
+    {
+        return [
+            $this->filterKnownEventTypes($types),
+            mb_substr($search, 0, self::MAX_SEARCH_LENGTH),
+            EventLogViewDataProvider::sanitizeExcludeKeys($excludeKeys),
+            isset(EventLogViewDataProvider::RANGES[$range]) ? $range : '',
+        ];
     }
 
     /**
@@ -114,21 +137,25 @@ final class FirewallModuleState
     }
 
     /**
-     * @return array{0: list<string>, 1: string}
+     * @return array{0: list<string>, 1: string, 2: list<string>, 3: string}
      */
     private function restorePersistedEventFilters(ModuleData $moduleData): array
     {
         $persistedFilter = $moduleData->get('eventsFilter', []);
         if (!is_array($persistedFilter)) {
-            return [[], ''];
+            return [[], '', [], ''];
         }
 
         $persistedTypes = is_array($persistedFilter['types'] ?? null) ? $persistedFilter['types'] : [];
         $persistedSearch = $persistedFilter['search'] ?? null;
+        $persistedExcludeKeys = is_array($persistedFilter['excludeKeys'] ?? null) ? $persistedFilter['excludeKeys'] : [];
+        $persistedRange = $persistedFilter['range'] ?? null;
 
         return [
             $this->filterKnownEventTypes($persistedTypes),
             is_string($persistedSearch) ? mb_substr($persistedSearch, 0, self::MAX_SEARCH_LENGTH) : '',
+            EventLogViewDataProvider::sanitizeExcludeKeys($persistedExcludeKeys),
+            is_string($persistedRange) && isset(EventLogViewDataProvider::RANGES[$persistedRange]) ? $persistedRange : '',
         ];
     }
 

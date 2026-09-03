@@ -293,6 +293,9 @@
       <trans-unit id="events.table.details">
         <source>Details</source>
       </trans-unit>
+      <trans-unit id="events.table.actions">
+        <source>Actions</source>
+      </trans-unit>
       <trans-unit id="events.pagination.label">
         <source>Event log pages</source>
       </trans-unit>
@@ -313,6 +316,57 @@
       </trans-unit>
       <trans-unit id="events.pagination.last">
         <source>Last page</source>
+      </trans-unit>
+      <trans-unit id="events.range.label">
+        <source>Time range</source>
+      </trans-unit>
+      <trans-unit id="events.range.24h">
+        <source>24 hours</source>
+      </trans-unit>
+      <trans-unit id="events.range.7d">
+        <source>7 days</source>
+      </trans-unit>
+      <trans-unit id="events.range.30d">
+        <source>30 days</source>
+      </trans-unit>
+      <trans-unit id="events.range.all">
+        <source>All</source>
+      </trans-unit>
+      <trans-unit id="events.filter.excludedKeys">
+        <source>Hidden keys</source>
+      </trans-unit>
+      <trans-unit id="events.filter.removeExcludedKey">
+        <source>Show this key again</source>
+      </trans-unit>
+      <trans-unit id="events.key.exclude">
+        <source>Hide all events of this key</source>
+      </trans-unit>
+      <trans-unit id="events.key.blocked.ban">
+        <source>Currently banned: %1$s</source>
+      </trans-unit>
+      <trans-unit id="events.key.blocked.pattern">
+        <source>Blocked by pattern entry: %1$s</source>
+      </trans-unit>
+      <trans-unit id="events.key.block.ip">
+        <source>Block IP %1$s with a pattern entry</source>
+      </trans-unit>
+      <trans-unit id="events.key.block.confirmTitle">
+        <source>Block key</source>
+      </trans-unit>
+      <trans-unit id="events.key.block.confirm">
+        <source>Create a pattern blocklist entry for %1$s? Every request from it will be rejected until the entry is removed in the Patterns view.</source>
+      </trans-unit>
+      <trans-unit id="events.key.block.confirmOk">
+        <source>Block</source>
+      </trans-unit>
+      <trans-unit id="events.warnings.title">
+        <source>Warnings</source>
+      </trans-unit>
+      <trans-unit id="events.fullIpLogging">
+        <source>Full IP logging is active for these rules: %1$s. Their events store the client IP unanonymized; remove the exception (extension setting "eventLogFullIpRules") when the analysis is done.</source>
+      </trans-unit>
+      <trans-unit id="events.request.headers">
+        <source>%1$s request headers</source>
       </trans-unit>
       <trans-unit id="bans.title">
         <source>Currently blocked keys</source>
@@ -382,6 +436,12 @@
       </trans-unit>
       <trans-unit id="flash.ban.notFound">
         <source>Ban not found or already expired.</source>
+      </trans-unit>
+      <trans-unit id="flash.key.blocked">
+        <source>Pattern entry created: %1$s %2$s</source>
+      </trans-unit>
+      <trans-unit id="flash.key.blockNotPossible">
+        <source>Only a full IP address can be blocked; anonymized or hash-only keys cannot.</source>
       </trans-unit>
       <trans-unit id="flash.validation.invalidKind">
         <source>Invalid pattern kind: %1$s</source>
@@ -580,6 +640,15 @@
       </trans-unit>
       <trans-unit id="reports.pcreJit.unavailable.message">
         <source>The PCRE library of this PHP build has no JIT support. The firewall evaluates regular expression patterns on every request, so pattern matching falls back to the slower interpreter.</source>
+      </trans-unit>
+      <trans-unit id="reports.fullIpLogging.title">
+        <source>Event log full IP logging</source>
+      </trans-unit>
+      <trans-unit id="reports.fullIpLogging.inactive.value">
+        <source>Not active</source>
+      </trans-unit>
+      <trans-unit id="reports.fullIpLogging.active.message">
+        <source>The listed rules store client IPs unanonymized in the event log. This exception is meant for the duration of an attack analysis; remove it from the "eventLogFullIpRules" extension setting when the analysis is done.</source>
       </trans-unit>
     </body>
   </file>
