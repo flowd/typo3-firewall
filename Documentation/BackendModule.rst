@@ -155,8 +155,8 @@ Event log
 
 This view lists the latest recorded firewall events, newest first. Every
 entry shows the time, the event type, the rule, the key (an anonymized IP
-address, or a hash for sensitive keys), the request line with the user
-agent, and the event details. The request line contains the full request
+address, or a hash for sensitive keys), an actions column, the request line
+with the user agent, and the event details. The request line contains the full request
 target including the query string, so GET payloads such as injection
 attempts are visible (and searchable) as they arrived.
 
@@ -187,8 +187,9 @@ the **System > Status** report warns as well.
 When a client triggers many events, the list collapses them: each key shows
 only its three newest events, and the third row carries a hint with the
 number of older events. Events without a key, for example blocklist matches,
-are never collapsed. The filter button next to the key - a plus overlay
-marks it - filters the list to that key and shows every one of its events;
+are never collapsed. The filter button in the actions column - a plus
+overlay marks it - filters the list to that key and shows every one of its
+events;
 in the filtered view it turns into a remove-filter button with a minus
 overlay. The hint on a collapsed key opens the same filter. The rule is clickable and filters the list to the events of that
 rule; both filters combine with the tags and the search. Every active filter

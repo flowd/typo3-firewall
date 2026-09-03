@@ -50,11 +50,12 @@ The dashboard widgets need the TYPO3 dashboard:
 
     composer require typo3/cms-dashboard
 
-With the TYPO3 reports module installed, the firewall adds a PCRE JIT check
-to :guilabel:`System > Status`. The firewall evaluates regular expression
-patterns on every request; the check warns when PCRE JIT is disabled or the
-PCRE library of the PHP build has no JIT support, because pattern matching
-then falls back to the slower interpreter.
+With the TYPO3 reports module installed, the firewall adds two checks to
+:guilabel:`System > Status`: a PCRE JIT check that warns when PCRE JIT is
+disabled or unavailable (the firewall evaluates regular expression patterns
+on every request, so matching would fall back to the slower interpreter),
+and a privacy check that warns while the ``eventLogFullIpRules`` exception
+stores unanonymized client IPs (see :doc:`Statistics`).
 
 ..  code-block:: bash
 
