@@ -2,9 +2,6 @@
 <xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
   <file source-language="en" datatype="plaintext" original="messages" product-name="firewall">
     <body>
-      <trans-unit id="module.title">
-        <source>Firewall</source>
-      </trans-unit>
       <trans-unit id="list.title">
         <source>Active Patterns</source>
       </trans-unit>
@@ -25,15 +22,6 @@
       </trans-unit>
       <trans-unit id="edit.notice.id">
         <source>Pattern ID</source>
-      </trans-unit>
-      <trans-unit id="edit.info.title">
-        <source>Pattern information</source>
-      </trans-unit>
-      <trans-unit id="edit.info.id">
-        <source>ID</source>
-      </trans-unit>
-      <trans-unit id="edit.info.addedAt">
-        <source>Added at</source>
       </trans-unit>
       <trans-unit id="action.add">
         <source>Add pattern</source>
@@ -64,9 +52,6 @@
       </trans-unit>
       <trans-unit id="field.kind">
         <source>Kind</source>
-      </trans-unit>
-      <trans-unit id="field.kind.help">
-        <source>Select what should be matched (IP, header, path, etc.).</source>
       </trans-unit>
       <trans-unit id="field.value">
         <source>Value</source>
@@ -227,9 +212,6 @@
       <trans-unit id="integrity.hint">
         <source>Affected entries are silently dropped during enforcement. Inspect config/system/phirewall.patterns.json and fix or remove the malformed entries.</source>
       </trans-unit>
-      <trans-unit id="note.patternsStorage">
-        <source>Patterns are stored in config/system/phirewall.patterns.json and enforced immediately.</source>
-      </trans-unit>
       <trans-unit id="nav.label">
         <source>View</source>
       </trans-unit>
@@ -349,12 +331,6 @@
       </trans-unit>
       <trans-unit id="bans.field.key">
         <source>Key</source>
-      </trans-unit>
-      <trans-unit id="bans.field.rule">
-        <source>Rule</source>
-      </trans-unit>
-      <trans-unit id="bans.field.type">
-        <source>Type</source>
       </trans-unit>
       <trans-unit id="bans.field.expiresAt">
         <source>Expires at</source>
