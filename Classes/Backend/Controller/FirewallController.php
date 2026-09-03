@@ -188,13 +188,13 @@ class FirewallController extends ActionController
 
     /**
      * Create an exact ip pattern entry for the address an event row
-     * displays. The posted value is validated like any admin-entered
-     * pattern: it must be a full IP, anonymized network addresses and
-     * non-IP values are rejected.
+     * displays. The posted address must be the row's complete key: its
+     * keyed hash has to match the posted key hash, which rejects anonymized
+     * network addresses and non-IP values.
      */
-    public function blockKeyAction(string $ip): ResponseInterface
+    public function blockKeyAction(string $ip, string $key): ResponseInterface
     {
-        $patternEntry = $this->blockableKeyResolver->resolve($ip);
+        $patternEntry = $this->blockableKeyResolver->resolve($ip, $key);
         if (!$patternEntry instanceof PatternEntry) {
             $this->addFlashMessage($this->translateLabel('flash.key.blockNotPossible'), $this->translateLabel('flash.title.error'), ContextualFeedbackSeverity::ERROR);
 

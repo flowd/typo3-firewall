@@ -10,7 +10,6 @@ use Flowd\Phirewall\Pattern\PatternEntry;
 use Flowd\Phirewall\Pattern\PatternKind;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Core\Utility\IpAnonymizationUtility;
 
 /**
  * Resolves whether a logged key is currently blocked by an active ban or a
@@ -49,7 +48,7 @@ final class KeyBlockStatusProvider
 
         return $this->getBanStatusByKeyHash()[$keyHash]
             ?? $this->getIpPatternStatusByKeyHash()[$keyHash]
-            ?? $this->findCidrPatternStatus($keyDisplay);
+            ?? $this->findCidrPatternStatus($keyDisplay, $keyHash);
     }
 
     /**
@@ -141,15 +140,17 @@ final class KeyBlockStatusProvider
         $this->cidrPatternEntries = $cidrEntries;
     }
 
-    private function findCidrPatternStatus(string $keyDisplay): ?KeyBlockStatus
+    private function findCidrPatternStatus(string $keyDisplay, string $keyHash): ?KeyBlockStatus
     {
         if (!GeneralUtility::validIP($keyDisplay)) {
             return null;
         }
 
-        $looksAnonymized = IpAnonymizationUtility::anonymizeIp($keyDisplay, 1) === $keyDisplay;
+        // A display whose keyed hash matches the stored hash is the complete
+        // key; everything else is an anonymized network address.
+        $isAnonymized = $this->keyHasher->hash($keyDisplay) !== $keyHash;
         foreach ($this->getCidrPatternEntries() as $patternEntry) {
-            if ($looksAnonymized && !$this->isCoarserThanAnonymizationMask($patternEntry->value)) {
+            if ($isAnonymized && !$this->isCoarserThanAnonymizationMask($patternEntry->value)) {
                 continue;
             }
 

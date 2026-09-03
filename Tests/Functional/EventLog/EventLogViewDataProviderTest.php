@@ -238,6 +238,26 @@ final class EventLogViewDataProviderTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function aZeroHostAddressLoggedAsTheFullKeyOffersTheBlockAction(): void
+    {
+        $this->insertEvent([
+            'event_type' => 'throttle_exceeded',
+            'rule' => 'flood-rule',
+            'key_hash' => $this->keyHash('203.0.113.0'),
+            'key_display' => '203.0.113.0',
+        ]);
+
+        $viewData = $this->eventLogViewDataProvider->getViewData([], '', '');
+        $events = $viewData['events'];
+        self::assertIsArray($events);
+
+        $event = $events[0];
+        self::assertIsArray($event);
+        self::assertSame('ip', $event['blockAction'], 'The display matches its key hash, so it is the complete key');
+        self::assertSame('203.0.113.0', $event['blockValue']);
+    }
+
+    #[Test]
     public function aHashOnlyKeyOffersNoBlockAction(): void
     {
         $this->insertEvent([

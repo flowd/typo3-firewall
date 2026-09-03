@@ -845,7 +845,7 @@ final class FirewallControllerTest extends FunctionalTestCase
     #[Test]
     public function blockKeyActionCreatesAnIpPatternEntryForThePostedIp(): void
     {
-        $response = $this->dispatchModuleRequest('blockKey', ['ip' => '203.0.113.10'], 'POST');
+        $response = $this->dispatchModuleRequest('blockKey', ['ip' => '203.0.113.10', 'key' => $this->keyHash('203.0.113.10')], 'POST');
 
         self::assertSame(303, $response->getStatusCode());
         $patterns = $this->createPatternBackend()->listRaw();
@@ -857,7 +857,7 @@ final class FirewallControllerTest extends FunctionalTestCase
     #[Test]
     public function blockKeyActionRejectsAnAnonymizedNetworkAddress(): void
     {
-        $response = $this->dispatchModuleRequest('blockKey', ['ip' => '203.0.113.0'], 'POST');
+        $response = $this->dispatchModuleRequest('blockKey', ['ip' => '203.0.113.0', 'key' => $this->keyHash('203.0.113.10')], 'POST');
 
         self::assertSame(303, $response->getStatusCode());
         self::assertCount(0, $this->createPatternBackend()->listRaw());
@@ -866,7 +866,7 @@ final class FirewallControllerTest extends FunctionalTestCase
     #[Test]
     public function blockKeyActionRejectsANonIpValue(): void
     {
-        $response = $this->dispatchModuleRequest('blockKey', ['ip' => 'not-an-ip'], 'POST');
+        $response = $this->dispatchModuleRequest('blockKey', ['ip' => 'not-an-ip', 'key' => $this->keyHash('not-an-ip')], 'POST');
 
         self::assertSame(303, $response->getStatusCode());
         self::assertCount(0, $this->createPatternBackend()->listRaw());

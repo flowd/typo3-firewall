@@ -193,6 +193,7 @@
                                                 <f:variable name="blockFormId" value="block-form-{event.uid}" />
                                                 <f:form action="blockKey" method="post" id="{blockFormId}" class="hidden">
                                                     <f:form.hidden name="ip" value="{event.blockValue}" />
+                                                    <f:form.hidden name="key" value="{event.key_hash}" />
                                                 </f:form>
                                             </f:if>
                                             <div class="btn-group" role="group" aria-label="{f:translate(key: 'events.table.actions')}">

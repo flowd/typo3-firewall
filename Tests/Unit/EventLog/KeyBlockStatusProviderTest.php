@@ -141,6 +141,17 @@ final class KeyBlockStatusProviderTest extends TestCase
     }
 
     #[Test]
+    public function aCompleteZeroHostKeyIsDecidedAgainstFineCidrEntries(): void
+    {
+        FileArrayPatternBackend::forFile($this->patternsFilePath)
+            ->append(new PatternEntry(kind: PatternKind::CIDR, value: '203.0.113.0/25'));
+
+        $status = $this->createProvider()->findBlockStatus($this->keyHasher->hash('203.0.113.0'), '203.0.113.0');
+
+        self::assertInstanceOf(KeyBlockStatus::class, $status, 'A display matching its key hash is the complete key, so fine CIDR entries are decidable');
+    }
+
+    #[Test]
     public function anUnknownKeyAndAnEmptyHashReportNoStatus(): void
     {
         $keyBlockStatusProvider = $this->createProvider();

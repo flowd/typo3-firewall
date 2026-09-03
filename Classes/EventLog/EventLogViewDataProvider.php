@@ -352,7 +352,7 @@ final class EventLogViewDataProvider
             return $event;
         }
 
-        $blockEntry = $this->blockableKeyResolver->resolve($keyDisplay);
+        $blockEntry = $this->blockableKeyResolver->resolve($keyDisplay, $keyHash);
         if ($blockEntry instanceof PatternEntry) {
             $event['blockAction'] = 'ip';
             $event['blockValue'] = $blockEntry->value;
