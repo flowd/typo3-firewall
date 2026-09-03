@@ -10,6 +10,12 @@ eventLogRetentionDays = 30
 # cat=event log; type=boolean; label=Anonymize IP addresses: Store client IPs with the last IPv4 octet (or the IPv6 host part) removed.
 eventLogAnonymizeIp = 1
 
+# cat=event log; type=string; label=Log full IPs for these rules: Comma-separated rule names whose events store the client IP unanonymized, e.g. while analyzing a specific attack. Overrides the anonymization setting for exactly these rules. Remove the entries when the analysis is done; the System > Status report warns while the list is not empty.
+eventLogFullIpRules =
+
+# cat=event log; type=boolean; label=Log request headers: Store the request headers with every event, shown in the event details. Credential headers (Cookie, Authorization, X-Api-Key, ...) are redacted, but the remaining headers can still contain personal data such as client IPs in forwarding headers - enable only while analyzing an attack.
+eventLogRequestHeaders = 0
+
 # cat=form flood protection; type=boolean; label=Enable form flood protection: Register a default "form-flood" allow2ban rule, fed by the "Firewall: flood protection" form finisher. Needs a persistent store (APCu/Redis) configured in phirewall.php.
 formFloodEnabled = 0
 

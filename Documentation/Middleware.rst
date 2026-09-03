@@ -10,15 +10,15 @@ frontend request stack.
 Position in the request stack
 =============================
 
-The middleware runs early: after ``typo3/cms-frontend/timetracker`` and
-before ``typo3/cms-core/normalized-params-attribute``. Two consequences
-follow from this position:
+The middleware runs early: after ``typo3/cms-core/normalized-params-attribute``
+and before ``typo3/cms-frontend/site``. Two consequences follow from this
+position:
 
 - Blocked requests are cheap. The firewall answers before TYPO3 resolves
   the site, the page, or any content.
-- The firewall sees the raw request. TYPO3's normalized parameters and site
-  handling have not run yet. That is why the extension resolves the client
-  IP itself (see :doc:`TrustedProxies`).
+- The firewall sees the request with TYPO3's normalized parameters already
+  attached, so the client IP respects the trusted-proxy settings
+  (see :doc:`TrustedProxies`), while site handling has not run yet.
 
 What is protected, and what is not
 ==================================

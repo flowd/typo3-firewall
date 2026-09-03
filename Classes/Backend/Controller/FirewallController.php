@@ -6,18 +6,18 @@ namespace Flowd\Typo3Firewall\Backend\Controller;
 
 use Flowd\Phirewall\BanType;
 use Flowd\Phirewall\Config;
+use Flowd\Phirewall\Pattern\PatternEntry;
 use Flowd\Phirewall\Pattern\PatternKind;
 use Flowd\Phirewall\Store\InMemoryCache;
 use Flowd\Typo3Firewall\Backend\FirewallModuleState;
 use Flowd\Typo3Firewall\Backend\FirewallModuleTemplateFactory;
 use Flowd\Typo3Firewall\Dto\PatternEntryDto;
+use Flowd\Typo3Firewall\EventLog\BlockableKeyResolver;
 use Flowd\Typo3Firewall\EventLog\EventLogViewDataProvider;
 use Flowd\Typo3Firewall\Pattern\FileArrayPatternBackend;
-use Flowd\Typo3Firewall\Pattern\PatternStorageSettings;
 use Flowd\Typo3Firewall\Pattern\PatternValidationException;
 use Flowd\Typo3Firewall\Statistics\StatisticsViewDataProvider;
 use Psr\Http\Message\ResponseInterface;
-use Psr\Log\LoggerInterface;
 use TYPO3\CMS\Backend\Attribute\AsController;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Type\ContextualFeedbackSeverity;
@@ -49,16 +49,14 @@ class FirewallController extends ActionController
         1770244720 => 'flash.validation.invalidRegex',
     ];
 
-    private ?FileArrayPatternBackend $fileArrayPatternBackend = null;
-
     public function __construct(
         private readonly FirewallModuleTemplateFactory $firewallModuleTemplateFactory,
         private readonly FirewallModuleState $firewallModuleState,
         private readonly Config $config,
         private readonly StatisticsViewDataProvider $statisticsViewDataProvider,
         private readonly EventLogViewDataProvider $eventLogViewDataProvider,
-        private readonly PatternStorageSettings $patternStorageSettings,
-        private readonly ?LoggerInterface $logger = null,
+        private readonly BlockableKeyResolver $blockableKeyResolver,
+        private readonly FileArrayPatternBackend $fileArrayPatternBackend,
     ) {}
 
     /**
@@ -82,7 +80,7 @@ class FirewallController extends ActionController
     public function overviewAction(?string $editId = null): ResponseInterface
     {
         $moduleTemplate = $this->firewallModuleTemplateFactory->create($this->request, 'overview');
-        $fileArrayPatternBackend = $this->getBackend();
+        $fileArrayPatternBackend = $this->fileArrayPatternBackend;
 
         $editPattern = null;
         if ($editId !== null) {
@@ -107,7 +105,7 @@ class FirewallController extends ActionController
     public function createAction(PatternEntryDto $patternEntryDto): ResponseInterface
     {
         try {
-            $this->getBackend()->append($patternEntryDto->toPatternEntry());
+            $this->fileArrayPatternBackend->append($patternEntryDto->toPatternEntry());
             $this->addFlashMessage($this->translateLabel('flash.pattern.created'));
         } catch (\InvalidArgumentException $invalidArgumentException) {
             $this->addFlashMessage($this->translateValidationError($invalidArgumentException), $this->translateLabel('flash.title.validationError'), ContextualFeedbackSeverity::ERROR);
@@ -119,7 +117,7 @@ class FirewallController extends ActionController
     public function updateAction(string $id, PatternEntryDto $patternEntryDto): ResponseInterface
     {
         try {
-            $this->getBackend()->append($patternEntryDto->toPatternEntry($id));
+            $this->fileArrayPatternBackend->append($patternEntryDto->toPatternEntry($id));
             $this->addFlashMessage($this->translateLabel('flash.pattern.updated'));
         } catch (\InvalidArgumentException $invalidArgumentException) {
             $this->addFlashMessage($this->translateValidationError($invalidArgumentException), $this->translateLabel('flash.title.validationError'), ContextualFeedbackSeverity::ERROR);
@@ -131,14 +129,14 @@ class FirewallController extends ActionController
 
     public function deleteAction(string $id): ResponseInterface
     {
-        $this->getBackend()->removeById($id);
+        $this->fileArrayPatternBackend->removeById($id);
         $this->addFlashMessage($this->translateLabel('flash.pattern.deleted'));
         return $this->redirect('overview');
     }
 
     public function pruneAction(): ResponseInterface
     {
-        $this->getBackend()->pruneExpired();
+        $this->fileArrayPatternBackend->pruneExpired();
         $this->addFlashMessage($this->translateLabel('flash.pattern.pruned'));
         return $this->redirect('overview');
     }
@@ -176,15 +174,41 @@ class FirewallController extends ActionController
 
     /**
      * @param array<mixed> $types
+     * @param array<mixed> $excludeKeys
      */
-    public function eventsAction(array $types = [], string $search = '', string $key = '', string $rule = '', int $page = 1, string $operation = ''): ResponseInterface
+    public function eventsAction(array $types = [], string $search = '', string $key = '', string $rule = '', int $page = 1, string $operation = '', array $excludeKeys = [], string $range = ''): ResponseInterface
     {
         $rule = mb_substr(trim($rule), 0, 255);
-        [$types, $search] = $this->firewallModuleState->resolveEventFilters($this->request, $types, trim($search), $key, $rule, $operation);
+        [$types, $search, $excludeKeys, $range] = $this->firewallModuleState->resolveEventFilters($this->request, $types, trim($search), $key, $rule, $operation, $excludeKeys, $range);
         $moduleTemplate = $this->firewallModuleTemplateFactory->create($this->request, 'events');
-        $moduleTemplate->assignMultiple($this->eventLogViewDataProvider->getViewData($types, $search, $key, $rule, $page));
+        $moduleTemplate->assignMultiple($this->eventLogViewDataProvider->getViewData($types, $search, $key, $rule, $page, $excludeKeys, $range));
 
         return $moduleTemplate->renderResponse('Backend/Firewall/Events');
+    }
+
+    /**
+     * Create an exact ip pattern entry for the address an event row
+     * displays. The posted address must be the row's complete key: its
+     * keyed hash has to match the posted key hash, which rejects anonymized
+     * network addresses and non-IP values.
+     */
+    public function blockKeyAction(string $ip, string $key): ResponseInterface
+    {
+        $patternEntry = $this->blockableKeyResolver->resolve($ip, $key);
+        if (!$patternEntry instanceof PatternEntry) {
+            $this->addFlashMessage($this->translateLabel('flash.key.blockNotPossible'), $this->translateLabel('flash.title.error'), ContextualFeedbackSeverity::ERROR);
+
+            return $this->redirect('events');
+        }
+
+        try {
+            $this->fileArrayPatternBackend->append($patternEntry);
+            $this->addFlashMessage(sprintf($this->translateLabel('flash.key.blocked'), $patternEntry->kind->value, $patternEntry->value));
+        } catch (\InvalidArgumentException $invalidArgumentException) {
+            $this->addFlashMessage($this->translateValidationError($invalidArgumentException), $this->translateLabel('flash.title.validationError'), ContextualFeedbackSeverity::ERROR);
+        }
+
+        return $this->redirect('events');
     }
 
     public function statisticsAction(string $range = ''): ResponseInterface
@@ -311,24 +335,12 @@ class FirewallController extends ActionController
         return sprintf($this->translateLabel('bans.remaining.daysHours'), intdiv($seconds, 86400), intdiv($seconds % 86400, 3600));
     }
 
-    private function getBackend(): FileArrayPatternBackend
-    {
-        if ($this->fileArrayPatternBackend instanceof FileArrayPatternBackend) {
-            return $this->fileArrayPatternBackend;
-        }
-
-        return $this->fileArrayPatternBackend = FileArrayPatternBackend::forFile(
-            $this->patternStorageSettings->getPatternsFilePath(),
-            $this->logger,
-        );
-    }
-
     /**
      * @return array<string, mixed>|null
      */
     private function findPatternById(string $id): ?array
     {
-        $patterns = $this->getBackend()->listRaw();
+        $patterns = $this->fileArrayPatternBackend->listRaw();
         foreach ($patterns as $pattern) {
             if (($pattern['id'] ?? null) === $id) {
                 return $pattern;

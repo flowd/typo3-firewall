@@ -90,12 +90,13 @@
                                                 <f:form.hidden name="key" value="{ban.key}" />
                                                 <f:form.hidden name="type" value="{group.type}" />
                                             </f:form>
-                                            <button type="button" class="btn btn-sm btn-outline-danger t3js-modal-trigger"
+                                            <button type="button" class="btn btn-sm btn-default text-danger t3js-modal-trigger"
                                                 title="{f:translate(key: 'bans.action.unban')}"
                                                 data-target-form="{unbanFormId}"
                                                 data-severity="warning"
                                                 data-title="{f:translate(key: 'bans.action.unban.confirmTitle')}"
                                                 data-bs-content="{f:translate(key: 'bans.action.unban.confirmFor', arguments: {0: ban.key, 1: group.rule})}"
+                                                data-content="{f:translate(key: 'bans.action.unban.confirmFor', arguments: {0: ban.key, 1: group.rule})}"
                                                 data-button-ok-text="{f:translate(key: 'bans.action.unban')}"
                                                 data-button-close-text="{f:translate(key: 'action.cancel')}">
                                                 <core:icon identifier="actions-delete" size="small" />

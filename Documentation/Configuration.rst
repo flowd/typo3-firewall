@@ -58,10 +58,9 @@ by using its name.
 
 Client IP resolver
     When your configuration does not call ``$config->setIpResolver()``, the
-    extension sets a resolver that uses
-    ``GeneralUtility::getIndpEnv('REMOTE_ADDR')``. This applies TYPO3's
-    ``reverseProxyIP`` settings, so rules see the real visitor address behind
-    a reverse proxy or CDN. When no address can be resolved, the resolver
+    extension sets a resolver that reads the request's normalized parameters
+    (``NormalizedParams``). This applies TYPO3's ``reverseProxyIP`` settings,
+    so rules see the real visitor address behind a reverse proxy or CDN. When no address can be resolved, the resolver
     returns ``null`` and rules that key on the client IP skip the request.
     Details: :doc:`TrustedProxies`.
 

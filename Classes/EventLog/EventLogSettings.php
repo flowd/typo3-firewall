@@ -72,6 +72,35 @@ final class EventLogSettings
         return (bool)$this->getSetting('eventLogAnonymizeIp', '1');
     }
 
+    /**
+     * Rules whose events store the client IP unanonymized, as a targeted
+     * exception from the anonymization setting while an attack is analyzed.
+     *
+     * @return list<string>
+     */
+    public function getFullIpLoggingRules(): array
+    {
+        $rules = [];
+        foreach (explode(',', $this->getSetting('eventLogFullIpRules', '')) as $configuredRule) {
+            $configuredRule = trim($configuredRule);
+            if ($configuredRule !== '' && !in_array($configuredRule, $rules, true)) {
+                $rules[] = $configuredRule;
+            }
+        }
+
+        return $rules;
+    }
+
+    public function isFullIpLoggingEnabledForRule(string $rule): bool
+    {
+        return $rule !== '' && in_array($rule, $this->getFullIpLoggingRules(), true);
+    }
+
+    public function isRequestHeaderLoggingEnabled(): bool
+    {
+        return (bool)$this->getSetting('eventLogRequestHeaders', '0');
+    }
+
     private function getSetting(string $settingName, string $default): string
     {
         try {

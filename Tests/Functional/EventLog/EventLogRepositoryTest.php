@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowd\Typo3Firewall\Tests\Functional\EventLog;
 
+use Flowd\Typo3Firewall\EventLog\EventLogFilter;
 use Flowd\Typo3Firewall\EventLog\EventLogger;
 use Flowd\Typo3Firewall\EventLog\EventLogRepository;
 use Flowd\Typo3Firewall\EventLog\KeyHasher;
@@ -71,10 +72,10 @@ final class EventLogRepositoryTest extends FunctionalTestCase
     {
         $this->insertKeylessEvents(4, 'probe-rule-');
 
-        $rows = $this->eventLogRepository->findLatestCollapsedByKey(since: 1_000_003);
+        $rows = $this->eventLogRepository->findLatestCollapsedByKey(new EventLogFilter(since: 1_000_003));
 
         self::assertSame(['probe-rule-3', 'probe-rule-2'], array_column($rows, 'rule'));
-        self::assertSame(2, $this->eventLogRepository->countCollapsedByKey(since: 1_000_003));
+        self::assertSame(2, $this->eventLogRepository->countCollapsedByKey(new EventLogFilter(since: 1_000_003)));
     }
 
     #[Test]
@@ -82,7 +83,7 @@ final class EventLogRepositoryTest extends FunctionalTestCase
     {
         $this->insertKeylessEvents(6, 'probe-rule-');
 
-        $rows = $this->eventLogRepository->findLatestCollapsedByKey(limit: 3, offset: 3);
+        $rows = $this->eventLogRepository->findLatestCollapsedByKey(new EventLogFilter(), limit: 3, offset: 3);
 
         self::assertSame(['probe-rule-2', 'probe-rule-1', 'probe-rule-0'], array_column($rows, 'rule'));
     }
@@ -93,7 +94,7 @@ final class EventLogRepositoryTest extends FunctionalTestCase
         $this->insertKeyedEvents(self::KEY_FLOODER, 2, 'flood-rule-', 'throttle_exceeded');
         $this->insertKeylessEvents(2, 'probe-rule-', 'blocklist_matched');
 
-        $rows = $this->eventLogRepository->findLatestCollapsedByKey(['throttle_exceeded']);
+        $rows = $this->eventLogRepository->findLatestCollapsedByKey(new EventLogFilter(eventTypes: ['throttle_exceeded']));
 
         self::assertSame(['flood-rule-1', 'flood-rule-0'], array_column($rows, 'rule'));
     }
@@ -104,10 +105,10 @@ final class EventLogRepositoryTest extends FunctionalTestCase
         $this->insertKeyedEvents(self::KEY_FLOODER, 5, 'flood-rule-');
         $this->insertKeyedEvents(self::KEY_OTHER, 2, 'other-rule-');
 
-        $rows = $this->eventLogRepository->findLatest(keyHash: $this->keyHash(self::KEY_FLOODER));
+        $rows = $this->eventLogRepository->findLatest(new EventLogFilter(keyHash: $this->keyHash(self::KEY_FLOODER)));
 
         self::assertCount(5, $rows);
-        self::assertSame(5, $this->eventLogRepository->count(keyHash: $this->keyHash(self::KEY_FLOODER)));
+        self::assertSame(5, $this->eventLogRepository->count(new EventLogFilter(keyHash: $this->keyHash(self::KEY_FLOODER))));
     }
 
     #[Test]
@@ -117,7 +118,7 @@ final class EventLogRepositoryTest extends FunctionalTestCase
         $this->insertKeylessEvents(1, 'tracked-rule-', 'track_hit');
         $this->insertKeylessEvents(1, 'error-rule-', 'firewall_error');
 
-        $rows = $this->eventLogRepository->findLatest(['track_hit', 'firewall_error']);
+        $rows = $this->eventLogRepository->findLatest(new EventLogFilter(eventTypes: ['track_hit', 'firewall_error']));
 
         self::assertSame(['error-rule-0', 'tracked-rule-0'], array_column($rows, 'rule'));
     }
@@ -127,7 +128,7 @@ final class EventLogRepositoryTest extends FunctionalTestCase
     {
         $this->insertKeylessEvents(2, 'probe-rule-');
 
-        $rows = $this->eventLogRepository->findLatest(rule: 'probe-rule-0');
+        $rows = $this->eventLogRepository->findLatest(new EventLogFilter(rule: 'probe-rule-0'));
 
         self::assertSame(['probe-rule-0'], array_column($rows, 'rule'));
     }
@@ -142,10 +143,10 @@ final class EventLogRepositoryTest extends FunctionalTestCase
         ]);
         $this->insertKeyedEvents(self::KEY_OTHER, 1, 'other-rule-');
 
-        $rows = $this->eventLogRepository->findLatest(search: '20.251.48.208');
+        $rows = $this->eventLogRepository->findLatest(new EventLogFilter(search: '20.251.48.208'));
 
         self::assertSame(['flood-rule'], array_column($rows, 'rule'));
-        self::assertSame(1, $this->eventLogRepository->count(search: '20.251.48.208'));
+        self::assertSame(1, $this->eventLogRepository->count(new EventLogFilter(search: '20.251.48.208')));
     }
 
     #[Test]
@@ -154,8 +155,8 @@ final class EventLogRepositoryTest extends FunctionalTestCase
         $this->insertEvent(['rule' => 'login-brute-force', 'request_path' => '/login']);
         $this->insertEvent(['rule' => 'env-probe', 'request_path' => '/.env']);
 
-        self::assertSame(['login-brute-force'], array_column($this->eventLogRepository->findLatest(search: 'login'), 'rule'));
-        self::assertSame(['env-probe'], array_column($this->eventLogRepository->findLatest(search: '.env'), 'rule'));
+        self::assertSame(['login-brute-force'], array_column($this->eventLogRepository->findLatest(new EventLogFilter(search: 'login')), 'rule'));
+        self::assertSame(['env-probe'], array_column($this->eventLogRepository->findLatest(new EventLogFilter(search: '.env')), 'rule'));
     }
 
     #[Test]
@@ -166,10 +167,54 @@ final class EventLogRepositoryTest extends FunctionalTestCase
         $this->insertKeyedEvents(self::KEY_OTHER, 3, 'other-rule-', 'throttle_exceeded');
 
         $flooderHash = $this->keyHash(self::KEY_FLOODER);
-        $counts = $this->eventLogRepository->countByKeyHashes(['throttle_exceeded'], '', [$flooderHash]);
+        $counts = $this->eventLogRepository->countByKeyHashes(new EventLogFilter(eventTypes: ['throttle_exceeded']), [$flooderHash]);
 
         self::assertSame([$flooderHash => 4], $counts);
-        self::assertSame([], $this->eventLogRepository->countByKeyHashes([], '', []));
+        self::assertSame([], $this->eventLogRepository->countByKeyHashes(new EventLogFilter(), []));
+    }
+
+    #[Test]
+    public function excludedKeyHashesHideAllEventsOfTheKey(): void
+    {
+        $this->insertKeyedEvents(self::KEY_FLOODER, 5, 'flood-rule-');
+        $this->insertKeyedEvents(self::KEY_OTHER, 2, 'other-rule-');
+        $this->insertKeylessEvents(1, 'probe-rule-');
+
+        $eventLogFilter = new EventLogFilter(excludeKeyHashes: [$this->keyHash(self::KEY_FLOODER)]);
+        $rows = $this->eventLogRepository->findLatestCollapsedByKey($eventLogFilter);
+
+        self::assertSame(['probe-rule-0', 'other-rule-1', 'other-rule-0'], array_column($rows, 'rule'));
+        self::assertSame(3, $this->eventLogRepository->countCollapsedByKey($eventLogFilter));
+        self::assertSame(3, $this->eventLogRepository->count($eventLogFilter));
+        self::assertNotContains($this->keyHash(self::KEY_FLOODER), array_column($this->eventLogRepository->findLatest($eventLogFilter), 'key_hash'));
+    }
+
+    #[Test]
+    public function excludedKeyHashesCombineWithSearchAndTypeFilters(): void
+    {
+        $this->insertKeyedEvents(self::KEY_FLOODER, 2, 'flood-rule-', 'throttle_exceeded');
+        $this->insertKeyedEvents(self::KEY_OTHER, 2, 'flood-rule-', 'throttle_exceeded');
+        $this->insertKeylessEvents(1, 'flood-rule-', 'blocklist_matched');
+
+        $rows = $this->eventLogRepository->findLatest(new EventLogFilter(
+            eventTypes: ['throttle_exceeded'],
+            search: 'flood-rule',
+            excludeKeyHashes: [$this->keyHash(self::KEY_OTHER)],
+        ));
+
+        self::assertSame([$this->keyHash(self::KEY_FLOODER)], array_values(array_unique(array_filter(array_column($rows, 'key_hash'), is_string(...)))));
+    }
+
+    #[Test]
+    public function collapsedCountCapsKeyedGroupsAndCountsKeylessEventsInFull(): void
+    {
+        $this->insertKeyedEvents(self::KEY_FLOODER, 7, 'flood-rule-');
+        $this->insertKeyedEvents(self::KEY_OTHER, 2, 'other-rule-');
+        $this->insertKeylessEvents(5, 'probe-rule-');
+
+        self::assertSame(10, $this->eventLogRepository->countCollapsedByKey());
+        self::assertSame(9, $this->eventLogRepository->countCollapsedByKey(eventsPerKey: 2), 'Keyless events are never capped');
+        self::assertSame(0, $this->eventLogRepository->countCollapsedByKey(new EventLogFilter(rule: 'unknown-rule')));
     }
 
     #[Test]

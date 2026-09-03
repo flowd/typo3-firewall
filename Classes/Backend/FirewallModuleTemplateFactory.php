@@ -6,10 +6,14 @@ namespace Flowd\Typo3Firewall\Backend;
 
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Template\Components\ButtonBar;
+use TYPO3\CMS\Backend\Template\Components\Buttons\Action\ShortcutButton;
+use TYPO3\CMS\Backend\Template\Components\Menu\Menu;
+use TYPO3\CMS\Backend\Template\Components\Menu\MenuItem;
 use TYPO3\CMS\Backend\Template\ModuleTemplate;
 use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Page\PageRenderer;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Mvc\RequestInterface;
 
 /**
@@ -55,13 +59,13 @@ final class FirewallModuleTemplateFactory
     private function addModuleMenu(ModuleTemplate $moduleTemplate, string $currentAction): void
     {
         $menuRegistry = $moduleTemplate->getDocHeaderComponent()->getMenuRegistry();
-        $menu = $menuRegistry->makeMenu();
+        $menu = GeneralUtility::makeInstance(Menu::class);
         $menu->setIdentifier('firewallModuleMenu');
         $menu->setLabel($this->translateLabel('nav.label'));
 
         foreach (self::ACTION_LABELS as $action => $labelKey) {
             $menu->addMenuItem(
-                $menu->makeMenuItem()
+                GeneralUtility::makeInstance(MenuItem::class)
                     ->setTitle($this->translateLabel($labelKey))
                     ->setHref((string)$this->uriBuilder->buildUriFromRoute(self::ROUTE_IDENTIFIER, ['action' => $action]))
                     ->setActive($currentAction === $action),
@@ -74,7 +78,7 @@ final class FirewallModuleTemplateFactory
     private function addShortcutButton(ModuleTemplate $moduleTemplate, string $currentAction, string $displayName): void
     {
         $buttonBar = $moduleTemplate->getDocHeaderComponent()->getButtonBar();
-        $shortcutButton = $buttonBar->makeShortcutButton()
+        $shortcutButton = GeneralUtility::makeInstance(ShortcutButton::class)
             ->setRouteIdentifier(self::ROUTE_IDENTIFIER)
             ->setArguments(['action' => $currentAction])
             ->setDisplayName($displayName);

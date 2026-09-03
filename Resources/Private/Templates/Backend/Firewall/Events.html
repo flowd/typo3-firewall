@@ -27,13 +27,38 @@
                 <strong><f:translate key="events.title" /></strong>
                 <span class="badge bg-secondary ms-2">{pagination.totalCount}</span>
             </span>
+            <div class="d-flex align-items-center gap-2">
+            <f:if condition="{fullIpLoggingRules}">
+                <button type="button" class="btn btn-sm btn-default text-warning t3js-modal-trigger"
+                    title="{f:translate(key: 'events.warnings.title')}"
+                    data-severity="warning"
+                    data-title="{f:translate(key: 'events.warnings.title')}"
+                    data-bs-content="{f:translate(key: 'events.fullIpLogging', arguments: {0: fullIpLoggingRules})}"
+                    data-content="{f:translate(key: 'events.fullIpLogging', arguments: {0: fullIpLoggingRules})}"
+                    data-button-close-text="{f:translate(key: 'action.cancel')}">
+                    <core:icon identifier="actions-exclamation-triangle" size="small" />
+                </button>
+            </f:if>
+            <div class="btn-group" role="group" aria-label="{f:translate(key: 'events.range.label')}">
+                <f:for each="{ranges}" as="rangeOption">
+                    <f:if condition="{rangeOption} == {range}">
+                        <f:then>
+                            <a class="btn btn-primary btn-sm" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: keyFilter.hash, rule: ruleFilter, excludeKeys: excludeKeyHashes, range: rangeOption, operation: 'filter'})}"><f:translate key="events.range.{rangeOption}" /></a>
+                        </f:then>
+                        <f:else>
+                            <a class="btn btn-default btn-sm" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: keyFilter.hash, rule: ruleFilter, excludeKeys: excludeKeyHashes, range: rangeOption, operation: 'filter'})}"><f:translate key="events.range.{rangeOption}" /></a>
+                        </f:else>
+                    </f:if>
+                </f:for>
+            </div>
+            </div>
         </div>
         <div class="card-body">
             <div class="d-flex flex-wrap gap-1 mb-3" role="group" aria-label="{f:translate(key: 'events.filter.types')}">
                 <f:for each="{typeFilters}" as="typeFilter">
                     <a class="btn btn-sm {f:if(condition: typeFilter.active, then: 'btn-primary', else: 'btn-default')}"
                        style="--firewall-type-color: {typeFilter.color};"
-                       href="{f:uri.action(action: 'events', arguments: {types: typeFilter.toggledTypes, search: search, key: keyFilter.hash, rule: ruleFilter, operation: 'filter'})}"
+                       href="{f:uri.action(action: 'events', arguments: {types: typeFilter.toggledTypes, search: search, key: keyFilter.hash, rule: ruleFilter, excludeKeys: excludeKeyHashes, range: range, operation: 'filter'})}"
                        aria-pressed="{f:if(condition: typeFilter.active, then: 'true', else: 'false')}">
                         <span class="firewall-dot me-1"></span><f:translate key="statistics.type.{typeFilter.value}" />
                     </a>
@@ -43,8 +68,12 @@
                 <f:for each="{currentTypes}" as="currentTypeValue" iteration="typeIteration">
                     <f:form.hidden name="types.{typeIteration.index}" value="{currentTypeValue}" />
                 </f:for>
+                <f:for each="{excludeKeyHashes}" as="excludedKeyHash" iteration="excludeIteration">
+                    <f:form.hidden name="excludeKeys.{excludeIteration.index}" value="{excludedKeyHash}" />
+                </f:for>
                 <f:form.hidden name="key" value="{keyFilter.hash}" />
                 <f:form.hidden name="rule" value="{ruleFilter}" />
+                <f:form.hidden name="range" value="{range}" />
                 <f:form.hidden name="operation" value="filter" />
                 <div class="col-12">
                     <label class="visually-hidden" for="events-search"><f:translate key="events.search.label" /></label>
@@ -55,7 +84,7 @@
                         <core:icon identifier="actions-search" size="small" />
                         <f:translate key="events.filter.submit" />
                     </f:form.button>
-                    <f:if condition="{search} || {currentTypes} || {keyFilter} || {ruleFilter}">
+                    <f:if condition="{search} || {currentTypes} || {keyFilter} || {ruleFilter} || {excludedKeyChips}">
                         <a class="btn btn-sm btn-link" href="{f:uri.action(action: 'events', arguments: {operation: 'reset-filters'})}"><f:translate key="events.filter.reset" /></a>
                     </f:if>
                 </div>
@@ -65,17 +94,28 @@
                     <f:if condition="{keyFilter}">
                         <span class="text-muted"><core:icon identifier="actions-filter" size="small" /> <f:translate key="events.filter.key" />:</span>
                         <span class="firewall-chip"><f:if condition="{keyFilter.display}"><f:then>{keyFilter.display}</f:then><f:else><f:format.crop maxCharacters="12" append="…">{keyFilter.hash}</f:format.crop></f:else></f:if></span>
-                        <a class="btn btn-sm btn-default" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, rule: ruleFilter})}" title="{f:translate(key: 'events.filter.removeKey')}">
+                        <a class="btn btn-sm btn-default" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, rule: ruleFilter, excludeKeys: excludeKeyHashes, range: range})}" title="{f:translate(key: 'events.filter.removeKey')}">
                             <core:icon identifier="actions-close" size="small" />
                         </a>
                     </f:if>
                     <f:if condition="{ruleFilter}">
                         <span class="text-muted"><core:icon identifier="actions-filter" size="small" /> <f:translate key="events.filter.rule" />:</span>
                         <span class="firewall-chip">{ruleFilter}</span>
-                        <a class="btn btn-sm btn-default" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: keyFilter.hash})}" title="{f:translate(key: 'events.filter.removeRule')}">
+                        <a class="btn btn-sm btn-default" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: keyFilter.hash, excludeKeys: excludeKeyHashes, range: range})}" title="{f:translate(key: 'events.filter.removeRule')}">
                             <core:icon identifier="actions-close" size="small" />
                         </a>
                     </f:if>
+                </div>
+            </f:if>
+            <f:if condition="{excludedKeyChips}">
+                <div class="mt-3 d-flex align-items-center flex-wrap gap-2">
+                    <span class="text-muted"><core:icon identifier="actions-minus-circle" size="small" /> <f:translate key="events.filter.excludedKeys" />:</span>
+                    <f:for each="{excludedKeyChips}" as="excludedKeyChip">
+                        <span class="firewall-chip" title="{excludedKeyChip.hash}"><f:if condition="{excludedKeyChip.display}"><f:then>{excludedKeyChip.display}</f:then><f:else><f:format.crop maxCharacters="12" append="…">{excludedKeyChip.hash}</f:format.crop></f:else></f:if></span>
+                        <a class="btn btn-sm btn-default" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: keyFilter.hash, rule: ruleFilter, excludeKeys: excludedKeyChip.remainingHashes, range: range, operation: 'filter'})}" title="{f:translate(key: 'events.filter.removeExcludedKey')}">
+                            <core:icon identifier="actions-close" size="small" />
+                        </a>
+                    </f:for>
                 </div>
             </f:if>
         </div>
@@ -83,13 +123,23 @@
         <f:if condition="{events}">
             <f:then>
                 <div class="table-fit mb-0">
-                    <table class="table table-striped table-hover mb-0">
+                    <table class="table table-striped table-hover mb-0" style="table-layout: fixed; min-width: 1100px;">
+                        <colgroup>
+                            <col style="width: 140px;" />
+                            <col style="width: 170px;" />
+                            <col style="width: 18%;" />
+                            <col style="width: 180px;" />
+                            <col style="width: 130px;" />
+                            <col />
+                            <col />
+                        </colgroup>
                         <thead class="table-light">
                             <tr>
                                 <th scope="col"><f:translate key="events.table.time" /></th>
                                 <th scope="col"><f:translate key="events.table.type" /></th>
                                 <th scope="col"><f:translate key="events.table.rule" /></th>
                                 <th scope="col"><f:translate key="events.table.key" /></th>
+                                <th scope="col"><f:translate key="events.table.actions" /></th>
                                 <th scope="col"><f:translate key="events.table.request" /></th>
                                 <th scope="col"><f:translate key="events.table.details" /></th>
                             </tr>
@@ -97,54 +147,105 @@
                         <tbody>
                             <f:for each="{events}" as="event">
                                 <tr>
-                                    <td class="text-nowrap"><small><f:format.date format="{dateFormat} H:i:s">@{event.created_at}</f:format.date></small></td>
-                                    <td>
+                                    <td class="text-nowrap" style="vertical-align: top;"><small><f:format.date format="{dateFormat} H:i:s">@{event.created_at}</f:format.date></small></td>
+                                    <td style="vertical-align: top;">
                                         <span class="text-nowrap">
                                             <span class="firewall-dot me-1" style="--firewall-type-color: {event.typeColor};"></span><f:translate key="statistics.type.{event.event_type}" default="{event.event_type}" />
                                         </span>
-                                        <f:if condition="{event.ban_type}">
-                                            <span class="badge bg-warning">{event.ban_type}</span>
-                                        </f:if>
                                     </td>
-                                    <td class="text-nowrap">
+                                    <td class="text-nowrap" style="vertical-align: top;">
                                         <f:if condition="{event.rule}">
                                             <f:if condition="{ruleFilter}">
                                                 <f:then>
-                                                    <span class="firewall-chip text-nowrap">{event.rule}</span>
+                                                    <span class="firewall-chip text-nowrap text-truncate" title="{event.rule}">{event.rule}</span>
                                                 </f:then>
                                                 <f:else>
-                                                    <a class="firewall-chip text-nowrap" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: keyFilter.hash, rule: event.rule})}" title="{f:translate(key: 'events.rule.showOnly')}">{event.rule}</a>
+                                                    <a class="firewall-chip text-nowrap" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: keyFilter.hash, rule: event.rule, excludeKeys: excludeKeyHashes, range: range})}" title="{f:translate(key: 'events.rule.showOnly')}"><span class="d-inline-block text-truncate mw-100">{event.rule}</span></a>
                                                 </f:else>
                                             </f:if>
                                         </f:if>
                                     </td>
-                                    <td>
+                                    <td style="vertical-align: top;">
                                         <f:if condition="{event.key_hash}">
-                                            <f:if condition="{keyFilter}">
-                                                <f:then>
-                                                    <span class="firewall-chip text-nowrap" title="{event.key_hash}"><f:render section="KeyLabel" arguments="{event: event}" /></span>
-                                                </f:then>
-                                                <f:else>
-                                                    <a class="firewall-chip text-nowrap" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: event.key_hash, rule: ruleFilter})}" title="{f:translate(key: 'events.key.showAll')}"><f:render section="KeyLabel" arguments="{event: event}" /></a>
-                                                    <f:if condition="{event.moreEventsCount}">
-                                                        <div class="mt-1">
-                                                            <a class="badge text-bg-primary d-inline-flex align-items-center gap-1" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: event.key_hash, rule: ruleFilter})}" title="{f:translate(key: 'events.key.showAll')}">
-                                                                <core:icon identifier="actions-list" size="small" />
-                                                                <f:translate key="events.key.more" arguments="{0: event.moreEventsCount}" />
-                                                            </a>
-                                                        </div>
-                                                    </f:if>
-                                                </f:else>
+                                            <div class="d-flex align-items-center flex-wrap gap-1">
+                                                <span class="firewall-chip text-nowrap" title="{event.key_hash}"><f:render section="KeyLabel" arguments="{event: event}" /></span>
+                                                <f:if condition="{event.blockStatus}">
+                                                    <f:variable name="blockStatusLabel" value="{f:translate(key: 'events.key.blocked.{event.blockStatus.source}', arguments: {0: event.blockStatus.detail})}" />
+                                                    <span class="text-danger" title="{blockStatusLabel}">
+                                                        <core:icon identifier="actions-lock" size="small" />
+                                                        <span class="visually-hidden">{blockStatusLabel}</span>
+                                                    </span>
+                                                </f:if>
+                                            </div>
+                                            <f:if condition="{event.moreEventsCount}">
+                                                <div class="mt-1">
+                                                    <a class="badge text-bg-primary d-inline-flex align-items-center gap-1" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: event.key_hash, rule: ruleFilter, excludeKeys: excludeKeyHashes, range: range})}" title="{f:translate(key: 'events.key.showAll')}">
+                                                        <core:icon identifier="actions-list" size="small" />
+                                                        <f:translate key="events.key.more" arguments="{0: event.moreEventsCount}" />
+                                                    </a>
+                                                </div>
                                             </f:if>
                                         </f:if>
                                     </td>
-                                    <td>
-                                        <span class="firewall-chip text-truncate" style="max-width: min(100ch, 100%);" title="{event.request_method} {event.request_host}{event.request_path}">{event.request_method} {event.request_host}{event.request_path}</span>
-                                        <f:if condition="{event.user_agent}">
-                                            <br /><small class="text-muted d-inline-block text-truncate" style="max-width: min(100ch, 100%);" title="{event.user_agent}">{event.user_agent}</small>
+                                    <td style="vertical-align: top;">
+                                        <f:if condition="{event.key_hash}">
+                                            <f:if condition="{event.blockAction}">
+                                                <f:variable name="blockFormId" value="block-form-{event.uid}" />
+                                                <f:form action="blockKey" method="post" id="{blockFormId}" class="hidden">
+                                                    <f:form.hidden name="ip" value="{event.blockValue}" />
+                                                    <f:form.hidden name="key" value="{event.key_hash}" />
+                                                </f:form>
+                                            </f:if>
+                                            <div class="btn-group" role="group" aria-label="{f:translate(key: 'events.table.actions')}">
+                                                <f:if condition="{keyFilter}">
+                                                    <f:then>
+                                                        <a class="btn btn-sm btn-default" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, rule: ruleFilter, excludeKeys: excludeKeyHashes, range: range})}" title="{f:translate(key: 'events.filter.removeKey')}">
+                                                            <core:icon identifier="firewall-filter-remove" size="small" />
+                                                        </a>
+                                                    </f:then>
+                                                    <f:else>
+                                                        <a class="btn btn-sm btn-default" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: event.key_hash, rule: ruleFilter, excludeKeys: excludeKeyHashes, range: range})}" title="{f:translate(key: 'events.key.showAll')}">
+                                                            <core:icon identifier="firewall-filter-add" size="small" />
+                                                        </a>
+                                                        <a class="btn btn-sm btn-default text-muted" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, rule: ruleFilter, excludeKeys: event.excludeKeysWithSelf, range: range, operation: 'filter'})}" title="{f:translate(key: 'events.key.exclude')}">
+                                                            <core:icon identifier="firewall-filter-remove" size="small" />
+                                                        </a>
+                                                    </f:else>
+                                                </f:if>
+                                                <f:if condition="{event.blockAction}">
+                                                    <button type="button" class="btn btn-sm btn-default text-danger t3js-modal-trigger"
+                                                        title="{f:translate(key: 'events.key.block.{event.blockAction}', arguments: {0: event.blockValue})}"
+                                                        data-target-form="{blockFormId}"
+                                                        data-severity="warning"
+                                                        data-title="{f:translate(key: 'events.key.block.confirmTitle')}"
+                                                        data-bs-content="{f:translate(key: 'events.key.block.confirm', arguments: {0: event.blockValue})}"
+                                                        data-content="{f:translate(key: 'events.key.block.confirm', arguments: {0: event.blockValue})}"
+                                                        data-button-ok-text="{f:translate(key: 'events.key.block.confirmOk')}"
+                                                        data-button-close-text="{f:translate(key: 'action.cancel')}">
+                                                        <core:icon identifier="actions-ban" size="small" />
+                                                    </button>
+                                                </f:if>
+                                            </div>
                                         </f:if>
                                     </td>
-                                    <td>
+                                    <td style="vertical-align: top;">
+                                        <span class="firewall-chip text-truncate text-nowrap" title="{event.request_method} {event.request_host}{event.request_path}">{event.request_method} {event.request_host}{event.request_path}</span>
+                                        <f:if condition="{event.user_agent}">
+                                            <br /><small class="text-muted d-inline-block text-truncate mw-100" title="{event.user_agent}">{event.user_agent}</small>
+                                        </f:if>
+                                        <f:if condition="{event.requestHeaderLines}">
+                                            <f:variable name="requestHeaderCount" value="{event.requestHeaderLines -> f:count()}" />
+                                            <details>
+                                                <summary class="small text-muted"><f:translate key="events.request.headers" arguments="{0: requestHeaderCount}" /></summary>
+                                                <ul class="list-unstyled mb-0">
+                                                    <f:for each="{event.requestHeaderLines}" as="requestHeaderLine">
+                                                        <li><small class="text-muted font-monospace d-inline-block text-truncate mw-100" title="{requestHeaderLine}">{requestHeaderLine}</small></li>
+                                                    </f:for>
+                                                </ul>
+                                            </details>
+                                        </f:if>
+                                    </td>
+                                    <td style="vertical-align: top;">
                                         <f:if condition="{event.metaLines}">
                                             <f:variable name="metaLineCount" value="{event.metaLines -> f:count()}" />
                                             <f:if condition="{metaLineCount} > 3">
@@ -172,10 +273,10 @@
                             <ul class="pagination pagination-sm mb-0">
                                 <f:if condition="{pagination.hasPrevious}">
                                     <li class="page-item">
-                                        <a class="page-link" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: keyFilter.hash, rule: ruleFilter, page: 1})}" title="{f:translate(key: 'events.pagination.first')}">«</a>
+                                        <a class="page-link" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: keyFilter.hash, rule: ruleFilter, excludeKeys: excludeKeyHashes, range: range, page: 1})}" title="{f:translate(key: 'events.pagination.first')}">«</a>
                                     </li>
                                     <li class="page-item">
-                                        <a class="page-link" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: keyFilter.hash, rule: ruleFilter, page: pagination.previousPage})}" title="{f:translate(key: 'events.pagination.previous')}">‹</a>
+                                        <a class="page-link" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: keyFilter.hash, rule: ruleFilter, excludeKeys: excludeKeyHashes, range: range, page: pagination.previousPage})}" title="{f:translate(key: 'events.pagination.previous')}">‹</a>
                                     </li>
                                 </f:if>
                                 <li class="page-item disabled">
@@ -183,10 +284,10 @@
                                 </li>
                                 <f:if condition="{pagination.hasNext}">
                                     <li class="page-item">
-                                        <a class="page-link" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: keyFilter.hash, rule: ruleFilter, page: pagination.nextPage})}" title="{f:translate(key: 'events.pagination.next')}">›</a>
+                                        <a class="page-link" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: keyFilter.hash, rule: ruleFilter, excludeKeys: excludeKeyHashes, range: range, page: pagination.nextPage})}" title="{f:translate(key: 'events.pagination.next')}">›</a>
                                     </li>
                                     <li class="page-item">
-                                        <a class="page-link" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: keyFilter.hash, rule: ruleFilter, page: pagination.pageCount})}" title="{f:translate(key: 'events.pagination.last')}">»</a>
+                                        <a class="page-link" href="{f:uri.action(action: 'events', arguments: {types: currentTypes, search: search, key: keyFilter.hash, rule: ruleFilter, excludeKeys: excludeKeyHashes, range: range, page: pagination.pageCount})}" title="{f:translate(key: 'events.pagination.last')}">»</a>
                                     </li>
                                 </f:if>
                             </ul>
@@ -209,7 +310,7 @@
 <f:section name="MetaLines">
     <ul class="list-unstyled mb-0">
         <f:for each="{event.metaLines}" as="metaLine">
-            <li><small class="text-muted font-monospace d-inline-block text-truncate" style="max-width: min(60ch, 100%);" title="{metaLine}">{metaLine}</small></li>
+            <li><small class="text-muted font-monospace d-inline-block text-truncate mw-100" title="{metaLine}">{metaLine}</small></li>
         </f:for>
     </ul>
 </f:section>

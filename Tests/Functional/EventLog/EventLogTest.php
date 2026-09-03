@@ -58,6 +58,50 @@ final class EventLogTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function eventsWithoutAKeyStoreTheClientIpOfTheRequest(): void
+    {
+        $serverRequest = new ServerRequest('https://example.com/probe', 'GET', 'php://input', [], ['REMOTE_ADDR' => '203.0.113.10']);
+
+        $this->dispatch(new BlocklistMatched('scanner-paths', $serverRequest, MatchResult::matched('custom')));
+
+        $rows = $this->fetchAllEventRows();
+        self::assertCount(1, $rows);
+        self::assertSame($this->keyHash('203.0.113.10'), $rows[0]['key_hash']);
+        self::assertSame('203.0.113.0', $rows[0]['key_display']);
+    }
+
+    #[Test]
+    public function theClientIpRespectsTheReverseProxyConfiguration(): void
+    {
+        $configurationVariables = $GLOBALS['TYPO3_CONF_VARS'];
+        self::assertIsArray($configurationVariables);
+        $originalSysConfiguration = $configurationVariables['SYS'];
+        self::assertIsArray($originalSysConfiguration);
+        $sysConfiguration = $originalSysConfiguration;
+        $sysConfiguration['reverseProxyIP'] = '10.0.0.2';
+        $sysConfiguration['reverseProxyHeaderMultiValue'] = 'first';
+        $configurationVariables['SYS'] = $sysConfiguration;
+        $GLOBALS['TYPO3_CONF_VARS'] = $configurationVariables;
+
+        try {
+            $serverRequest = new ServerRequest('https://example.com/probe', 'GET', 'php://input', [], [
+                'REMOTE_ADDR' => '10.0.0.2',
+                'HTTP_X_FORWARDED_FOR' => '203.0.113.10',
+            ]);
+
+            $this->dispatch(new BlocklistMatched('scanner-paths', $serverRequest, MatchResult::matched('custom')));
+
+            $rows = $this->fetchAllEventRows();
+            self::assertCount(1, $rows);
+            self::assertSame($this->keyHash('203.0.113.10'), $rows[0]['key_hash'], 'The forwarded client IP is used, not the proxy address');
+            self::assertSame('203.0.113.0', $rows[0]['key_display']);
+        } finally {
+            $configurationVariables['SYS'] = $originalSysConfiguration;
+            $GLOBALS['TYPO3_CONF_VARS'] = $configurationVariables;
+        }
+    }
+
+    #[Test]
     public function theRequestPathIncludesTheQueryString(): void
     {
         $serverRequest = new ServerRequest('https://example.com/index.php?id=1&mode=drop', 'GET');
@@ -370,6 +414,124 @@ final class EventLogTest extends FunctionalTestCase
         $this->dispatch(new BlocklistMatched('scanner-paths', new ServerRequest('https://example.com/', 'GET'), MatchResult::matched('custom')));
 
         self::assertSame([], $this->fetchAllEventRows());
+    }
+
+    #[Test]
+    public function fullIpRulesStoreTheUnanonymizedIpOnlyForTheirEvents(): void
+    {
+        $this->get(ExtensionConfiguration::class)->set('firewall', [
+            'eventLogEnabled' => '1',
+            'eventLogTypes' => self::DEFAULT_EVENT_LOG_TYPES,
+            'eventLogAnonymizeIp' => '1',
+            'eventLogFullIpRules' => 'login-brute-force, some-other-rule',
+        ]);
+
+        try {
+            $serverRequest = new ServerRequest('https://example.com/login', 'POST');
+            $this->dispatch(new Fail2BanMatched('login-brute-force', '203.0.113.10', 5, 300, 3, $serverRequest, MatchResult::matched('custom')));
+            $this->dispatch(new ThrottleExceeded('search-throttle', '203.0.113.10', 10, 60, 11, 42, $serverRequest, null));
+
+            $rows = $this->fetchAllEventRows();
+            self::assertCount(2, $rows);
+            self::assertSame('203.0.113.10', $rows[0]['key_display'], 'The listed rule stores the full IP');
+            self::assertSame('203.0.113.0', $rows[1]['key_display'], 'Every other rule stays anonymized');
+            self::assertSame($this->keyHash('203.0.113.10'), $rows[0]['key_hash']);
+        } finally {
+            $this->get(ExtensionConfiguration::class)->set('firewall', ['eventLogEnabled' => '1', 'eventLogTypes' => self::DEFAULT_EVENT_LOG_TYPES]);
+        }
+    }
+
+    #[Test]
+    public function requestHeadersAreStoredRedactedWhenEnabled(): void
+    {
+        $this->get(ExtensionConfiguration::class)->set('firewall', [
+            'eventLogEnabled' => '1',
+            'eventLogTypes' => self::DEFAULT_EVENT_LOG_TYPES,
+            'eventLogRequestHeaders' => '1',
+        ]);
+
+        try {
+            // The headers are read from the HTTP_* server params, the raw
+            // environment as PHP received it, so a header the PSR-7 layer
+            // dropped (X-Removed) still reaches the log; the SAPI merges
+            // duplicate header lines into one comma-separated value.
+            $serverRequest = new ServerRequest('https://example.com/probe', 'GET', 'php://input', [], [
+                'HTTP_HOST' => 'example.com',
+                'HTTP_USER_AGENT' => 'sqlmap/1.0',
+                'HTTP_ACCEPT_LANGUAGE' => 'de-DE, de;q=0.9',
+                'HTTP_X_REMOVED' => 'still-visible',
+                'HTTP_COOKIE' => 'fe_typo_user=secret-session-id',
+                'HTTP_AUTHORIZATION' => 'Bearer secret-token',
+                'CONTENT_TYPE' => 'application/x-www-form-urlencoded',
+                'REMOTE_ADDR' => '203.0.113.10',
+            ]);
+
+            $this->dispatch(new BlocklistMatched('scanner-paths', $serverRequest, MatchResult::matched('custom')));
+
+            $rows = $this->fetchAllEventRows();
+            self::assertCount(1, $rows);
+            self::assertIsString($rows[0]['meta']);
+            $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
+            self::assertIsArray($meta);
+            self::assertSame([
+                'Host' => 'example.com',
+                'User-Agent' => 'sqlmap/1.0',
+                'Accept-Language' => 'de-DE, de;q=0.9',
+                'X-Removed' => 'still-visible',
+                'Cookie' => '[redacted]',
+                'Authorization' => '[redacted]',
+                'Content-Type' => 'application/x-www-form-urlencoded',
+            ], $meta['requestHeaders'], 'Non-header server params like REMOTE_ADDR are not recorded');
+            self::assertStringNotContainsString('secret', $rows[0]['meta']);
+        } finally {
+            $this->get(ExtensionConfiguration::class)->set('firewall', ['eventLogEnabled' => '1', 'eventLogTypes' => self::DEFAULT_EVENT_LOG_TYPES]);
+        }
+    }
+
+    #[Test]
+    public function requestHeadersFallBackToThePsr7HeadersWithoutServerParams(): void
+    {
+        $this->get(ExtensionConfiguration::class)->set('firewall', [
+            'eventLogEnabled' => '1',
+            'eventLogTypes' => self::DEFAULT_EVENT_LOG_TYPES,
+            'eventLogRequestHeaders' => '1',
+        ]);
+
+        try {
+            $serverRequest = (new ServerRequest('https://example.com/probe', 'GET'))
+                ->withAddedHeader('User-Agent', 'sqlmap/1.0')
+                ->withAddedHeader('Cookie', 'fe_typo_user=secret-session-id');
+
+            $this->dispatch(new BlocklistMatched('scanner-paths', $serverRequest, MatchResult::matched('custom')));
+
+            $rows = $this->fetchAllEventRows();
+            self::assertCount(1, $rows);
+            self::assertIsString($rows[0]['meta']);
+            $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
+            self::assertIsArray($meta);
+            self::assertIsArray($meta['requestHeaders']);
+            self::assertSame('sqlmap/1.0', $meta['requestHeaders']['User-Agent']);
+            self::assertSame('[redacted]', $meta['requestHeaders']['Cookie']);
+            self::assertStringNotContainsString('secret', $rows[0]['meta']);
+        } finally {
+            $this->get(ExtensionConfiguration::class)->set('firewall', ['eventLogEnabled' => '1', 'eventLogTypes' => self::DEFAULT_EVENT_LOG_TYPES]);
+        }
+    }
+
+    #[Test]
+    public function requestHeadersAreNotStoredByDefault(): void
+    {
+        $serverRequest = (new ServerRequest('https://example.com/probe', 'GET'))
+            ->withAddedHeader('User-Agent', 'sqlmap/1.0');
+
+        $this->dispatch(new BlocklistMatched('scanner-paths', $serverRequest, MatchResult::matched('custom')));
+
+        $rows = $this->fetchAllEventRows();
+        self::assertCount(1, $rows);
+        self::assertIsString($rows[0]['meta']);
+        $meta = json_decode($rows[0]['meta'], true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($meta);
+        self::assertArrayNotHasKey('requestHeaders', $meta);
     }
 
     #[Test]

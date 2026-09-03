@@ -46,7 +46,11 @@ return RectorConfig::configure()
         // PHPUnit sets
 
         // PHPUnitSetList::PHPUNIT80_DMS,
-        PHPUnitSetList::PHPUNIT_100,
+        // rector-phpunit 1.x only ships versioned sets, 2.x only the
+        // composer-based set deriving the level from the installed PHPUnit.
+        defined(PHPUnitSetList::class . '::COMPOSER_BASED')
+            ? constant(PHPUnitSetList::class . '::COMPOSER_BASED')
+            : constant(PHPUnitSetList::class . '::PHPUNIT_100'),
         // PHPUnitSetList::PHPUNIT_CODE_QUALITY,
 
         Typo3SetList::CODE_QUALITY,

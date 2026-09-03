@@ -155,6 +155,7 @@ final class FileArrayWriter
 
     /**
      * @param array<mixed> $array
+     * @phpstan-assert-if-true array<string, mixed> $array
      */
     private function isStringIndexedArray(array $array): bool
     {

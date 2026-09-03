@@ -62,9 +62,17 @@ final class FileArrayPatternBackend implements PatternBackendInterface
             }
 
             $entry = $this->rowToPatternEntry($id, $row);
-            if ($entry instanceof PatternEntry) {
-                $entries[] = $entry;
+            if (!$entry instanceof PatternEntry) {
+                continue;
             }
+
+            // Expired entries must not reach the matcher; they stay in the
+            // file until pruneExpired() removes them.
+            if ($entry->expiresAt !== null && $entry->expiresAt <= $this->now) {
+                continue;
+            }
+
+            $entries[] = $entry;
         }
 
         return new PatternSnapshot($entries, $mtime, $this->filePath);

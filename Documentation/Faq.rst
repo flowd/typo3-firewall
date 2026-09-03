@@ -22,9 +22,9 @@ brings its own rate limiting for backend login attempts.
 How does the firewall see the real client IP behind a proxy?
 =============================================================
 
-The extension resolves the client IP through
-``GeneralUtility::getIndpEnv('REMOTE_ADDR')``, which applies the
-``reverseProxyIP`` settings of your TYPO3 installation. Configure those
+The extension resolves the client IP through the request's normalized
+parameters (``NormalizedParams``), which apply the ``reverseProxyIP``
+settings of your TYPO3 installation. Configure those
 settings once and both TYPO3 and the firewall see the real visitor address
 (see :doc:`TrustedProxies`).
 
@@ -114,17 +114,21 @@ What about the event log and GDPR?
 ==================================
 
 The event log is built to hold as little personal data as possible. The
-client key, usually the IP address, is stored only as a SHA-256 hash. A
-readable address is kept only for real IP addresses and, by default, only in
-shortened form. Entries are deleted after the retention period. The log also
-stores the request path, method, host, and user agent. Review this against
-your privacy policy, keep IP anonymization on when you do not need full
+client key, usually the IP address, is stored only as a keyed hash
+(HMAC-SHA-256). A readable address is kept only for real IP addresses and,
+by default, only in shortened form. Entries are deleted after the retention
+period. The log also stores the request path, method, host, and user agent.
+Two opt-in settings extend what is recorded and deserve a privacy review of
+their own: ``eventLogFullIpRules`` stores unanonymized IPs for listed rules
+during an attack analysis, and ``eventLogRequestHeaders`` records the
+request headers (credential headers redacted). Review this against your
+privacy policy, keep IP anonymization on when you do not need full
 addresses, and set a retention that fits your needs (see :doc:`Statistics`).
 
 Why are bans gone after the upgrade to 0.4?
 ===========================================
 
-Version 0.4 updates the firewall engine from phirewall 0.3 to 0.7. Along the
+Version 0.4 updates the firewall engine from phirewall 0.3 to 0.8. Along the
 way the engine changed its internal cache key format. Active bans and running
 counters are forgotten once when you deploy the upgrade, then rebuild with the
 next matching requests. This reset

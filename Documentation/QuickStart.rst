@@ -68,7 +68,7 @@ Request a blocked path. The firewall answers with status 403:
 
 ..  code-block:: bash
 
-    curl -i https://www.example.org/wp-admin/setup.php
+    curl -i https://www.example.org/.env
 
 Regular pages keep working as before.
 
