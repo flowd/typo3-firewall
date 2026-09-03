@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Flowd\Typo3Firewall\EventLog;
 
+use Flowd\Phirewall\Pattern\PatternEntry;
 use Flowd\Typo3Firewall\Statistics\BarChartBuilder;
 
 /**
@@ -15,6 +16,19 @@ use Flowd\Typo3Firewall\Statistics\BarChartBuilder;
  */
 final class EventLogViewDataProvider
 {
+    /** Time ranges offered by the view, as window seconds; 0 means unbounded. */
+    public const array RANGES = [
+        '24h' => 86400,
+        '7d' => 604800,
+        '30d' => 2592000,
+        'all' => 0,
+    ];
+
+    public const string DEFAULT_RANGE = '7d';
+
+    /** Bounds the NOT IN clause and the URL length of the filter links. */
+    public const int MAX_EXCLUDED_KEYS = 20;
+
     private const int ITEMS_PER_PAGE = 50;
 
     private const int EVENTS_PER_KEY = 3;
@@ -26,24 +40,39 @@ final class EventLogViewDataProvider
         private readonly EventLogRepository $eventLogRepository,
         private readonly EventLogSettings $eventLogSettings,
         private readonly BarChartBuilder $barChartBuilder,
+        private readonly KeyBlockStatusProvider $keyBlockStatusProvider,
+        private readonly BlockableKeyResolver $blockableKeyResolver,
     ) {}
 
     /**
-     * View variables for the event log view; unknown types and malformed key
-     * hashes fall back to the unfiltered view, out-of-range pages are clamped.
+     * View variables for the event log view; unknown types, ranges and
+     * malformed key hashes fall back to the unfiltered view, out-of-range
+     * pages are clamped.
      *
      * @param array<mixed> $types
+     * @param array<mixed> $excludeKeys
      * @return array<string, mixed>
      */
-    public function getViewData(array $types, string $search, string $keyHash, string $rule = '', int $page = 1): array
+    public function getViewData(array $types, string $search, string $keyHash, string $rule = '', int $page = 1, array $excludeKeys = [], string $range = ''): array
     {
         $currentTypes = $this->sanitizeTypes($types);
         $keyHash = preg_match('/^[a-f0-9]{64}$/', $keyHash) === 1 ? $keyHash : '';
         $rule = mb_substr(trim($rule), 0, 255);
+        $excludeKeyHashes = self::sanitizeExcludeKeys($excludeKeys);
+        $range = isset(self::RANGES[$range]) ? $range : self::DEFAULT_RANGE;
+
+        $eventLogFilter = new EventLogFilter(
+            eventTypes: $currentTypes,
+            search: $search,
+            keyHash: $keyHash,
+            rule: $rule,
+            since: self::RANGES[$range] === 0 ? 0 : time() - self::RANGES[$range],
+            excludeKeyHashes: $excludeKeyHashes,
+        );
 
         $viewData = $keyHash === ''
-            ? $this->buildCollapsedTimelineData($currentTypes, $search, $rule, $page)
-            : $this->buildKeyFilterData($currentTypes, $search, $keyHash, $rule, $page);
+            ? $this->buildCollapsedTimelineData($eventLogFilter, $page)
+            : $this->buildKeyFilterData($eventLogFilter, $page);
 
         return [
             ...$viewData,
@@ -51,9 +80,37 @@ final class EventLogViewDataProvider
             'currentTypes' => $currentTypes,
             'search' => $search,
             'ruleFilter' => $rule === '' ? null : $rule,
+            'range' => $range,
+            'ranges' => array_keys(self::RANGES),
+            'excludeKeyHashes' => $excludeKeyHashes,
+            'excludedKeyChips' => $this->buildExcludedKeyChips($excludeKeyHashes),
+            'fullIpLoggingRules' => implode(', ', $this->eventLogSettings->getFullIpLoggingRules()),
             'loggingEnabled' => $this->eventLogSettings->isEnabled(),
             'pruneOverdue' => $this->isPruneOverdue(),
         ];
+    }
+
+    /**
+     * Keep only well-formed key hashes, without duplicates, capped at
+     * MAX_EXCLUDED_KEYS.
+     *
+     * @param array<mixed> $excludeKeys
+     * @return list<string>
+     */
+    public static function sanitizeExcludeKeys(array $excludeKeys): array
+    {
+        $sanitized = [];
+        foreach ($excludeKeys as $excludeKey) {
+            if (is_string($excludeKey) && preg_match('/^[a-f0-9]{64}$/', $excludeKey) === 1 && !in_array($excludeKey, $sanitized, true)) {
+                $sanitized[] = $excludeKey;
+            }
+
+            if (count($sanitized) === self::MAX_EXCLUDED_KEYS) {
+                break;
+            }
+        }
+
+        return $sanitized;
     }
 
     /**
@@ -61,53 +118,67 @@ final class EventLogViewDataProvider
      * a moreEventsCount with the number of older events hidden behind the key
      * filter link.
      *
-     * @param list<string> $currentTypes
      * @return array<string, mixed>
      */
-    private function buildCollapsedTimelineData(array $currentTypes, string $search, string $rule, int $page): array
+    private function buildCollapsedTimelineData(EventLogFilter $eventLogFilter, int $page): array
     {
-        $rowCount = $this->eventLogRepository->countCollapsedByKey($currentTypes, $search, self::EVENTS_PER_KEY, 0, $rule);
+        $rowCount = $this->eventLogRepository->countCollapsedByKey($eventLogFilter, self::EVENTS_PER_KEY);
         $pageCount = max(1, (int)ceil($rowCount / self::ITEMS_PER_PAGE));
         $page = min(max(1, $page), $pageCount);
 
         $events = array_map(
-            $this->decorateEvent(...),
-            $this->eventLogRepository->findLatestCollapsedByKey($currentTypes, $search, self::EVENTS_PER_KEY, self::ITEMS_PER_PAGE, ($page - 1) * self::ITEMS_PER_PAGE, 0, $rule),
+            fn(array $event): array => $this->decorateEvent($event, $eventLogFilter->excludeKeyHashes),
+            $this->eventLogRepository->findLatestCollapsedByKey($eventLogFilter, self::EVENTS_PER_KEY, self::ITEMS_PER_PAGE, ($page - 1) * self::ITEMS_PER_PAGE),
         );
-        $events = $this->attachMoreEventsCounts($events, $currentTypes, $search, $rule);
+        $events = $this->attachMoreEventsCounts($events, $eventLogFilter);
 
         return [
             'events' => $events,
             'keyFilter' => null,
-            'pagination' => $this->buildPagination($page, $pageCount, $this->eventLogRepository->count($currentTypes, $search, '', 0, $rule)),
+            'pagination' => $this->buildPagination($page, $pageCount, $this->eventLogRepository->count($eventLogFilter)),
         ];
     }
 
     /**
      * Every event of a single key, newest first.
      *
-     * @param list<string> $currentTypes
      * @return array<string, mixed>
      */
-    private function buildKeyFilterData(array $currentTypes, string $search, string $keyHash, string $rule, int $page): array
+    private function buildKeyFilterData(EventLogFilter $eventLogFilter, int $page): array
     {
-        $totalCount = $this->eventLogRepository->count($currentTypes, $search, $keyHash, 0, $rule);
+        $totalCount = $this->eventLogRepository->count($eventLogFilter);
         $pageCount = max(1, (int)ceil($totalCount / self::ITEMS_PER_PAGE));
         $page = min(max(1, $page), $pageCount);
 
         $events = array_map(
-            $this->decorateEvent(...),
-            $this->eventLogRepository->findLatest($currentTypes, $search, $keyHash, self::ITEMS_PER_PAGE, ($page - 1) * self::ITEMS_PER_PAGE, $rule),
+            fn(array $event): array => $this->decorateEvent($event, $eventLogFilter->excludeKeyHashes),
+            $this->eventLogRepository->findLatest($eventLogFilter, self::ITEMS_PER_PAGE, ($page - 1) * self::ITEMS_PER_PAGE),
         );
 
         return [
             'events' => $events,
             'keyFilter' => [
-                'hash' => $keyHash,
-                'display' => $this->eventLogRepository->findKeyDisplay($keyHash),
+                'hash' => $eventLogFilter->keyHash,
+                'display' => $this->eventLogRepository->findKeyDisplay($eventLogFilter->keyHash),
             ],
             'pagination' => $this->buildPagination($page, $pageCount, $totalCount),
         ];
+    }
+
+    /**
+     * Chip data for the excluded keys: the readable key form and the
+     * exclusion list without the chip's own hash, for the remove link.
+     *
+     * @param list<string> $excludeKeyHashes
+     * @return list<array{hash: string, display: string, remainingHashes: list<string>}>
+     */
+    private function buildExcludedKeyChips(array $excludeKeyHashes): array
+    {
+        return array_map(fn(string $excludedHash): array => [
+            'hash' => $excludedHash,
+            'display' => $this->eventLogRepository->findKeyDisplay($excludedHash),
+            'remainingHashes' => array_values(array_diff($excludeKeyHashes, [$excludedHash])),
+        ], $excludeKeyHashes);
     }
 
     /**
@@ -159,10 +230,9 @@ final class EventLogViewDataProvider
      * Attach the hidden-event count to each row that hit the per-key cap.
      *
      * @param list<array<string, mixed>> $events
-     * @param list<string> $currentTypes
      * @return list<array<string, mixed>>
      */
-    private function attachMoreEventsCounts(array $events, array $currentTypes, string $search, string $rule): array
+    private function attachMoreEventsCounts(array $events, EventLogFilter $eventLogFilter): array
     {
         $cappedKeyHashes = [];
         foreach ($events as $event) {
@@ -171,7 +241,7 @@ final class EventLogViewDataProvider
             }
         }
 
-        $totalCounts = $this->eventLogRepository->countByKeyHashes($currentTypes, $search, $cappedKeyHashes, 0, $rule);
+        $totalCounts = $this->eventLogRepository->countByKeyHashes($eventLogFilter, $cappedKeyHashes);
 
         return array_map(static function (array $event) use ($totalCounts): array {
             $keyHash = is_string($event['key_hash']) ? $event['key_hash'] : '';
@@ -198,12 +268,95 @@ final class EventLogViewDataProvider
 
     /**
      * @param array<string, mixed> $event
+     * @param list<string> $excludeKeyHashes
      * @return array<string, mixed>
      */
-    private function decorateEvent(array $event): array
+    private function decorateEvent(array $event, array $excludeKeyHashes): array
     {
-        $event['metaLines'] = $this->flattenMeta(is_array($event['meta']) ? $event['meta'] : []);
+        $meta = is_array($event['meta']) ? $event['meta'] : [];
+        $event['requestHeaderLines'] = $this->buildRequestHeaderLines($meta);
+        unset($meta['requestHeaders']);
+        $event['metaLines'] = $this->flattenMeta($this->withoutRedundantOwaspRuleIds($meta));
         $event['typeColor'] = $this->colorForType(is_string($event['event_type']) ? $event['event_type'] : '');
+
+        return $this->decorateKeyActions($event, $excludeKeyHashes);
+    }
+
+    /**
+     * "Name: value" display lines of the recorded request headers, rendered
+     * as their own block instead of meta lines.
+     *
+     * @param array<string, mixed> $meta
+     * @return list<string>
+     */
+    private function buildRequestHeaderLines(array $meta): array
+    {
+        $requestHeaders = $meta['requestHeaders'] ?? null;
+        if (!is_array($requestHeaders)) {
+            return [];
+        }
+
+        $lines = [];
+        foreach ($requestHeaders as $name => $value) {
+            if (is_string($name) && is_scalar($value)) {
+                $lines[] = $name . ': ' . $value;
+            }
+        }
+
+        return $lines;
+    }
+
+    /**
+     * Drop the matched-rule list when it only repeats the single primary
+     * rule id, so the details do not show the same value twice. With
+     * several matched rules both stay: the list is the full picture, the
+     * primary id is the rule the msg and matched-variable lines belong to.
+     *
+     * @param array<string, mixed> $meta
+     * @return array<string, mixed>
+     */
+    private function withoutRedundantOwaspRuleIds(array $meta): array
+    {
+        $matchedRuleIds = $meta['owasp_rule_ids'] ?? null;
+        $primaryRuleId = $meta['owasp_rule_id'] ?? null;
+        if (is_scalar($matchedRuleIds) && is_scalar($primaryRuleId) && (string)$matchedRuleIds === (string)$primaryRuleId) {
+            unset($meta['owasp_rule_ids']);
+        }
+
+        return $meta;
+    }
+
+    /**
+     * Attach the current block status of the row's key, the exclusion list a
+     * "hide this key" link switches to, and, for keys that still carry the
+     * full readable IP and are not blocked yet, the offered block action.
+     *
+     * @param array<string, mixed> $event
+     * @param list<string> $excludeKeyHashes
+     * @return array<string, mixed>
+     */
+    private function decorateKeyActions(array $event, array $excludeKeyHashes): array
+    {
+        $keyHash = is_string($event['key_hash']) ? $event['key_hash'] : '';
+        $keyDisplay = is_string($event['key_display']) ? $event['key_display'] : '';
+
+        $event['excludeKeysWithSelf'] = $keyHash === '' ? $excludeKeyHashes : [...$excludeKeyHashes, $keyHash];
+
+        $event['blockStatus'] = $keyHash === ''
+            ? null
+            : $this->keyBlockStatusProvider->findBlockStatus($keyHash, $keyDisplay);
+        $event['blockAction'] = null;
+        $event['blockValue'] = '';
+
+        if ($event['blockStatus'] instanceof KeyBlockStatus) {
+            return $event;
+        }
+
+        $blockEntry = $this->blockableKeyResolver->resolve($keyDisplay);
+        if ($blockEntry instanceof PatternEntry) {
+            $event['blockAction'] = 'ip';
+            $event['blockValue'] = $blockEntry->value;
+        }
 
         return $event;
     }

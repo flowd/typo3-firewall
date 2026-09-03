@@ -15,5 +15,6 @@ CREATE TABLE tx_firewall_event (
     PRIMARY KEY (uid),
     KEY event_type_created_at (event_type, created_at),
     KEY key_hash_created_at (key_hash, created_at),
+    KEY rule_created_at (rule, created_at),
     KEY created_at (created_at)
 );

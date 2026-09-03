@@ -99,6 +99,32 @@ it under **Admin Tools** > **Settings** >
     Stores client IP addresses in shortened form. The last part of the
     address is dropped, so a single visitor can no longer be identified.
 
+``eventLogFullIpRules`` (default: empty)
+    Comma-separated rule names whose events store the client IP
+    unanonymized, as a targeted exception from ``eventLogAnonymizeIp``
+    while a specific attack is analyzed. Restricting the exception to the
+    rules under investigation and removing it afterwards keeps the data
+    minimization intact that the anonymization default provides; network
+    and information security is a recognized legitimate interest (GDPR
+    recital 49), and the operator should record the analysis in the
+    processing documentation. While the list is not empty, the event log
+    view shows a warning icon in its header and the **System > Status**
+    report warns, so the exception is not forgotten.
+
+``eventLogRequestHeaders`` (default: off)
+    Stores the request headers with every event, shown as their own block
+    in the event details. The headers are read from the raw server
+    environment (the ``HTTP_*`` server params) as PHP received them, so
+    they show the request as it arrived even when TYPO3 or a middleware
+    modified the PSR-7 request afterwards; note that the web server and
+    SAPI already merge duplicate header lines into one comma-separated
+    value before PHP sees them. Credential headers (``Cookie``,
+    ``Authorization``, ``Proxy-Authorization``, ``X-Api-Key``,
+    ``X-Auth-Token``) are redacted before storing; the remaining headers
+    can still contain personal data, for example client IPs in forwarding
+    headers. Enable it only while analyzing an attack and disable it
+    afterwards.
+
 Privacy and retention
 ======================
 

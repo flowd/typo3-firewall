@@ -123,6 +123,33 @@ final class EventLogSettingsTest extends TestCase
         self::assertFalse($this->createSettings(['eventLogAnonymizeIp' => '0'])->isIpAnonymizationEnabled());
     }
 
+    #[Test]
+    public function fullIpLoggingRulesAreParsedTrimmedAndDeduplicated(): void
+    {
+        self::assertSame([], $this->createSettings([])->getFullIpLoggingRules());
+        self::assertSame(
+            ['login-brute-force', 'scanner-paths'],
+            $this->createSettings(['eventLogFullIpRules' => ' login-brute-force, scanner-paths ,, login-brute-force '])->getFullIpLoggingRules(),
+        );
+    }
+
+    #[Test]
+    public function fullIpLoggingMatchesOnlyListedRules(): void
+    {
+        $eventLogSettings = $this->createSettings(['eventLogFullIpRules' => 'login-brute-force']);
+
+        self::assertTrue($eventLogSettings->isFullIpLoggingEnabledForRule('login-brute-force'));
+        self::assertFalse($eventLogSettings->isFullIpLoggingEnabledForRule('search-throttle'));
+        self::assertFalse($eventLogSettings->isFullIpLoggingEnabledForRule(''));
+    }
+
+    #[Test]
+    public function requestHeaderLoggingIsDisabledByDefault(): void
+    {
+        self::assertFalse($this->createSettings([])->isRequestHeaderLoggingEnabled());
+        self::assertTrue($this->createSettings(['eventLogRequestHeaders' => '1'])->isRequestHeaderLoggingEnabled());
+    }
+
     /**
      * @param array<string, string> $settings
      */

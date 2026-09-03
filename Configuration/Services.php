@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Flowd\Typo3Firewall\Form\Finisher\FloodProtectionFinisher;
+use Flowd\Typo3Firewall\Reports\FullIpLoggingStatusProvider;
 use Flowd\Typo3Firewall\Reports\PcreJitStatusProvider;
 use Flowd\Typo3Firewall\Widgets\Provider\BlockedTodayDataProvider;
 use Flowd\Typo3Firewall\Widgets\Provider\FirewallEventsChartDataProvider;
@@ -44,6 +45,7 @@ return static function (ContainerConfigurator $containerConfigurator, ContainerB
     // as reports.status for the System > Status report.
     if (interface_exists(StatusProviderInterface::class)) {
         $services->set(PcreJitStatusProvider::class);
+        $services->set(FullIpLoggingStatusProvider::class);
     }
 
     // typo3/cms-dashboard: the firewall dashboard widgets.
