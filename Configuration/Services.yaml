@@ -27,8 +27,11 @@ services:
         arguments:
             $config: '@Flowd\Phirewall\Config'
 
+    # Public so CLI scripts can retrieve the effective configuration
+    # from the container (e.g. Build/Scripts/doc-screenshot-data.php).
     Flowd\Phirewall\Config:
         factory: ['@Flowd\Typo3Firewall\ConfigFactory', 'fromConfigurationFile']
+        public: true
 
     # Built via factory because the file path comes from the extension
     # configuration at runtime; autowiring is off so the constructor's
