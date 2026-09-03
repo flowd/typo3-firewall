@@ -81,6 +81,21 @@ final class FileArrayPatternBackendTest extends TestCase
     }
 
     #[Test]
+    public function consumeSkipsExpiredEntries(): void
+    {
+        $fileArrayPatternBackend = $this->createBackend(1000);
+        $fileArrayPatternBackend->append(new PatternEntry(kind: PatternKind::IP, value: '192.168.1.1', expiresAt: 2000));
+        $fileArrayPatternBackend->append(new PatternEntry(kind: PatternKind::IP, value: '192.168.1.2'));
+
+        $patternSnapshot = $this->createBackend(3000)->consume();
+
+        self::assertSame(['192.168.1.2'], array_map(
+            static fn(PatternEntry $patternEntry): string => $patternEntry->value,
+            $patternSnapshot->entries,
+        ));
+    }
+
+    #[Test]
     public function appendGeneratesIdFromHash(): void
     {
         $fileArrayPatternBackend = $this->createBackend();
