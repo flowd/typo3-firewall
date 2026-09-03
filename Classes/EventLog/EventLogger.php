@@ -175,7 +175,11 @@ final class EventLogger
     {
         $headers = [];
         foreach ($serverParams as $name => $value) {
-            if (!is_string($name) || !is_scalar($value)) {
+            if (!is_string($name)) {
+                continue;
+            }
+
+            if (!is_scalar($value)) {
                 continue;
             }
 

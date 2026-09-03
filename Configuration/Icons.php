@@ -12,10 +12,12 @@ return [
     ],
     'firewall-filter-add' => [
         'provider' => SvgSpriteIconProvider::class,
-        'sprite' => 'EXT:firewall/Resources/Public/Icons/FilterAdd.svg#firewall-filter-add',
+        'source' => 'EXT:firewall/Resources/Public/Icons/FilterAdd.svg',
+        'sprite' => 'EXT:firewall/Resources/Public/Icons/FirewallIcons.svg#firewall-filter-add',
     ],
     'firewall-filter-remove' => [
         'provider' => SvgSpriteIconProvider::class,
-        'sprite' => 'EXT:firewall/Resources/Public/Icons/FilterRemove.svg#firewall-filter-remove',
+        'source' => 'EXT:firewall/Resources/Public/Icons/FilterRemove.svg',
+        'sprite' => 'EXT:firewall/Resources/Public/Icons/FirewallIcons.svg#firewall-filter-remove',
     ],
 ];

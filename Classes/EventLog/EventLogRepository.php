@@ -102,9 +102,8 @@ final class EventLogRepository
         $this->applyFilters($groupedQueryBuilder, $eventLogFilter);
 
         $sql = sprintf(
-            'SELECT SUM(CASE WHEN %1$s = %2$s THEN %3$s WHEN %3$s > %4$d THEN %4$d ELSE %3$s END) FROM (%5$s) %6$s',
+            "SELECT SUM(CASE WHEN %1\$s = '' THEN %2\$s WHEN %2\$s > %3\$d THEN %3\$d ELSE %2\$s END) FROM (%4\$s) %5\$s",
             $connection->quoteIdentifier('key_hash'),
-            $connection->quote(''),
             $connection->quoteIdentifier('key_event_count'),
             $eventsPerKey,
             $groupedQueryBuilder->getSQL(),
